@@ -1,34 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import { AppBar, Toolbar, Typography } from '@mui/material';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState(null)
+  const { VITE_API_KEY: apiKey, VITE_API_URL: apiURL } = import.meta.env;
+
+  useEffect(() => {
+    var myHeaders = new Headers();
+    myHeaders.append("x-rapidapi-key", apiKey);
+    myHeaders.append("x-rapidapi-host", apiURL);
+
+    var requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow'
+    };
+
+    fetch(`https://${apiURL}/leagues`, requestOptions)
+      .then(response => response.json())
+      .then(result => setData(result))
+      .catch(error => console.log('error', error));
+  }, [])
+
+  const Header = () => {
+    return (
+        <AppBar position="static">
+            <Toolbar>
+                <Typography variant="h6">Sports Schedule</Typography>
+            </Toolbar>
+        </AppBar>
+    );
+};
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <>
+        <Header />
+        {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
+      </>
   )
 }
 
