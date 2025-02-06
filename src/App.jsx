@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Typography } from '@mui/material';
+import { Box, LinearProgress, Typography } from '@mui/material';
 import Header from './Header';
 
 function App() {
@@ -24,7 +24,11 @@ function App() {
   }, [])
 
   if (!data) {
-    return <Typography variant="h6">Loading...</Typography>;
+    return (
+      <Box sx={{ width: '100%' }}>
+        <LinearProgress />
+      </Box>
+    );
   }
 
   const currentRequests = data.response.requests.current;
