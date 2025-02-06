@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { AppBar, Toolbar, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
+import Header from './Header';
 
 function App() {
   const [data, setData] = useState(null)
@@ -16,27 +17,26 @@ function App() {
       redirect: 'follow'
     };
 
-    fetch(`https://${apiURL}/leagues`, requestOptions)
+    fetch(`https://${apiURL}/status`, requestOptions)
       .then(response => response.json())
       .then(result => setData(result))
       .catch(error => console.log('error', error));
   }, [])
 
-  const Header = () => {
-    return (
-        <AppBar position="static">
-            <Toolbar>
-                <Typography variant="h6">Sports Schedule</Typography>
-            </Toolbar>
-        </AppBar>
-    );
-};
+  if (!data) {
+    return <Typography variant="h6">Loading...</Typography>;
+  }
+
+  const currentRequests = data.response.requests.current;
+  const limitDay = data.response.requests.limit_day;
 
   return (
-      <>
-        <Header />
-        {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
-      </>
+    <>
+      <Header currentRequests={currentRequests} limitDay={limitDay} />
+      {
+       // data && <pre>{JSON.stringify(data, null, 2)}</pre>
+      }
+    </>
   )
 }
 
