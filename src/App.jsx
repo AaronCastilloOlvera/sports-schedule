@@ -2,26 +2,16 @@ import { useEffect, useState } from 'react'
 import { Box, LinearProgress, Typography } from '@mui/material';
 import Header from './Header';
 import './App.css';
+import { fetchStatus } from './api';
 
 function App() {
   const [data, setData] = useState(null)
   const { VITE_API_KEY: apiKey, VITE_API_URL: apiURL } = import.meta.env;
 
   useEffect(() => {
-    var myHeaders = new Headers();
-    myHeaders.append("x-rapidapi-key", apiKey);
-    myHeaders.append("x-rapidapi-host", apiURL);
-
-    var requestOptions = {
-      method: 'GET',
-      headers: myHeaders,
-      redirect: 'follow'
-    };
-
-    fetch(`https://${apiURL}/status`, requestOptions)
-      .then(response => response.json())
-      .then(result => setData(result))
-      .catch(error => console.log('error', error));
+    fetchStatus(apiKey, apiURL)
+      .then((data) => setData(data))
+      .catch((error) => console.error(error))
   }, [])
 
   if (!data) {
