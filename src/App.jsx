@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Box, LinearProgress, Typography } from '@mui/material';
 import Header from './Header';
+import './App.css';
 
 function App() {
   const [data, setData] = useState(null)
