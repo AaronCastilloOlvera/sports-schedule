@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
+import { AppBar, Badge, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
 import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball, NightsStay } from "@mui/icons-material";
 
 const Header = ({ currentRequests, limitDay }) => {
@@ -16,12 +16,12 @@ const Header = ({ currentRequests, limitDay }) => {
             value={value}
             onChange={(event, newValue) => setValue(newValue)}
             textColor="inherit"
-            indicatorColor="secondary">
-
-            <Tab icon={<SportsSoccer />} label="Soccer" />
-            <Tab icon={<SportsBasketball />} label="Basketball" />
-            <Tab icon={<SportsBaseball />} label="Baseball" />
-            <Tab icon={<SportsFootball />} label="Football" />
+            indicatorColor="secondary"
+          >            
+            <Tab icon={<SportsSoccer />} label="Soccer" iconPosition="start" />
+            <Tab icon={<SportsBasketball />} label="Basketball" iconPosition="start" />
+            <Tab icon={<SportsBaseball />} label="Baseball" iconPosition="start" />
+            <Tab icon={<SportsFootball />} label="Football" iconPosition="start" />
           </Tabs>
         </Box>
                 
