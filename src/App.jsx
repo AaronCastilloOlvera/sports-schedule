@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Box, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import Header from './Header';
 import './App.css';
-import { fetchStatus, fetchLeagues } from './api';
+import { fetchStatus, fetchLeagues, fetchFavoriteLeagues } from './api';
 
 function App() {
   const [data, setData] = useState(null)
@@ -10,10 +10,16 @@ function App() {
   const { VITE_API_KEY: apiKey, VITE_API_URL: apiURL, VITE_API_HOST: apiHost } = import.meta.env;
   
   useEffect(() => {
+    /*
     fetchLeagues(apiHost)
       .then((leagues) => setLeagues(leagues))
       .catch((error) => console.error(error))
-
+    */
+    
+      fetchFavoriteLeagues(apiHost)
+      .then((leagues) => setLeagues(leagues))
+      .catch((error) => console.error(error))
+  
     fetchStatus(apiKey, apiURL)
       .then((data) => setData(data))
       .catch((error) => console.error(error))
