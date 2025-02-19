@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { Box, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, LinearProgress, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import Header from './Header';
 import './App.css';
-import { fetchStatus, fetchLeagues, fetchFavoriteLeagues } from './api';
+import { fetchStatus, fetchLeagues, fetchFavoriteLeagues, fetchLeaguesCountries } from './api';
 
 function App() {
   const [data, setData] = useState(null)
   const [leagues, setLeagues] = useState(null)
+  const [leaguesCountries, setLeaguesCountries] = useState(null)
   const { VITE_API_KEY: apiKey, VITE_API_URL: apiURL, VITE_API_HOST: apiHost } = import.meta.env;
   
   useEffect(() => {
@@ -16,7 +17,11 @@ function App() {
       .catch((error) => console.error(error))
     */
     
-      fetchFavoriteLeagues(apiHost)
+    fetchLeaguesCountries(apiHost)
+    .then((leaguesCountries) => setLeaguesCountries(leaguesCountries))
+    .catch((error) => console.error(error))
+
+    fetchFavoriteLeagues(apiHost)
       .then((leagues) => setLeagues(leagues))
       .catch((error) => console.error(error))
   
@@ -77,7 +82,7 @@ function App() {
         </TableContainer>
       </Box>
       
-      { leagues && <pre>{JSON.stringify(leagues, null, 2)}</pre> }
+      { leaguesCountries && <pre>{JSON.stringify(leaguesCountries, null, 2)}</pre> }
     </React.Fragment>
   )
 }

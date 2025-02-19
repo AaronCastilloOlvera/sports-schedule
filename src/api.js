@@ -19,7 +19,12 @@ export const fetchLeagues = async (host) => {
   return await response.json()
 }
 
-export const fetchFavoriteLeagues = async (host, ids) => {
+export const fetchFavoriteLeagues = async (host) => {
   const response = await fetch(`http://${host}/favorite_leagues`)
+  return await response.json();
+}
+
+export const fetchLeaguesCountries = async (host) => {
+  const response = await fetch(`http://${host}/leagues_countries`)
   return await response.json();
 }
