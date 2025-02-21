@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { AppBar, Badge, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
-import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball, NightsStay } from "@mui/icons-material";
+import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
+import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball } from "@mui/icons-material";
 
 const Header = ({ currentRequests, limitDay }) => {
   const [value, setValue] = useState(0);
 
   return (
-    <AppBar position="static">
+    <AppBar position="fixed" sx={{zIndex: (theme) => theme.zIndex.drawer + 1}} >
       <Toolbar>
         <Typography variant="h6">Sports Schedule</Typography>
         
