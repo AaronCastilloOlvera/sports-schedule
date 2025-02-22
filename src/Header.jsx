@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
 import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball } from "@mui/icons-material";
+import Status from './Status';
 
-const Header = ({ currentRequests, limitDay }) => {
+const Header = () => {
   const [value, setValue] = useState(0);
 
   return (
@@ -26,7 +27,7 @@ const Header = ({ currentRequests, limitDay }) => {
         </Box>
                 
         <Box sx={{ flexGrow: 1 }}/>
-        <Typography variant="body1"> Requests: {currentRequests} / {limitDay} </Typography>
+        <Status />
       </Toolbar>
     </AppBar>
     );
