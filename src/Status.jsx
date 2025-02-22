@@ -2,9 +2,7 @@ import React, { useEffect, useState }  from 'react';
 import { Typography } from "@mui/material";
 import { fetchStatus } from './api';
 
-
-const Status = () => {
-  
+const Status = () => {  
   const [status, setStatus] = useState(null);
   const { VITE_API_KEY: apiKey,  VITE_API_URL: apiURL } = import.meta.env;
 
@@ -17,7 +15,7 @@ const Status = () => {
   if (!status || !status === '') {
     return <Typography variant="body1">Loading...</Typography>;
   }
-  
+
   const currentRequests = status.response.requests.current;
   const limitDay = status.response.requests.limit_day;
 
