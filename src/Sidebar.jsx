@@ -12,7 +12,6 @@ const Sidebar = () => {
   useEffect(() => { 
     fetchFavoriteLeagues(apiHost)
       .then((leagues) => {
-        console.log("Fetched leagues:", leagues);
         setData(leagues)
       })
       .catch((error) => console.error(error))
