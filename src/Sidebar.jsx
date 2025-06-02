@@ -11,7 +11,16 @@ const Sidebar = () => {
 
   useEffect(() => { 
     fetchFavoriteLeagues(apiHost)
-      .then((leagues) => setData(leagues))
+      .then((leagues) => {
+        console.log("Fetched leagues:", leagues);
+        if (!leagues || !leagues.response) {
+          console.error("Invalid data format:", leagues);
+          return;
+        }
+        else {
+         setData(leagues) 
+        }
+      })
       .catch((error) => console.error(error))
   }, []);
 
