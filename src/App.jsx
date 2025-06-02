@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Box } from '@mui/material';
 import Header from './Header';
 import './App.css';
-import { fetchLeagues, fetchFavoriteLeagues, fetchLeaguesCountries } from './api';
+import { fetchFavoriteLeagues } from './api';
 import Sidebar from './Sidebar';
 
 function App() {
@@ -10,21 +10,9 @@ function App() {
   const { VITE_API_KEY: apiKey, VITE_API_URL: apiURL, VITE_API_HOST: apiHost } = import.meta.env;
   
   useEffect(() => {
-    /*
-    fetchLeagues(apiHost)
-      .then((leagues) => setLeagues(leagues))
-      .catch((error) => console.error(error))
-    */
-    
-    fetchLeaguesCountries(apiHost)
+    fetchFavoriteLeagues(apiHost)
     .then((leaguesCountries) => setLeaguesCountries(leaguesCountries))
     .catch((error) => console.error(error))
-
-    /*
-    fetchFavoriteLeagues(apiHost)
-      .then((leagues) => setLeagues(leagues))
-      .catch((error) => console.error(error))
-    */
   }, [])
   return (
     
