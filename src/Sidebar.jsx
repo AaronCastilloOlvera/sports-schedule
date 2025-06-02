@@ -1,4 +1,4 @@
-import React, { use, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Box, Drawer, List, ListItemButton, ListItemText } from "@mui/material";
 import { fetchFavoriteLeagues } from "./api";
 const { VITE_API_HOST: apiHost } = import.meta.env;
