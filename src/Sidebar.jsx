@@ -41,15 +41,15 @@ const Sidebar = () => {
       }}
     >
       <List>
-        { data && data.response.map((item, index) => (
+        { data && data.response && data.response.map((item, index) => (
             <ListItemButton key={index}>
               <Box
                 component="img"
-                src={item.league.logo}
-                alt={item.league.name}
+                src={item.logo}
+                alt={item.name}
                 sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
               />
-              <ListItemText primary={item.league.name} />
+              <ListItemText primary={item.name} />
             </ListItemButton>
         ))}
       </List>
