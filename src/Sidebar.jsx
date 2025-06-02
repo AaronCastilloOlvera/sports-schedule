@@ -42,6 +42,7 @@ const Sidebar = () => {
                 alt={item.name}
                 sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
               />
+              a
               <ListItemText primary={item.name} />
             </ListItemButton>
         ))}
