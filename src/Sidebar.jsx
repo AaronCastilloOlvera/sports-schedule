@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Drawer, List, ListItemButton, ListItemText } from "@mui/material";
+import { Box, Drawer, LinearProgress, List, ListItemButton, ListItemText } from "@mui/material";
 import { fetchFavoriteLeagues } from "./api";
 const { VITE_API_HOST: apiHost } = import.meta.env;
 
@@ -34,19 +34,23 @@ const Sidebar = () => {
       }}
     >
       <List>
-        {data && data.map((item, index) => (
-          <ListItemButton key={index} sx={{ display: 'flex', alignItems: 'center' }}>
-            {item.logo && (
-              <Box
-                component="img"
-                src={item.logo}
-                alt={item.name}
-                sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
-              />
-            )}
-            <ListItemText primary={item.name} />
-          </ListItemButton>
-        ))}
+        {data ? 
+          data.map((item, index) => (
+            <ListItemButton key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+              {item.logo && (
+                <Box
+                  component="img"
+                  src={item.logo}
+                  alt={item.name}
+                  sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
+                />
+              )}
+              <ListItemText primary={item.name} />
+            </ListItemButton>
+          )) : 
+          <Box sx={{ width: '100%' }}>
+            <LinearProgress />
+          </Box>}
       </List>
     </Drawer>
   );
