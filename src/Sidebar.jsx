@@ -34,7 +34,7 @@ const Sidebar = () => {
       }}
     >
       <List>
-        {data && data.response && data.response.map((item, index) => (
+        {data && data.map((item, index) => (
           <ListItemButton key={index} sx={{ display: 'flex', alignItems: 'center' }}>
             {item.logo && (
               <Box

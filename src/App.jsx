@@ -19,24 +19,6 @@ function App() {
     <Box sx={{ display: 'flex' }}>
       <Header currentRequests={0} limitDay={0} /> 
       <Sidebar />
-
-      <Box sx={{ flexGrow: 1, p: 3 }} >
-        <List>
-          {leagues && leagues.map((item, index) => (
-            <ListItemButton key={index} sx={{ display: 'flex', alignItems: 'center' }}>
-              {item.logo && (
-                <Box
-                  component="img"
-                  src={item.logo}
-                  alt={item.name}
-                  sx={{ width: 60, height: 60, objectFit: 'contain', marginRight: 2 }}
-                />
-              )}
-              <ListItemText primary={item.name} />
-            </ListItemButton>
-          ))}
-        </List>
-      </Box>
     </Box>
   )
 }
