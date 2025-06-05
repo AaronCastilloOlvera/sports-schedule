@@ -11,10 +11,7 @@ function App() {
   
   useEffect(() => {
     fetchFavoriteLeagues(apiHost)
-    .then((leagues) => {
-        setLeagues(leagues)
-        console.log(leagues)
-      })
+    .then((leagues) => { setLeagues(leagues) })
     .catch((error) => console.error(error))
   }, [])
   return (
@@ -25,7 +22,7 @@ function App() {
 
       <Box sx={{ flexGrow: 1, p: 3 }} >
         <List>
-          {leagues && leagues.response.map((item, index) => (
+          {leagues && leagues.map((item, index) => (
             <ListItemButton key={index} sx={{ display: 'flex', alignItems: 'center' }}>
               {item.logo && (
                 <Box
