@@ -11,7 +11,10 @@ function App() {
   
   useEffect(() => {
     fetchFavoriteLeagues(apiHost)
-    .then((leagues) => setLeagues(leagues))
+    .then((leagues) => {
+        setLeagues(leagues)
+        console.log(leagues)
+      })
     .catch((error) => console.error(error))
   }, [])
   return (
