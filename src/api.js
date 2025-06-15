@@ -14,16 +14,11 @@ export const fetchStatus = async (apiKey, apiURL) => {
 };
 
 export const fetchLeagues = async (host) => {
-  const response = await fetch(`${host}/leagues`)
+  const response = await fetch(`${host}leagues`)
   return await response.json()
 }
 
 export const fetchFavoriteLeagues = async (host) => {
-  const response = await fetch(`${host}/favorite-leagues`)
-  return await response.json();
-}
-
-export const fetchLeaguesCountries = async (host) => {
-  const response = await fetch(`${host}/leagues`)
+  const response = await fetch(`${host}favorite-leagues`)
   return await response.json();
 }
