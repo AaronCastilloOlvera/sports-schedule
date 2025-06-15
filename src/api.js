@@ -1,4 +1,3 @@
-
 import axios from "axios"
 
 export const fetchStatus = async (apiKey, apiURL) => {
