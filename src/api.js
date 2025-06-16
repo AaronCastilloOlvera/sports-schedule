@@ -25,8 +25,18 @@ export const fetchLeagues = async (host) => {
 }
 
 export const fetchFavoriteLeagues = async (host) => {  
-  var url = joinUrl(host, 'favorite-leagues');
-  console.log("Fetching favorite leagues from:", url);
-  const response = await fetch(url)
-  return await response.json();
+  
+  try {
+    var url = joinUrl(host, 'favorite-leagues');
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
+  catch (error) {
+    console.error('Error fetching favorite leagues:', error);
+    throw error;
+  }
 }
