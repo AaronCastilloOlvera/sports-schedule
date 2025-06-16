@@ -15,15 +15,18 @@ export const fetchStatus = async (apiKey, apiURL) => {
 
 const joinUrl = (apiURL, endpoint) => {
   if (!apiURL.endsWith('/')) apiURL += '/';
-    return `${apiURL}${endpoint}`;
+  return `${apiURL}${endpoint}`;
 }
 
 export const fetchLeagues = async (host) => {
-  const response = await fetch(joinUrl(host, 'leagues'))
+  var url = joinUrl(host, 'leagues');
+  const response = await fetch(url)
   return await response.json()
 }
 
-export const fetchFavoriteLeagues = async (host) => {
-  const response = await fetch(joinUrl(host, 'favorite-leagues'))
+export const fetchFavoriteLeagues = async (host) => {  
+  var url = joinUrl(host, 'favorite-leagues');
+  console.log("Fetching favorite leagues from:", url);
+  const response = await fetch(url)
   return await response.json();
 }
