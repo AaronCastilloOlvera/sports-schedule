@@ -27,7 +27,7 @@ export const fetchLeagues = async (host) => {
 export const fetchFavoriteLeagues = async (host) => {  
   
   try {
-    var url = joinUrl(host, 'favorite-leagues');
+    var url = joinUrl(host, 'leagues/favorite');
     const response = await fetch(url);
     
     if (!response.ok) {
