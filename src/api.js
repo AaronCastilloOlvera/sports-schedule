@@ -51,6 +51,16 @@ class ApiClient {
       throw error;
     }
   }
+
+  async fetchFixtures(date = '2025-12-14') {
+    try {
+      const response = await this.client.get(`/matches/by-date?date=${date}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching fixtures:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
