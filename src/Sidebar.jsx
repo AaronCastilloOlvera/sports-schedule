@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Box, Drawer, LinearProgress, List, ListItemButton, ListItemText } from "@mui/material";
-import { fetchFavoriteLeagues } from "./api";
-const { VITE_API_HOST: apiHost } = import.meta.env;
+import { apiClient } from "./api";
 
 const drawerWidth = 280;
 
@@ -10,11 +9,15 @@ const Sidebar = () => {
   const [data, setData] = useState(null);
 
   useEffect(() => { 
-    fetchFavoriteLeagues(apiHost)
+    let mounted = true;
+    
+    apiClient.fetchFavoriteLeagues()
       .then((leagues) => {
-        setData(leagues)
+        if (mounted) setData(leagues);
       })
-      .catch((error) => console.error(error))
+      .catch((error) => console.error(error));
+    
+    return () => { mounted = false; };
   }, []);
 
   return (

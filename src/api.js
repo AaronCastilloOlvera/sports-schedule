@@ -13,30 +13,44 @@ export const fetchStatus = async (apiKey, apiURL) => {
   return response.data;
 };
 
-const joinUrl = (apiURL, endpoint) => {
-  if (!apiURL.endsWith('/')) apiURL += '/';
-  return `${apiURL}${endpoint}`;
-}
-
-export const fetchLeagues = async (host) => {
-  var url = joinUrl(host, 'leagues');
-  const response = await fetch(url)
-  return await response.json()
-}
-
-export const fetchFavoriteLeagues = async (host) => {  
-  
-  try {
-    var url = joinUrl(host, 'leagues/favorite');
-    const response = await fetch(url);
+class ApiClient {
+  constructor(baseURL, opts = {}) {
+    if (!baseURL) throw new Error('ApiClient requires a baseURL');
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
+    this.client = axios.create({
+      baseURL,
+      timeout: opts.timeout || 8000,
+      headers: opts.headers || {}
+    });
+
+    this.client.interceptors.response.use(
+      response => response,
+      error => {
+        console.error('API Error:', error.message);
+        return Promise.reject(error);
+      }
+    );
   }
-  catch (error) {
-    console.error('Error fetching favorite leagues:', error);
-    throw error;
+
+  async fetchLeagues() {
+    try {
+      const response = await this.client.get('/leagues');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching leagues:', error);
+      throw error;
+    }
+  }
+
+  async fetchFavoriteLeagues() {
+    try {
+      const response = await this.client.get('/leagues/favorite');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching favorite leagues:', error);
+      throw error;
+    }
   }
 }
+
+export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
