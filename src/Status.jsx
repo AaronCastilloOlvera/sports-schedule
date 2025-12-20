@@ -16,8 +16,8 @@ const Status = () => {
     return <Typography variant="body1">Loading...</Typography>;
   }
 
-  const currentRequests = status.response.requests.current;
-  const limitDay = status.response.requests.limit_day;
+  const currentRequests = status.response.requests?.current;
+  const limitDay = status.response.requests?.limit_day;
 
   return(
     <Typography variant="body1"> Requests: {currentRequests} / {limitDay} </Typography>
