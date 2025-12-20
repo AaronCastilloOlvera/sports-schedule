@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Avatar, Box, Chip, LinearProgress, Table, TableBody, TableCell,  TableContainer, TableHead, TableRow, Typography, Paper} from '@mui/material';
+import { Box, Chip, LinearProgress, Table, TableBody, TableCell,  TableContainer, TableHead, TableRow, Typography, Paper} from '@mui/material';
 import { apiClient } from './api';
 
 const Fixtures = () => {
@@ -48,7 +48,8 @@ const Fixtures = () => {
           <TableHead>
             <TableRow>
               <TableCell>Liga</TableCell>
-              <TableCell>Fecha / Estado</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Hora</TableCell>
               <TableCell align="right">Local</TableCell>
               <TableCell align="center">Marcador</TableCell>
               <TableCell align="left">Visitante</TableCell>
@@ -59,93 +60,91 @@ const Fixtures = () => {
             {fixtures.data.map((match, index) => {
                 const matchDate = new Date(match.fixture.date);
                 return (
-                  <TableRow
-                      key={match.fixture.id || index}
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  >
-                      {/* Columna: Liga */}
-                      <TableCell component="th" scope="row">
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {match.league.logo && (
-                          <Avatar 
-                              src={match.league.logo} 
-                              alt={match.league.name} 
-                              sx={{ width: 24, height: 24, marginRight: 1 }} 
-                          />
-                          )}
-                          <Typography variant="body2">{match.league.name}</Typography>
-                      </Box>
-                      </TableCell>
+                  <TableRow key={match.fixture.id || index}>
+                    {/* Columna: Liga */}
+                    <TableCell component="th" scope="row">
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {match.league.logo && (
+                        <Box 
+                            component="img"
+                            src={match.league.logo} 
+                            alt={match.league.name} 
+                            sx={{ width: 24, height: 24, marginRight: 1 }} 
+                        />
+                        )}
+                        <Typography variant="body2">{match.league.name}</Typography>
+                    </Box>
+                    </TableCell>
+                      
+                    {/* Status */}
+                    <TableCell>
+                      <Chip 
+                        label={match.fixture.status.short} 
+                        size="small" 
+                        color={match.fixture.status.short === 'FT' ? 'default' : 'primary'}
+                        variant={match.fixture.status.short === 'FT' ? 'outlined' : 'filled'}
+                        sx={{ mt: 0.5, width: 'fit-content', height: 20, fontSize: '0.65rem' }}
+                    />
+                    </TableCell>
 
-                      {/* Columna: Fecha y Estado */}
-                      <TableCell>
-                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* Hour */}
+                    <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                               {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                              {matchDate.toLocaleDateString()}
-                          </Typography>
-                          <Chip 
-                              label={match.fixture.status.short} 
-                              size="small" 
-                              color={match.fixture.status.short === 'FT' ? 'default' : 'primary'}
-                              variant={match.fixture.status.short === 'FT' ? 'outlined' : 'filled'}
-                              sx={{ mt: 0.5, width: 'fit-content', height: 20, fontSize: '0.65rem' }}
-                          />
-                          </Box>
-                      </TableCell>
+                        </Box>
+                    </TableCell>
 
-                      {/* Columna: Equipo Local (Alineado a la derecha) */}
-                      <TableCell align="right">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', marginRight: 1 }}>
-                              {match.teams.home.name}
-                          </Typography>
-                          {match.teams.home.logo && (
-                          <Box
-                              component="img"
-                              src={match.teams.home.logo}
-                              alt={match.teams.home.name}
-                              sx={{ width: 30, height: 30, objectFit: 'contain' }}
-                          />
-                          )}
-                      </Box>
-                      </TableCell>
+                    {/* Local Team */}
+                    <TableCell align="right">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', marginRight: 1 }}>
+                            {match.teams.home.name}
+                        </Typography>
+                        {match.teams.home.logo && (
+                        <Box
+                            component="img"
+                            src={match.teams.home.logo}
+                            alt={match.teams.home.name}
+                            sx={{ width: 30, height: 30, objectFit: 'contain' }}
+                        />
+                        )}
+                    </Box>
+                    </TableCell>
 
-                      {/* Columna: Marcador */}
-                      <TableCell align="center">
-                      <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
-                          <Typography variant="subtitle1" fontWeight="bold">
-                              {match.goals.home} - {match.goals.away}
-                          </Typography>
-                      </Box>
-                      </TableCell>
+                    {/* Columna: Marcador */}
+                    <TableCell align="center">
+                    <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                            {match.goals.home} - {match.goals.away}
+                        </Typography>
+                    </Box>
+                    </TableCell>
 
-                      {/* Columna: Equipo Visitante (Alineado a la izquierda) */}
-                      <TableCell align="left">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                          {match.teams.away.logo && (
-                          <Box
-                              component="img"
-                              src={match.teams.away.logo}
-                              alt={match.teams.away.name}
-                              sx={{ width: 30, height: 30, objectFit: 'contain', marginRight: 1 }}
-                          />
-                          )}
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                              {match.teams.away.name}
-                          </Typography>
-                      </Box>
-                      </TableCell>
+                    {/* Columna: Equipo Visitante (Alineado a la izquierda) */}
+                    <TableCell align="left">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                        {match.teams.away.logo && (
+                        <Box
+                            component="img"
+                            src={match.teams.away.logo}
+                            alt={match.teams.away.name}
+                            sx={{ width: 30, height: 30, objectFit: 'contain', marginRight: 1 }}
+                        />
+                        )}
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {match.teams.away.name}
+                        </Typography>
+                    </Box>
+                    </TableCell>
 
-                      {/* Columna: Estadio */}
-                      <TableCell>
-                      <Typography variant="caption" color="textSecondary">
-                          {match.fixture.venue.name}
-                      </Typography>
-                      </TableCell>
-
+                    {/* Columna: Estadio */}
+                    <TableCell>
+                    <Typography variant="caption" color="textSecondary">
+                        {match.fixture.venue.name}
+                    </Typography>
+                    </TableCell>
                   </TableRow>
                 )}
             )}
