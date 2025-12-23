@@ -99,7 +99,7 @@ const Fixtures = () => {
                       <TableCell align="center">
                         <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
                           <Typography variant="subtitle1" fontWeight="bold">
-                            {match.goals.home ?? 0} - {match.goals.away ?? 0}
+                            {match.goals.home} - {match.goals.away}
                           </Typography>
                         </Box>
                       </TableCell>
