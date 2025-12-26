@@ -2,8 +2,8 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Tab, Tabs }  from '@mui/material';
 import Fixtures from './Fixtures';
+import LeagueSelector from './LeagueSelector';
 
-const LeaguesList = () => <div>Lista de las 34 ligas favoritas...</div>;
 const Predictions = () => <div>Análisis de la Supercoppa con IA...</div>;
 
 function FutbolTab(props) {
@@ -52,7 +52,7 @@ export default function FutballDashboard() {
       </FutbolTab>
       
       <FutbolTab value={tabValue} index={1}>
-        <LeaguesList />
+        <LeagueSelector />
       </FutbolTab>
       
       <FutbolTab value={tabValue} index={2}>
