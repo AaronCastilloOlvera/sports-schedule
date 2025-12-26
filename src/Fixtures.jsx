@@ -33,11 +33,8 @@ const Fixtures = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ padding: 2, mt: 8 }}>
+      <Box sx={{ padding: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">Partidos</Typography>
-          
-          {/* Selector de Fecha */}
           <DatePicker
             label="Seleccionar Fecha"
             value={selectedDate}
