@@ -52,12 +52,22 @@ class ApiClient {
     }
   }
 
-  async fetchFixtures(date = '2025-12-14') {
+  async fetchFixtures(date='2025-12-14') {
     try {
       const response = await this.client.get(`/matches/by-date?date=${date}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching fixtures:', error);
+      throw error;
+    }
+  }
+
+  async fetchRefreshFixtures(date='2025-12-14') {
+    try {
+      const response = await this.client.get(`/redis/refresh-fixtures-cache?date=${date}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error refreshing cache:', error);
       throw error;
     }
   }

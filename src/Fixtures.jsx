@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Avatar, Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, Stack } from '@mui/material';
+import { Avatar, Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, Stack, Tooltip } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { ChevronLeft } from '@mui/icons-material';  
-import { ChevronRight } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Refresh } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { apiClient } from './api';
 
@@ -51,6 +50,20 @@ const Fixtures = () => {
     );
   };
 
+  const handleRefreshLeagues = () => {
+    setLoading(true);
+    const formattedDate = selectedDate.format('YYYY-MM-DD');
+    apiClient.fetchRefreshFixtures(formattedDate)
+      .then((response) => {
+        setFixtures(response.data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error refreshing fixtures:', error);
+        setLoading(false);
+      });
+  };
+
   const filteredFixtures = selectedLeagues.length > 0
     ? fixtures?.filter((match) => selectedLeagues.includes(match.league.id))
     : fixtures;
@@ -71,6 +84,14 @@ const Fixtures = () => {
 
   const summaryArray = leaguesSummary ? Object.values(leaguesSummary) : [];
 
+  if (loading) {
+    return (
+      <Box sx={{ width: '100%' }}>
+        <LinearProgress />
+      </Box>
+    );
+  }
+  
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ padding: 2 }}>
@@ -92,6 +113,12 @@ const Fixtures = () => {
             <ChevronRight />
           </IconButton>
 
+          <Box sx={{ flexGrow: 1 }} />
+          <Tooltip title="Refrescar Ligas">
+            <IconButton onClick={handleRefreshLeagues} color='primary'>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
         </Box>
 
         <Stack 
