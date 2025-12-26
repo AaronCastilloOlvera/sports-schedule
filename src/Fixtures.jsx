@@ -78,7 +78,15 @@ const Fixtures = () => {
 
         </Box>
 
-        <Stack direction="row" spacing={2} sx={{ mb: 3, overflowX: 'auto' }}>
+        <Stack 
+          direction="row" 
+          sx={{ 
+            flexWrap: { xs: 'nowrap', md: 'wrap' }, 
+            overflowX: { xs: 'auto', md: 'visible' },
+            gap: 1,
+            pb: 2
+          }}
+        >
           {summaryArray.map((league) => (
             <Chip
               key={league.name}
