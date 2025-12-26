@@ -5,7 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ChevronLeft, ChevronRight, Refresh } from '@mui/icons-material';
 import dayjs from 'dayjs';
-import { apiClient } from './api';
+import { apiClient } from '../../api/api';
 
 const Fixtures = () => {
 

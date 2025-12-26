@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
 import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball } from "@mui/icons-material";
-import Status from './Status';
+import Status from './../common/Status.jsx';
 
 const Header = () => {
   const [value, setValue] = useState(0);

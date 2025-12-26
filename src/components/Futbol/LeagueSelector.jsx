@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Avatar, Box, TextField, List, ListItem, ListItemAvatar, LinearProgress, ListItemText, InputAdornment, Typography } from '@mui/material';
-import { apiClient } from './api';
+import { apiClient } from '../../api/api';
 import SearchIcon from '@mui/icons-material/Search';
 
 function LeagueSelector() {

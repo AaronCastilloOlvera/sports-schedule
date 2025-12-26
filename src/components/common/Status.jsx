@@ -1,6 +1,6 @@
 import { useEffect, useState }  from 'react';
 import { Typography } from "@mui/material";
-import { fetchStatus } from './api';
+import { fetchStatus } from './../../api/api.js';
 
 const Status = () => {  
   const [status, setStatus] = useState(null);

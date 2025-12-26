@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import './App.css';
-import Header from './Header';
-import FutbolDashboard from './Futbol';
+import Header from './components/layout/Header.jsx';
+import FutbolDashboard from './views/FutbolDashboard.jsx';
 
 function App() {
   return (

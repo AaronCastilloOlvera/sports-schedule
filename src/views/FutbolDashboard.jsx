@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Tab, Tabs }  from '@mui/material';
-import Fixtures from './Fixtures';
-import LeagueSelector from './LeagueSelector';
+import Fixtures from '../components/Futbol/Fixtures';
+import LeagueSelector from '../components/Futbol/LeagueSelector';
 
 const Predictions = () => <div>Análisis de la Supercoppa con IA...</div>;
 
