@@ -50,7 +50,7 @@ const Fixtures = () => {
     );
   };
 
-  const handleRefreshLeagues = () => {
+  const handleRefreshFixtures = () => {
     setLoading(true);
     const formattedDate = selectedDate.format('YYYY-MM-DD');
     apiClient.fetchRefreshFixtures(formattedDate)
@@ -115,7 +115,7 @@ const Fixtures = () => {
 
           <Box sx={{ flexGrow: 1 }} />
           <Tooltip title="Refrescar Ligas">
-            <IconButton onClick={handleRefreshLeagues} color='primary'>
+            <IconButton onClick={handleRefreshFixtures} color='primary'>
               <Refresh />
             </IconButton>
           </Tooltip>
