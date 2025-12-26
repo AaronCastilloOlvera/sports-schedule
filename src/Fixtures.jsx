@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Box, Chip, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper } from '@mui/material';
+import { Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { ChevronLeft } from '@mui/icons-material';  
+import { ChevronRight } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { apiClient } from './api';
 
@@ -31,16 +33,35 @@ const Fixtures = () => {
     return () => { mounted = false; };
   }, [selectedDate]);
 
+  const handlePreviousDay = () => {
+    setSelectedDate(prevDate => prevDate.subtract(1, 'day'));
+  };
+
+  const handleNextDay = () => {
+    setSelectedDate(prevDate => prevDate.add(1, 'day'));
+  };
+
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+
+          <IconButton onClick={handlePreviousDay} color='primary'>
+            <ChevronLeft />
+          </IconButton>
+
           <DatePicker
             label="Seleccionar Fecha"
             value={selectedDate}
             onChange={(newValue) => setSelectedDate(newValue)}
             slotProps={{ textField: { size: 'small' } }}
           />
+
+          <IconButton onClick={handleNextDay} color='primary'>
+            <ChevronRight />
+          </IconButton>
+
         </Box>
 
         {loading ? (
