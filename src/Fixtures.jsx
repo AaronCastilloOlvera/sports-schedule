@@ -69,7 +69,8 @@ const Fixtures = () => {
             label="Seleccionar Fecha"
             value={selectedDate}
             onChange={(newValue) => setSelectedDate(newValue)}
-            slotProps={{ textField: { size: 'small' } }}
+            format='DD/MM/YYYY'
+            slotProps={{ textField: { size: 'small', readOnly: true } }}
           />
 
           <IconButton onClick={handleNextDay} color='primary'>
