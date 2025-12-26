@@ -9,9 +9,11 @@ import dayjs from 'dayjs';
 import { apiClient } from './api';
 
 const Fixtures = () => {
-  const [selectedDate, setSelectedDate] = useState(dayjs());
+
   const [fixtures, setFixtures] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [selectedLeagues, setSelectedLeagues] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -41,13 +43,26 @@ const Fixtures = () => {
     setSelectedDate(prevDate => prevDate.add(1, 'day'));
   };
 
+  const handleLeagueClick = (leagueId) => {
+    setSelectedLeagues((prev) =>
+      prev.includes(leagueId)
+        ? prev.filter((id) => id !== leagueId)
+        : [...prev, leagueId]
+    );
+  };
+
+  const filteredFixtures = selectedLeagues.length > 0
+    ? fixtures?.filter((match) => selectedLeagues.includes(match.league.id))
+    : fixtures;
+
   const leaguesSummary = fixtures?.reduce((summary, match) => {
     const leagueId = match.league.id;
     if (!summary[leagueId]) {
       summary[leagueId] = {
+        count: 0,
+        id: leagueId,
         name: match.league.name,
         logo: match.league.logo,
-        count: 0
       };
     }
     summary[leagueId].count += 1;
@@ -81,42 +96,64 @@ const Fixtures = () => {
 
         <Stack 
           direction="row" 
-          sx={{ 
-            flexWrap: { xs: 'nowrap', md: 'wrap' }, 
-            overflowX: { xs: 'auto', md: 'visible' },
-            gap: 1,
-            pb: 2
-          }}
+          sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' },  overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
         >
-          {summaryArray.map((league) => (
-            <Chip
-              key={league.name}
-              avatar={
-                <Avatar 
+          <Chip 
+            label="All"
+            onClick={() => setSelectedLeagues([])}
+            color={selectedLeagues.length === 0 ? 'primary' : 'default'}
+            variant={selectedLeagues.length === 0 ? 'filled' : 'outlined'}
+            clickable
+          />
+          {summaryArray.map((league) => {
+            const isSelected = selectedLeagues.includes(league.id);
+            return (
+              <Chip
+                key={league.name}
+                label={`${league.name} (${league.count})`}
+                onClick={() => handleLeagueClick(league.id)}
+                color={isSelected ? 'primary' : 'default'}
+                variant={isSelected ? 'filled' : 'outlined'}
+                clickable
+                sx={{
+                  transition: 'all 0.2s ease',
+                  backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.12)' : 'transparent', 
+                  color: isSelected ? 'primary.main' : 'text.secondary',
+                  borderColor: isSelected ? 'primary.main' : 'divider',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  fontWeight: isSelected ? 600 : 400,
+                  '&:hover': {
+                    backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.20)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  '& .MuiChip-avatar': {
+                    margin: 0,
+                    marginLeft: '4px'
+                  }
+                }}
+                avatar={
+                 <Avatar 
                   src={league.logo} 
                   alt={league.name}
                   variant="rounded"
                   sx={{ 
-                    width: 24, 
-                    height: 24,
-                    bgcolor: 'transparent',
+                    width: 20,
+                    height: 20,
+                    backgroundColor: 'transparent !important', 
                     '& .MuiAvatar-img': {
                       objectFit: 'contain',
                     }
                   }}
                 />
-              }
-              label={`${league.name} (${league.count})`}
-              onClick={() => console.log("Filtrar por:", league.name)}
-              variant="outlined"
-              clickable
-            />  
-          ))}
+                }
+              /> 
+            );
+            })}
         </Stack>
 
         {loading ? (
           <LinearProgress />
-        ) : !fixtures || fixtures.length === 0 ? (
+        ) : !filteredFixtures || filteredFixtures.length === 0 ? (
           <Typography>No hay partidos disponibles para esta fecha.</Typography>
         ) : (
           <TableContainer component={Paper}>
@@ -133,7 +170,7 @@ const Fixtures = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {fixtures.map((match, index) => {
+                {filteredFixtures?.map((match, index) => {
                   const matchDate = new Date(match.fixture.date);
                   return (
                     <TableRow key={match.fixture.id || index}>
