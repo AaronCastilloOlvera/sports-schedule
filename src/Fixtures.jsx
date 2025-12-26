@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper } from '@mui/material';
+import { Avatar, Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, Stack } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -19,9 +19,9 @@ const Fixtures = () => {
     const formattedDate = selectedDate.format('YYYY-MM-DD');
     
     apiClient.fetchFixtures(formattedDate)
-      .then((data) => {
+      .then((response) => {
         if (mounted) {
-          setFixtures(data);
+          setFixtures(response.data);
           setLoading(false);
         }
       })
@@ -41,6 +41,20 @@ const Fixtures = () => {
     setSelectedDate(prevDate => prevDate.add(1, 'day'));
   };
 
+  const leaguesSummary = fixtures?.reduce((summary, match) => {
+    const leagueId = match.league.id;
+    if (!summary[leagueId]) {
+      summary[leagueId] = {
+        name: match.league.name,
+        logo: match.league.logo,
+        count: 0
+      };
+    }
+    summary[leagueId].count += 1;
+    return summary;
+  }, {});
+
+  const summaryArray = leaguesSummary ? Object.values(leaguesSummary) : [];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -64,9 +78,22 @@ const Fixtures = () => {
 
         </Box>
 
+        <Stack direction="row" spacing={2} sx={{ mb: 3, overflowX: 'auto' }}>
+          {summaryArray.map((league) => (
+            <Chip
+              key={league.name}
+              avatar={<Avatar src={league.logo} />}
+              label={`${league.name} (${league.count})`}
+              onClick={() => console.log("Filtrar por:", league.name)}
+              variant="outlined"
+              clickable
+            />  
+          ))}
+        </Stack>
+
         {loading ? (
           <LinearProgress />
-        ) : !fixtures?.data || fixtures.data.length === 0 ? (
+        ) : !fixtures || fixtures.length === 0 ? (
           <Typography>No hay partidos disponibles para esta fecha.</Typography>
         ) : (
           <TableContainer component={Paper}>
@@ -83,7 +110,7 @@ const Fixtures = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {fixtures.data.map((match, index) => {
+                {fixtures.map((match, index) => {
                   const matchDate = new Date(match.fixture.date);
                   return (
                     <TableRow key={match.fixture.id || index}>
