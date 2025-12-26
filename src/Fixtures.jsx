@@ -82,7 +82,21 @@ const Fixtures = () => {
           {summaryArray.map((league) => (
             <Chip
               key={league.name}
-              avatar={<Avatar src={league.logo} />}
+              avatar={
+                <Avatar 
+                  src={league.logo} 
+                  alt={league.name}
+                  variant="rounded"
+                  sx={{ 
+                    width: 24, 
+                    height: 24,
+                    bgcolor: 'transparent',
+                    '& .MuiAvatar-img': {
+                      objectFit: 'contain',
+                    }
+                  }}
+                />
+              }
               label={`${league.name} (${league.count})`}
               onClick={() => console.log("Filtrar por:", league.name)}
               variant="outlined"
@@ -117,7 +131,19 @@ const Fixtures = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           {match.league.logo && (
-                            <Box component="img" src={match.league.logo} alt={match.league.name} sx={{ width: 24, height: 24, marginRight: 1 }} />
+                            <Box 
+                              component="img" 
+                              src={match.league.logo} 
+                              alt={match.league.name} 
+                              sx={{ 
+                                width: 24, 
+                                height: 24, 
+                                marginRight: 1,
+                                objectFit: 'contain', 
+                                borderRadius: '4px',
+                                bgcolor: 'transparent' 
+                              }} 
+                            />
                           )}
                           <Typography variant="body2">{match.league.name}</Typography>
                         </Box>
