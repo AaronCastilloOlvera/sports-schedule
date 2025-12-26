@@ -30,7 +30,7 @@ function FutbolTab(props) {
   );
 }
 
-export default function FutballDashboard() {
+export default function FutbolDashboard() {
   const [tabValue, setTabValue] = useState(0);
 
   const handleChange = (event, newValue) => {

@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import Header from './Header';
 import './App.css';
 import Sidebar from './Sidebar';
-import Futball from './Futbol';
+import FutbolDashboard from './Futbol';
 
 function App() {
   return (
@@ -11,7 +11,7 @@ function App() {
       <Header /> 
       <Sidebar />
       <Box sx={{ flex: 1, padding: 2, marginTop: 8 }}>
-        <Futball />
+        <FutbolDashboard />
       </Box>
     </Box>
   )
