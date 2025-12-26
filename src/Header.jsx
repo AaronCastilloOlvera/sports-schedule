@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AppBar, Box, Tab, Tabs, Toolbar, Typography } from "@mui/material"; 
 import { SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball } from "@mui/icons-material";
 import Status from './Status';
@@ -7,7 +7,7 @@ const Header = () => {
   const [value, setValue] = useState(0);
 
   return (
-    <AppBar position="fixed" sx={{zIndex: (theme) => theme.zIndex.drawer + 1}} >
+    <AppBar position="sticky" sx={{zIndex: (theme) => theme.zIndex.drawer + 1}} >
       <Toolbar>
         <Typography variant="h6">Sports Schedule</Typography>
         
