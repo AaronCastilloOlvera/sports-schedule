@@ -3,7 +3,7 @@ import { Avatar, Box, TextField, List, ListItem, ListItemAvatar, LinearProgress,
 import { apiClient } from '../../api/api';
 import SearchIcon from '@mui/icons-material/Search';
 
-function LeagueSelector() {
+function Leagues() {
 
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,4 +93,4 @@ return (
   );
 }
 
-export default LeagueSelector
+export default Leagues

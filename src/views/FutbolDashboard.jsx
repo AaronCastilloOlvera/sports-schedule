@@ -2,9 +2,8 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Tab, Tabs }  from '@mui/material';
 import Fixtures from '../components/Futbol/Fixtures';
-import LeagueSelector from '../components/Futbol/LeagueSelector';
-
-const Predictions = () => <div>Análisis de la Supercoppa con IA...</div>;
+import Leagues from '../components/Futbol/Leagues';
+import Bets from '../components/Futbol/Bets';
 
 function FutbolTab(props) {
   const { children, value, index } = props;
@@ -52,11 +51,11 @@ export default function FutbolDashboard() {
       </FutbolTab>
       
       <FutbolTab value={tabValue} index={1}>
-        <LeagueSelector />
+        <Leagues />
       </FutbolTab>
       
       <FutbolTab value={tabValue} index={2}>
-        <Predictions />
+        <Bets />
       </FutbolTab>
     </Box>
   );

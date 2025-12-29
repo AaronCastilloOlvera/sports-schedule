@@ -71,6 +71,28 @@ class ApiClient {
       throw error;
     }
   }
+
+  async fetchAnalyzeTicket(imageData) {
+    try {
+      const response = await this.client.post('/bets/analyze-ticket', imageData, {
+        headers: {  "Content-Type": "multipart/form-data"}
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error analyzing ticket:', error);
+      throw error;
+    }
+  }
+
+  async fetchBets() {
+    try {
+      const response = await this.client.get('/bets');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching bets:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
