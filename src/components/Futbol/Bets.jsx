@@ -110,12 +110,11 @@ function Bets() {
   }
 
   const columns = [
-    { field: 'ticket_id', headerName: 'ID', width: 80 },
-    { field: 'match_name', headerName: 'Partido', width: 200 },
-    { field: 'league', headerName: 'Liga', width: 130 },
+    { field: 'ticket_id', headerName: 'ID', width: 120},
+    { field: 'pick', headerName: 'Pick', width: 250 },
     { 
       field: 'odds', 
-      headerName: 'Cuota', 
+      headerName: 'Odds', 
       type: 'number', 
       width: 90,
       renderCell: (params) => <strong>{params.value}</strong> 
@@ -140,7 +139,7 @@ function Bets() {
     },
     { 
       field: 'status', 
-      headerName: 'Estado', 
+      headerName: 'Status', 
       width: 100,
       renderCell: (params) => {
         const color = params.value === 'won' ? 'success' : params.value === 'lost' ? 'error' : 'warning';
@@ -149,9 +148,9 @@ function Bets() {
     },
     { 
       field: 'match_datetime', 
-      headerName: 'Fecha Evento', 
+      headerName: 'Date Event', 
       width: 180,
-      valueGetter: (value) => new Date(value).toLocaleString()
+      valueGetter: (value) => new Date(value).toLocaleDateString()
     },
     {
       field: 'actions',
@@ -177,7 +176,7 @@ function Bets() {
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Historial de Apuestas</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
         <Fab size="small" color="primary" aria-label="add" onClick={() => setOpenModal(true)}>
           <Add />
         </Fab>
