@@ -94,13 +94,8 @@ class ApiClient {
   }
 
   async fetchBets() {
-    try {
-      const response = await this.client.get('/bets');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching bets:', error);
-      throw error;
-    }
+    const response = await this.client.get('/bets/get-tickets');
+    return response.data;
   }
   async createTicket(formData) {
     const response = await this.client.post(`/bets/create-ticket`, formData);
