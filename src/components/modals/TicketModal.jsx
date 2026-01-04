@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, Dialog, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES} from "../../utils/consts.jsx"; 
 import PropTypes from "prop-types";
 
@@ -77,7 +77,16 @@ function TicketModal({openModal, setOpenModal, currentTicket, handleChange, hand
                 ))
                 }
               </TextField>
-              <TextField label="Studied" name="studied" type="checkbox" value={currentTicket.studied} fullWidth onChange={handleChange}/>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="studied"
+                    checked={currentTicket.studied}
+                    onChange={handleChange}
+                  />
+                }
+                label="Studied"
+              />
               <TextField label="Comments" name="comments" multiline rows={4} value={currentTicket.comments} fullWidth onChange={handleChange}/>
                 
             </Stack>
