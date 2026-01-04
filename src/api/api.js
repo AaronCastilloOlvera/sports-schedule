@@ -93,6 +93,25 @@ class ApiClient {
       throw error;
     }
   }
+  async createTicket(formData) {
+    const response = await this.client.post(`/bets/create-ticket`, formData);
+    return response.data;
+  }
+
+  async deleteTicket(ticketId) {
+    const response = await this.client.delete(`/bets/delete-ticket?ticket_id=${ticketId}`);
+    return response.data;
+  }
+
+  async updateTicket(ticketId, formData) {
+    const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
+    return response.data;
+  }
+
+  async uploadTicketImage(ticketId, formData) {
+    const response = await this.client.post(`/bets/upload-ticket-image?ticket_id=${ticketId}`, formData);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
