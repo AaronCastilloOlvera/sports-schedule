@@ -4,7 +4,7 @@ export const BET_TYPES = [
   { value: 'parlay', label: 'Parlay' },
   { value: 'teaser', label: 'Teaser' },
   { value: 'crear_apuesta', label: 'Crear Apuesta' }
-]
+];
 
 export const SPORT_TYPES = [
   { value: 'futbol', label: 'Soccer' },

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField,  Typography } from "@mui/material";
+import { Box, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit } from '@mui/icons-material';
@@ -161,7 +161,6 @@ function Bets() {
       disableColumnMenu: true,
       renderCell: (params) => {
         return (
-          
           <Box sx={{ display: 'flex', gap: 1 }}>
             <IconButton color="error" onClick={() => handleDelete(params.row.ticket_id)} size="small">
               <Delete /> 
