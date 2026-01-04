@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Box, Button, Chip, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Chip, Fab, IconButton, Stack, Typography } from "@mui/material";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit } from '@mui/icons-material';
-import TicketModal from '../modals/ticketModal.jsx';
+import TicketModal from "./../modals/TicketModal";
 
 const initialStatedata = {
     ticket_id: '',
@@ -178,12 +178,9 @@ function Bets() {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Historial de Apuestas</Typography>
-        <Button 
-          variant="contained"
-          color="primary"  
-          startIcon={<Add/>} 
-          onClick={() => setOpenModal(true)}
-        />
+        <Fab size="small" color="primary" aria-label="add" onClick={() => setOpenModal(true)}>
+          <Add />
+        </Fab>
       </Stack>
 
       <Box sx={{ height: 500, width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
