@@ -190,6 +190,17 @@ function Bets() {
           pageSizeOptions={[5, 10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           disableRowSelectionOnClick
+          rowHeight={42}
+          sx={{
+            '& .MuiDataGrid-cell': {
+              alignItems: 'center',
+              display: 'flex'
+            },
+            '& .MuiDataGrid-columnHeader': {
+              alignItems: 'center',
+              display: 'flex'
+            }
+          }}
         />
       </Box>
       <TicketModal 
