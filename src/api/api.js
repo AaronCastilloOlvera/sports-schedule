@@ -16,10 +16,18 @@ export const fetchStatus = async (apiKey, apiURL) => {
 class ApiClient {
   constructor(baseURL, opts = {}) {
     if (!baseURL) throw new Error('ApiClient requires a baseURL');
-    
-    console.log('baseURL', baseURL);
+
+    let finalBaseURL = baseURL;
+    // In production, ensure the URL is HTTPS to avoid mixed content errors.
+    // In development, we trust the provided URL to allow for local http servers.
+    if (import.meta.env.PROD) {
+      finalBaseURL = `https://${baseURL.replace(/^(https?:\/\/)?/, '')}`;
+    }
+
+    console.log(`[${import.meta.env.MODE}] baseURL:`, finalBaseURL);
+
     this.client = axios.create({
-      baseURL,
+      baseURL: finalBaseURL,
       timeout: opts.timeout || 8000,
       headers: opts.headers || {}
     });
