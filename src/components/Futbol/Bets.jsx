@@ -3,33 +3,7 @@ import { Box, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, Menu
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit } from '@mui/icons-material';
-
-const BET_TYPES = [
-  { value: 'derecha', label: 'Derecha' },
-  { value: 'parlay', label: 'Parlay' },
-  { value: 'teaser', label: 'Teaser' },
-  { value: 'crear_apuesta', label: 'Crear Apuesta' }
-]
-
-const SPORT_TYPES = [
-  { value: 'futbol', label: 'Soccer' },
-  { value: 'basketball', label: 'Basketball' },
-  { value: 'american_football', label: 'American Football' },
-  { value: 'baseball', label: 'Baseball' }
-]; 
-
-const DEVICE_TYPES = [
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'desktop', label: 'Desktop' }
-];
-
-const STATUS = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
-  { value: 'push', label: 'Push' }
-
-];
+import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES} from "../../utils/consts.jsx"; 
 
 const initialStatedata = {
     ticket_id: '',
