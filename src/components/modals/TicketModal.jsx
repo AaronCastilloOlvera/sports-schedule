@@ -1,8 +1,32 @@
+import { useCallback, useEffect } from "react";
 import { Box, Button, Checkbox, Dialog, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES} from "../../utils/consts.jsx"; 
 import PropTypes from "prop-types";
 
-function TicketModal({openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile}) {
+function TicketModal({openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file}) {
+
+  const handlePaste = useCallback((event) => {
+    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        const imageFile = new File([blob], "pasted-image.png", { type: blob.type });
+        setFile(imageFile);
+        break; 
+      }
+    }
+  }, [setFile]);
+
+  useEffect(() => {
+    if (openModal) {
+      window.addEventListener('paste', handlePaste);
+    }
+
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [openModal, handlePaste]);
+
   return (
     <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
       <DialogTitle>Add Ticket</DialogTitle>
@@ -94,7 +118,9 @@ function TicketModal({openModal, setOpenModal, currentTicket, handleChange, hand
 
           <Box sx={{ bgcolor: '#f9f9f9', p: 2, borderRadius: 1 }}>
             <Typography variant="caption" display="block" sx={{ mb: 1, fontWeight: 'bold' }}> TICKET IMAGE </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>Paste image from clipboard or select a file.</Typography>
             <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files[0])} />
+            {file && <Typography variant="body2" sx={{mt: 1}}>Selected file: {file.name}</Typography>}
           </Box>
 
           <Button variant="contained" onClick={handleSubmit} size="large" fullWidth sx={{ py: 1.5, fontWeight: 'bold' }}>
@@ -106,7 +132,6 @@ function TicketModal({openModal, setOpenModal, currentTicket, handleChange, hand
   );
 }
 
-
 TicketModal.propTypes = {
   openModal: PropTypes.bool.isRequired,
   setOpenModal: PropTypes.func.isRequired,
@@ -114,6 +139,7 @@ TicketModal.propTypes = {
   handleChange: PropTypes.func.isRequired,
   handleSubmit: PropTypes.func.isRequired,
   setFile: PropTypes.func.isRequired,
+  file: PropTypes.object,
 };
 
 export default TicketModal;

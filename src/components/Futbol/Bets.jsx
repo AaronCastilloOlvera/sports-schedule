@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Box, Chip, Fab, IconButton, Stack, Typography } from "@mui/material";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { Add, Delete, Edit } from '@mui/icons-material';
+import { Add, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
 import TicketModal from "./../modals/TicketModal";
 
 const initialStatedata = {
@@ -152,24 +152,32 @@ function Bets() {
     { 
       field: 'match_datetime', 
       headerName: 'Date Event', 
-      width: 180,
+      width: 100,
       valueGetter: (value) => new Date(value).toLocaleDateString()
     },
     {
       field: 'actions',
-      width: 100,
+      width: 150,
       headerName: 'Accions',
       sortable: false,
       disableColumnMenu: true,
       renderCell: (params) => {
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton color="error" onClick={() => handleDelete(params.row.ticket_id)} size="small">
+            <IconButton color="info" onClick={() => handleDelete(params.row.ticket_id)} size="small">
               <Delete /> 
             </IconButton>
-            <IconButton color="error" onClick={() => handleEdit(params.row.ticket_id)} size="small">
+            <IconButton color="info" onClick={() => handleEdit(params.row.ticket_id)} size="small">
               <Edit /> 
             </IconButton>
+
+            {
+              params.row.image_path && (
+                <IconButton color="info" size="small">
+                  <RemoveRedEye /> 
+                </IconButton>
+              )
+            }
           </Box>    
         )
       }
@@ -212,7 +220,8 @@ function Bets() {
         currentTicket={currentTicket} 
         handleChange={handleChange} 
         handleSubmit={handleSubmit} 
-        setFile={setFile} 
+        setFile={setFile}
+        file={file}
       />
     </Box>
   );
