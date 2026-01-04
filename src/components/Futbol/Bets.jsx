@@ -126,13 +126,15 @@ function Bets() {
       headerName: 'Odds', 
       type: 'number', 
       width: 90,
-      renderCell: (params) => <strong>{params.value}</strong> 
+      valueFormatter: (params) => params.value?.toFixed(2),
+      renderCell: (params) => <strong>{params.value}</strong>
     },
     { 
       field: 'stake', 
       headerName: 'Stake', 
       type: 'number', 
       width: 100,
+      
       valueFormatter: (value) => `$${value}` 
     },
     { 
