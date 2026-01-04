@@ -17,6 +17,7 @@ class ApiClient {
   constructor(baseURL, opts = {}) {
     if (!baseURL) throw new Error('ApiClient requires a baseURL');
     
+    console.log('baseURL', baseURL);
     this.client = axios.create({
       baseURL,
       timeout: opts.timeout || 8000,
