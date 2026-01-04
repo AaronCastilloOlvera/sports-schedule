@@ -31,7 +31,7 @@ function Bets() {
   const [editId, setEditId] = useState(null);
 
   const fetchTickets = () => {
-    apiClient.fetchBets()
+    apiClient.fetchTickets()
       .then((tickets) => { setTickets(tickets) }) 
       .catch((error) => console.error(error));
   }
@@ -82,6 +82,12 @@ function Bets() {
       alert("Error al crear el ticket" + error);
     }
   };
+
+  const handleAdd = () => {
+    setCurrentTicket(initialStatedata);
+    setEditId(null);
+    setOpenModal(true);
+  }
 
   const handleDelete = async (ticket_id) => {
     if (window.confirm("Are you sure?")) {
@@ -188,7 +194,7 @@ function Bets() {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
-        <Fab size="small" color="primary" aria-label="add" onClick={() => setOpenModal(true)}>
+        <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
           <Add />
         </Fab>
       </Stack>

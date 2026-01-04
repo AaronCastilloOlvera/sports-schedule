@@ -17,17 +17,8 @@ class ApiClient {
   constructor(baseURL, opts = {}) {
     if (!baseURL) throw new Error('ApiClient requires a baseURL');
 
-    let finalBaseURL = baseURL;
-    // In production, ensure the URL is HTTPS to avoid mixed content errors.
-    // In development, we trust the provided URL to allow for local http servers.
-    if (import.meta.env.PROD) {
-      finalBaseURL = `https://${baseURL.replace(/^(https?:\/\/)?/, '')}`;
-    }
-
-    console.log(`[${import.meta.env.MODE}] baseURL:`, finalBaseURL);
-
     this.client = axios.create({
-      baseURL: finalBaseURL,
+      baseURL,
       timeout: opts.timeout || 8000,
       headers: opts.headers || {}
     });
@@ -93,7 +84,7 @@ class ApiClient {
     }
   }
 
-  async fetchBets() {
+  async fetchTickets() {
     const response = await this.client.get('/bets/get-tickets');
     return response.data;
   }
