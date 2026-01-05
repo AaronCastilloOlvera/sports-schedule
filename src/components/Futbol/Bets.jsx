@@ -4,6 +4,7 @@ import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
 import TicketModal from "./../modals/TicketModal";
+import FutbolCharts from "./FutbolCharts";
 
 const initialStatedata = {
     ticket_id: '',
@@ -250,6 +251,7 @@ function Bets() {
         setFile={setFile}
         file={file}
       />
+      <FutbolCharts />
     </Box>
   );
 }
