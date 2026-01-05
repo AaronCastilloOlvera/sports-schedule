@@ -126,27 +126,46 @@ function Bets() {
       headerName: 'Odds', 
       type: 'number', 
       width: 90,
-      valueFormatter: (params) => params.value?.toFixed(2),
-      renderCell: (params) => <strong>{params.value}</strong>
+      renderCell: (params) => <strong>{params.formattedValue}</strong>,
+      valueFormatter: (value) => 
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value || 0)
     },
     { 
       field: 'stake', 
       headerName: 'Stake', 
       type: 'number', 
       width: 100,
-      
-      valueFormatter: (value) => `$${value}` 
+      valueFormatter: (value) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value || 0)
     },
     { 
       field: 'net_profit', 
-      headerName: 'Ganancia', 
+      headerName: 'Net Profit', 
       type: 'number', 
       width: 110,
-      renderCell: (params) => (
-        <span style={{ color: params.value >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }}>
-          {params.value >= 0 ? `+$${params.value}` : `-$${Math.abs(params.value)}`}
-        </span>
-      )
+      renderCell: (params) => {
+        const value = params.value || 0;
+        const formatted = new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(Math.abs(value));
+
+        return (
+          <span style={{ color: value >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }}>
+            {value >= 0 ? `+$${formatted}` : `-$${formatted}`}
+          </span>
+        )
+      }
     },
     { 
       field: 'status', 
