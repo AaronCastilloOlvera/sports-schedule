@@ -1,5 +1,6 @@
 
 export const BET_TYPES = [
+  { value: 'simple', label: 'Simple' },
   { value: 'derecha', label: 'Derecha' },
   { value: 'parlay', label: 'Parlay' },
   { value: 'teaser', label: 'Teaser' },
