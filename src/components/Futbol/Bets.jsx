@@ -120,13 +120,15 @@ function Bets() {
   }
 
   const columns = [
-    { field: 'ticket_id', headerName: 'ID', width: 120},
+    { field: 'ticket_id', headerName: 'ID', width: 120, align: 'center', headerAlign: 'center' },
     { field: 'pick', headerName: 'Pick', width: 250 },
     { 
       field: 'odds', 
       headerName: 'Odds', 
       type: 'number', 
       width: 90,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => <strong>{params.formattedValue}</strong>,
       valueFormatter: (value) => 
         new Intl.NumberFormat('en-US', {
@@ -141,6 +143,8 @@ function Bets() {
       headerName: 'Stake', 
       type: 'number', 
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       valueFormatter: (value) =>
         new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -154,6 +158,8 @@ function Bets() {
       headerName: 'Net Profit', 
       type: 'number', 
       width: 110,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         const value = params.value || 0;
         const formatted = new Intl.NumberFormat('en-US', {
@@ -172,6 +178,8 @@ function Bets() {
       field: 'status', 
       headerName: 'Status', 
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         const color = params.value === 'won' ? 'success' : params.value === 'lost' ? 'error' : 'warning';
         return <Chip label={params.value.toUpperCase()} color={color} size="small" />;
@@ -181,6 +189,8 @@ function Bets() {
       field: 'match_datetime', 
       headerName: 'Date Event', 
       width: 100,
+      align: 'center',
+      headerAlign: 'center',
       valueGetter: (value) => new Date(value).toLocaleDateString()
     },
     {
@@ -189,6 +199,8 @@ function Bets() {
       headerName: 'Accions',
       sortable: false,
       disableColumnMenu: true,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params) => {
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
