@@ -235,9 +235,17 @@ const Fixtures = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', marginRight: 1 }}>{match.teams.home.name}</Typography>
-                          <Box component="img" src={match.teams.home.logo} sx={{ width: 30, height: 30 }} />
+                        <Box  sx={{  display: 'flex', alignItems: 'center',  justifyContent: 'flex-end', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                            {match.teams.home.name}
+                          </Typography>
+                          
+                          <Box 
+                            component="img" 
+                            src={match.teams.home.logo} 
+                            alt={match.teams.home.name}
+                            sx={{  width: 30,  height: 30, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
+                          />
                         </Box>
                       </TableCell>
                       <TableCell align="center">
@@ -247,10 +255,17 @@ const Fixtures = () => {
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell align="left">
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Box component="img" src={match.teams.away.logo} sx={{ width: 30, height: 30, marginRight: 1 }} />
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{match.teams.away.name}</Typography>
+                      <TableCell align="right">
+                        <Box sx={{  display: 'flex', alignItems: 'center',  justifyContent: 'flex-start', gap: 1 }} >
+                          <Box 
+                            component="img" 
+                            src={match.teams.away.logo} 
+                            alt={match.teams.away.name}
+                            sx={{ width: 30, height: 30, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
+                          />
+                           <Typography variant="body2" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                            {match.teams.away.name}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
