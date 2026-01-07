@@ -221,7 +221,7 @@ function Bets() {
         </Fab>
       </Stack>
 
-      <Box sx={{ height: 500, width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
+      <Box sx={{ height: '100%', width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
         <DataGrid
           rows={tickets}
           columns={columns}
