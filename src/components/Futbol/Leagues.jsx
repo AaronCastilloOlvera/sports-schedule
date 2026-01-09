@@ -70,11 +70,11 @@ return (
             onClick={() => console.log("Seleccionada:", league.id)}
           >
             <ListItemAvatar>
-              <Avatar 
+              <Box 
+                component="img" 
                 src={league.logo} 
                 alt={league.name} 
-                variant="rounded"
-                sx={{ width: 40, height: 40 }}
+                sx={{  width: 50,  height: 50, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
               />
             </ListItemAvatar>
             <ListItemText
