@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Avatar, Box, TextField, List, ListItem, ListItemAvatar, LinearProgress, ListItemText, InputAdornment, Typography } from '@mui/material';
+import { Box, TextField, List, ListItem, ListItemAvatar, LinearProgress, ListItemText, InputAdornment, Typography, IconButton } from '@mui/material';
 import { apiClient } from '../../api/api';
 import SearchIcon from '@mui/icons-material/Search';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 
 function Leagues() {
 
@@ -34,6 +36,21 @@ function Leagues() {
     );
   }
 
+  const handleToggleFavorite = async (e, league) => {
+    e.stopPropagation();
+    const newStatus = !league.is_favorite;
+    const originalLeagues = [...leagues];
+
+    setLeagues(prev => prev.map(l => l.id === league.id ? { ...l, is_favorite: newStatus } : l));
+
+    try {
+      await apiClient.updateLeague(league.id, newStatus);
+    } catch (error) {
+      console.error('Error updating favorite:', error);
+      setLeagues(originalLeagues);
+    }
+  };
+
 return (
   <Box sx={{ width: '100%', maxWidth: 500, margin: '0 auto' }}>
     
@@ -63,7 +80,7 @@ return (
     }}>
       {filteredLeagues.length > 0 ? (
         filteredLeagues.map((league) => (
-          <ListItem 
+          <ListItem
             key={league.id} 
             divider
             sx={{ '&:hover': { bgcolor: 'action.hover', cursor: 'pointer' } }}
@@ -81,6 +98,9 @@ return (
               primary={league.name}
               secondary={`${league.type} - ID: ${league.id}`}
             />
+            <IconButton onClick={(e) => handleToggleFavorite(e, league)}>
+              {league.is_favorite ? <StarIcon color="warning" /> : <StarBorderIcon />}
+            </IconButton>
           </ListItem>
         ))
       ) : (

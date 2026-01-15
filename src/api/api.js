@@ -42,6 +42,11 @@ class ApiClient {
     }
   }
 
+  async updateLeague(leagueId, isFavorite) {
+    const response = await this.client.put(`/leagues/update-league?league_id=${leagueId}&is_favorite=${isFavorite}`);
+    return response.data;
+  }
+
   async fetchFavoriteLeagues() {
     try {
       const response = await this.client.get('/leagues/favorite');
