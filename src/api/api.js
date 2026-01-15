@@ -48,13 +48,8 @@ class ApiClient {
   }
 
   async fetchFavoriteLeagues() {
-    try {
-      const response = await this.client.get('/leagues/favorite');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching favorite leagues:', error);
-      throw error;
-    }
+    const response = await this.client.get('/leagues/favorite-leagues');
+    return response.data;
   }
 
   async fetchFixtures(date='2025-12-14') {
