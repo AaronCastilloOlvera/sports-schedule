@@ -52,14 +52,20 @@ class ApiClient {
     return response.data;
   }
 
+  // Matches 
   async fetchFixtures(date='2025-12-14') {
-    try {
-      const response = await this.client.get(`/matches/by-date?date=${date}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching fixtures:', error);
-      throw error;
-    }
+    const response = await this.client.get(`/matches/by-date?date=${date}`);
+    return response.data;
+  }
+
+  async fetchHeadToHeadMatches(teamId1, teamId2) {
+    const response = await this.client.get(`/matches/headtohead?team1=${teamId1}&team2=${teamId2}`);
+    return response.data;
+  }
+
+  async fetchHeadToHeadCachedMatches() {
+    const response = await this.client.get(`/matches/headtohead/cached-keys`);
+    return response.data;
   }
 
   async fetchRefreshFixtures(date='2025-12-14') {
@@ -84,6 +90,7 @@ class ApiClient {
     }
   }
 
+  // Tickets
   async fetchTickets() {
     const response = await this.client.get('/bets/get-tickets');
     return response.data;

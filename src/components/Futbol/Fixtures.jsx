@@ -3,9 +3,10 @@ import { Avatar, Box, Chip, IconButton, LinearProgress, Table, TableBody, TableC
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { ChevronLeft, ChevronRight, Refresh } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Refresh, Insights } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
+import H2HModal from '../modals/H2HModal';
 
 const Fixtures = () => {
 
@@ -13,6 +14,23 @@ const Fixtures = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedLeagues, setSelectedLeagues] = useState([]);
+  const [h2hModalOpen, setH2hModalOpen] = useState(false);
+  const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
+  const [cachedH2H, setCachedH2H] = useState(new Set());
+
+  const fetchCachedKeys = () => {
+    apiClient.fetchHeadToHeadCachedMatches()
+      .then(cachedKeys => {
+        setCachedH2H(new Set(cachedKeys));
+      })
+      .catch(error => {
+        console.error('Error fetching cached H2H keys:', error);
+      });
+  };
+
+  useEffect(() => {
+    fetchCachedKeys();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +80,17 @@ const Fixtures = () => {
         console.error('Error refreshing fixtures:', error);
         setLoading(false);
       });
+  };
+
+  const handleOpenH2HModal = (team1Id, team2Id) => {
+    setSelectedTeams({ team1: team1Id, team2: team2Id });
+    setH2hModalOpen(true);
+  };
+
+  const handleCloseH2HModal = () => {
+    setH2hModalOpen(false);
+    setSelectedTeams({ team1: null, team2: null });
+    fetchCachedKeys();
   };
 
   const filteredFixtures = selectedLeagues.length > 0
@@ -194,6 +223,7 @@ const Fixtures = () => {
                   <TableCell align="center">Marcador</TableCell>
                   <TableCell align="left">Visitante</TableCell>
                   <TableCell>Estadio</TableCell>
+                  <TableCell>Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -255,7 +285,7 @@ const Fixtures = () => {
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="left">
                         <Box sx={{  display: 'flex', alignItems: 'center',  justifyContent: 'flex-start', gap: 1 }} >
                           <Box 
                             component="img" 
@@ -271,6 +301,16 @@ const Fixtures = () => {
                       <TableCell>
                         <Typography variant="caption" color="textSecondary">{match.fixture.venue.name}</Typography>
                       </TableCell>
+                      <TableCell>
+                        <Tooltip title="Head to Head">
+                          <IconButton 
+                            onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)}
+                            color={cachedH2H.has(`h2h:${match.teams.home.id}&${match.teams.away.id}`) ? 'success' : 'default'}
+                          >
+                            <Insights />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -278,6 +318,12 @@ const Fixtures = () => {
             </Table>
           </TableContainer>
         )}
+        <H2HModal 
+          open={h2hModalOpen}
+          onClose={handleCloseH2HModal}
+          team1Id={selectedTeams.team1}
+          team2Id={selectedTeams.team2}
+        />
       </Box>
     </LocalizationProvider>
   );
