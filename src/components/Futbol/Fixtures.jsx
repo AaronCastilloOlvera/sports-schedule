@@ -35,12 +35,24 @@ const Fixtures = () => {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    const formattedDate = selectedDate.format('YYYY-MM-DD');
-    
-    apiClient.fetchFixtures(formattedDate)
-      .then((response) => {
+
+    const localTargetDate = selectedDate.format('YYYY-MM-DD');
+    const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
+
+    Promise.all([
+      apiClient.fetchFixtures(localTargetDate),
+      apiClient.fetchFixtures(nextDay)
+    ])
+      .then(([responseToday, responseTomorrow]) => {
         if (mounted) {
-          setFixtures(response.data);
+          const combinedFixtures = [...responseToday.data, ...responseTomorrow.data];
+
+          const trueLocalFixtures = combinedFixtures.filter(match => {
+            const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
+            return matchLocalDay === localTargetDate;
+          });
+
+          setFixtures(trueLocalFixtures);
           setLoading(false);
         }
       })
