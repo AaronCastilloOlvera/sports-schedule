@@ -45,7 +45,7 @@ const Fixtures = () => {
     ])
       .then(([responseToday, responseTomorrow]) => {
         if (mounted) {
-          const combinedFixtures = [...responseToday.data, ...responseTomorrow.data];
+          const combinedFixtures = [...responseToday, ...responseTomorrow];
 
           const trueLocalFixtures = combinedFixtures.filter(match => {
             const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
