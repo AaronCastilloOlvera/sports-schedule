@@ -33,35 +33,7 @@ const Fixtures = () => {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-
-    const localTargetDate = selectedDate.format('YYYY-MM-DD');
-    const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
-
-    Promise.all([
-      apiClient.fetchFixtures(localTargetDate),
-      apiClient.fetchFixtures(nextDay)
-    ])
-      .then(([responseToday, responseTomorrow]) => {
-        if (mounted) {
-          const combinedFixtures = [...responseToday, ...responseTomorrow];
-
-          const trueLocalFixtures = combinedFixtures.filter(match => {
-            const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
-            return matchLocalDay === localTargetDate;
-          });
-
-          setFixtures(trueLocalFixtures);
-          setLoading(false);
-        }
-      })
-      .catch((error) => {
-        console.error('Error fetching fixtures:', error);
-        setLoading(false);
-      });
-
-    return () => { mounted = false; };
+    loadMatchesData(false);
   }, [selectedDate]);
 
   const handlePreviousDay = () => {
@@ -81,17 +53,7 @@ const Fixtures = () => {
   };
 
   const handleRefreshFixtures = () => {
-    setLoading(true);
-    const formattedDate = selectedDate.format('YYYY-MM-DD');
-    apiClient.fetchRefreshFixtures(formattedDate)
-      .then((response) => {
-        setFixtures(response.data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error refreshing fixtures:', error);
-        setLoading(false);
-      });
+    loadMatchesData(true);
   };
 
   const handleOpenH2HModal = (team1Id, team2Id) => {
@@ -104,6 +66,35 @@ const Fixtures = () => {
     setSelectedTeams({ team1: null, team2: null });
     fetchCachedKeys();
   };
+
+  const loadMatchesData = (forceRefresh = false) => {
+    setLoading(true);
+
+    const localTargetDate = selectedDate.format('YYYY-MM-DD');
+    const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
+
+    const method = forceRefresh ? 'fetchRefreshFixtures' : 'fetchFixtures';
+
+    Promise.all([
+      apiClient[method](localTargetDate),
+      apiClient[method](nextDay)
+    ])
+      .then(([responseToday, responseTomorrow]) => {
+        const combinedFixtures = [...responseToday.data, ...responseTomorrow.data];
+
+        const trueLocalFixtures = combinedFixtures.filter(match => {
+            const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
+            return matchLocalDay === localTargetDate;
+          });
+
+          setFixtures(trueLocalFixtures);
+          setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading matches:', error);
+        setLoading(false);
+      });
+  }
 
   const filteredFixtures = selectedLeagues.length > 0
     ? fixtures?.filter((match) => selectedLeagues.includes(match.league.id))
@@ -251,8 +242,8 @@ const Fixtures = () => {
                               src={match.league.logo} 
                               alt={match.league.name} 
                               sx={{ 
-                                width: 24, 
-                                height: 24, 
+                                width: 35, 
+                                height: 35, 
                                 marginRight: 1,
                                 objectFit: 'contain', 
                                 borderRadius: '4px',
@@ -286,7 +277,7 @@ const Fixtures = () => {
                             component="img" 
                             src={match.teams.home.logo} 
                             alt={match.teams.home.name}
-                            sx={{  width: 30,  height: 30, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
+                            sx={{  width: 35,  height: 35, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
                           />
                         </Box>
                       </TableCell>
@@ -303,7 +294,7 @@ const Fixtures = () => {
                             component="img" 
                             src={match.teams.away.logo} 
                             alt={match.teams.away.name}
-                            sx={{ width: 30, height: 30, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
+                            sx={{ width: 35, height: 35, objectFit: 'contain', display: 'block', flexShrink: 0 }} 
                           />
                            <Typography variant="body2" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
                             {match.teams.away.name}
