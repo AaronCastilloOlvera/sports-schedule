@@ -31,7 +31,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
       setLoading(true);
       apiClient.fetchHeadToHeadMatches(team1Id, team2Id)
         .then(response => {
-          setH2hData(response?.slice(0, 10));
+          setH2hData(response?.data.slice(0, 10));
         })
         .catch(error => {
           console.error('Error fetching H2H data:', error);

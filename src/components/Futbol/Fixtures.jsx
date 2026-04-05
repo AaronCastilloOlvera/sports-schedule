@@ -16,21 +16,6 @@ const Fixtures = () => {
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
-  const [cachedH2H, setCachedH2H] = useState(new Set());
-
-  const fetchCachedKeys = () => {
-    apiClient.fetchHeadToHeadMatches()
-      .then(cachedKeys => {
-        setCachedH2H(new Set(cachedKeys));
-      })
-      .catch(error => {
-        console.error('Error fetching cached H2H keys:', error);
-      });
-  };
-
-  useEffect(() => {
-    fetchCachedKeys();
-  }, []);
 
   useEffect(() => {
     loadMatchesData(false);
@@ -64,7 +49,6 @@ const Fixtures = () => {
   const handleCloseH2HModal = () => {
     setH2hModalOpen(false);
     setSelectedTeams({ team1: null, team2: null });
-    fetchCachedKeys();
   };
 
   const loadMatchesData = (forceRefresh = false) => {
@@ -308,7 +292,6 @@ const Fixtures = () => {
                         <Tooltip title="Head to Head">
                           <IconButton 
                             onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)}
-                            color={cachedH2H.has(`h2h:${match.teams.home.id}&${match.teams.away.id}`) ? 'success' : 'default'}
                           >
                             <Insights />
                           </IconButton>
