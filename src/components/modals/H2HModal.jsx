@@ -19,8 +19,8 @@ const modalStyle = {
   boxShadow: 24,
   p: { xs: 2, md: 4 },
   borderRadius: 3,
-  maxHeight: '70vh',
-  overflowY: 'auto'
+  height: '70vh',
+  overflow: 'hidden'
 };
 
 const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
@@ -74,9 +74,9 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress /></Box>
         ) : h2hData.length > 0 ? (
-          <>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             { /* HEADER WITH TEAMS AND NEXT MATCH */ }
-            <Box sx={{ mt: 2, mb: 4, textAlign: 'center' }}>
+            <Box sx={{ mt: 2, mb: 4, textAlign: 'center', flexShrink: 0 }}>
               <Stack direction="row" spacing={3} alignItems="center" justifyContent="center">
                 <Stack alignItems="center" sx={{ flex: 1 }}>
                   <Box 
@@ -138,9 +138,9 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
               )}
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
-            { /* PAST MATCHES TABLE WITH FILTERS */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Divider sx={{ mb: 3, flexShrink: 0 }} />
+            { /* PAST MATCHES TABLE WITH FILTERS */ }
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexShrink: 0 }}>
               <Typography variant="h6" fontWeight="bold">Last Matches</Typography>
               <ButtonGroup size="small" aria-label="filtros de localia">
                 <Button 
@@ -158,7 +158,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
               </ButtonGroup>
             </Stack>
 
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', flex: 1, overflow: 'auto' }}>
               <Table size="small">
                 <TableHead sx={{ bgcolor: 'grey.100' }}>
                   <TableRow>
@@ -220,7 +220,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
                 </Typography>
               )}
             </TableContainer>
-          </>
+          </Box>
         ) : (
           <Typography sx={{ mt: 2, textAlign: 'center' }}>No se encontraron datos.</Typography>
         )}
