@@ -64,13 +64,8 @@ class ApiClient {
   }
 
   async fetchRefreshFixtures(date='2025-12-14') {
-    try {
-      const response = await this.client.post(`/redis/refresh-fixtures-cache?date=${date}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error refreshing cache:', error);
-      throw error;
-    }
+    const response = await this.client.post(`/redis/refresh-fixtures-cache?date=${date}`);
+    return response.data;
   }
 
   async fetchAnalyzeTicket(imageData) {
