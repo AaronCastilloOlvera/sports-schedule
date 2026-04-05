@@ -63,11 +63,6 @@ class ApiClient {
     return response.data;
   }
 
-  async fetchHeadToHeadCachedMatches() {
-    const response = await this.client.get(`/matches/headtohead/cached-keys`);
-    return response.data;
-  }
-
   async fetchRefreshFixtures(date='2025-12-14') {
     try {
       const response = await this.client.post(`/redis/refresh-fixtures-cache?date=${date}`);
