@@ -19,7 +19,7 @@ const Fixtures = () => {
   const [cachedH2H, setCachedH2H] = useState(new Set());
 
   const fetchCachedKeys = () => {
-    apiClient.fetchHeadToHeadCachedMatches()
+    apiClient.fetchHeadToHeadMatches()
       .then(cachedKeys => {
         setCachedH2H(new Set(cachedKeys));
       })
