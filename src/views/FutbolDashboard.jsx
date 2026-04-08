@@ -18,10 +18,11 @@ function FutbolTab(props) {
       sx={{
         width: '100%',
         transition: 'all 0.3s ease',
+        boxSizing: 'border-box'
       }}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1, md: 3 }, width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
           {children}
         </Box>
       )}
@@ -37,9 +38,15 @@ export default function FutbolDashboard() {
   };
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={handleChange}>
+    <Box sx={{ width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={handleChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Tab label="En Vivo" />
           <Tab label="Mis Ligas" />
           <Tab label="Control" />
