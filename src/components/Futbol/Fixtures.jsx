@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Avatar, Box, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Paper, Stack, Tooltip } from '@mui/material';
+import { Avatar, Box, Card, CardContent, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
+  Typography, Paper, Stack, Tooltip, useMediaQuery } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -16,6 +17,8 @@ const Fixtures = () => {
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
+
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     loadMatchesData(false);
@@ -111,30 +114,34 @@ const Fixtures = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1, mb: 3 }}>
 
-          <IconButton onClick={handlePreviousDay} color='primary'>
-            <ChevronLeft />
-          </IconButton>
-
-          <DatePicker
-            label="Seleccionar Fecha"
-            value={selectedDate}
-            onChange={(newValue) => setSelectedDate(newValue)}
-            format='DD/MM/YYYY'
-            slotProps={{ textField: { size: 'small', readOnly: true } }}
-          />
-
-          <IconButton onClick={handleNextDay} color='primary'>
-            <ChevronRight />
-          </IconButton>
-
-          <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title="Refrescar Ligas">
-            <IconButton onClick={handleRefreshFixtures} color='primary'>
-              <Refresh />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, order: { xs: 1, sm: 0 } }}>
+            <IconButton onClick={handlePreviousDay} color='primary'>
+              <ChevronLeft />
             </IconButton>
-          </Tooltip>
+
+            <DatePicker
+              label="Seleccionar Fecha"
+              value={selectedDate}
+              onChange={(newValue) => setSelectedDate(newValue)}
+              format='DD/MM/YYYY'
+              slotProps={{ textField: { size: 'small', readOnly: true } }}
+            />
+
+            <IconButton onClick={handleNextDay} color='primary'>
+              <ChevronRight />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ flexGrow: 1, order: { xs: 3, sm: 0 } }} />
+          <Box sx={{ order: { xs: 2, sm: 0 } }}>
+            <Tooltip title="Refrescar Ligas">
+              <IconButton onClick={handleRefreshFixtures} color='primary'>
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         <Stack 
@@ -198,6 +205,75 @@ const Fixtures = () => {
           <LinearProgress />
         ) : !filteredFixtures || filteredFixtures.length === 0 ? (
           <Typography>No hay partidos disponibles para esta fecha.</Typography>
+        ) : isMobile ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filteredFixtures.map((match, index) => {
+              const matchDate = new Date(match.fixture.date);
+              return (
+                <Card key={match.fixture.id || index} elevation={2} sx={{ borderRadius: 2 }}>
+                  <CardContent sx={{ pb: '16px !important' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {match.league.logo && (
+                          <Box component="img" src={match.league.logo} alt={match.league.name} sx={{ width: 24, height: 24, objectFit: 'contain' }} />
+                        )}
+                        <Typography variant="caption" color="textSecondary">
+                          {match.league.name}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                          {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Typography>
+                        <Chip 
+                          label={match.fixture.status.short} 
+                          size="small" 
+                          color={match.fixture.status.short === 'FT' ? 'default' : 'primary'}
+                          sx={{ height: 20, fontSize: '0.65rem' }}
+                        />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, textAlign: 'center' }}>
+                        <Box component="img" src={match.teams.home.logo} sx={{ width: 45, height: 45, objectFit: 'contain', mb: 0.5 }} />
+                        <Typography variant="body2" fontWeight="bold" lineHeight={1.2}>
+                          {match.teams.home.name}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ px: 2 }}>
+                        <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
+                          <Typography variant="h6" fontWeight="bold">
+                            {match.goals.home ?? '-'} : {match.goals.away ?? '-'}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, textAlign: 'center' }}>
+                        <Box component="img" src={match.teams.away.logo} sx={{ width: 45, height: 45, objectFit: 'contain', mb: 0.5 }} />
+                        <Typography variant="body2" fontWeight="bold" lineHeight={1.2}>
+                          {match.teams.away.name}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 1.5, borderTop: '1px solid #eeeeee' }}>
+                      <Typography variant="caption" color="textSecondary" sx={{ maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        🏟️ {match.fixture.venue.name || 'Estadio por definir'}
+                      </Typography>
+                      <IconButton size="small" onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)} color="primary">
+                        <Insights fontSize="small" />
+                      </IconButton>
+                    </Box>
+
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
         ) : (
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 650 }} aria-label="tabla de partidos">
