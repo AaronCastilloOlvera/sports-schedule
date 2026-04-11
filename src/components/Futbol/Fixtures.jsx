@@ -22,8 +22,8 @@ const Fixtures = () => {
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  const loadMatchesData = useCallback((forceRefresh = false) => {
-    setLoading(true);
+  const loadMatchesData = useCallback((forceRefresh = false, showLoading = true) => {
+    if (showLoading) setLoading(true);
 
     const localTargetDate = selectedDate.format('YYYY-MM-DD');
     const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
@@ -52,10 +52,10 @@ const Fixtures = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    loadMatchesData(false);
+    loadMatchesData(false, true);
 
     const interva = setInterval(() => {
-      loadMatchesData(false);
+      loadMatchesData(false, false);
     }, 60000);
 
     return () => clearInterval(interva);
