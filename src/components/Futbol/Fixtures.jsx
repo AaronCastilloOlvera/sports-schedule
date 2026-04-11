@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Avatar, Box, Card, CardContent, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   Typography, Paper, Stack, Tooltip, useMediaQuery } from '@mui/material';
+import { keyframes } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -20,9 +21,46 @@ const Fixtures = () => {
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
+  const statusPriority = {
+    // In Progress (Priority 1)
+    '1H': 1, 'HT': 1, '2H': 1, 'ET': 1, 'BT': 1, 'P': 1, 'LIVE': 1, 'INT': 1,
+    // Not Started (Priority 2)
+    'NS': 2, 'TBD': 2,
+    // Finished (Priority 3)
+    'FT': 3, 'AET': 3, 'PEN': 3, 'PST': 3, 'CANC': 3
+  };
+
   useEffect(() => {
     loadMatchesData(false);
   }, [selectedDate]);
+
+  const processedFixtures = useMemo(() => {
+    
+    if (!fixtures) return [];
+
+    // Filter by favorite leagues
+    const filtered = selectedLeagues.length > 0
+      ? fixtures.filter((match) => selectedLeagues.includes(match.league.id))
+      : fixtures;
+
+    // Order by status priority and then by time
+    return [...filtered].sort((a, b) => {
+      const statusA = a.fixture.status.short;
+      const statusB = b.fixture.status.short;
+      
+      const priorityA = statusPriority[statusA] || 2;
+      const priorityB = statusPriority[statusB] || 2;
+
+      // Priority: 1 = Live, 2 = Not Started, 3 = Finished
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // If same priority, order by time
+      return new Date(a.fixture.date) - new Date(b.fixture.date);
+    });
+
+  }, [fixtures, selectedLeagues]);
 
   const handlePreviousDay = () => {
     setSelectedDate(prevDate => prevDate.subtract(1, 'day'));
@@ -83,9 +121,11 @@ const Fixtures = () => {
       });
   }
 
-  const filteredFixtures = selectedLeagues.length > 0
-    ? fixtures?.filter((match) => selectedLeagues.includes(match.league.id))
-    : fixtures;
+  const pulseAnimation = keyframes`
+    0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(229, 57, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+  `;
 
   const leaguesSummary = fixtures?.reduce((summary, match) => {
     const leagueId = match.league.id;
@@ -203,12 +243,13 @@ const Fixtures = () => {
 
         {loading ? (
           <LinearProgress />
-        ) : !filteredFixtures || filteredFixtures.length === 0 ? (
+        ) : processedFixtures.length === 0 ? (
           <Typography>No hay partidos disponibles para esta fecha.</Typography>
         ) : isMobile ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {filteredFixtures.map((match, index) => {
+            {processedFixtures.map((match, index) => {
               const matchDate = new Date(match.fixture.date);
+              const isLive = statusPriority[match.fixture.status.short] === 1; // Prioridad 1 = En Vivo
               return (
                 <Card key={match.fixture.id || index} elevation={2} sx={{ borderRadius: 2 }}>
                   <CardContent sx={{ pb: '16px !important' }}>
@@ -225,11 +266,18 @@ const Fixtures = () => {
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                           {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Typography>
-                        <Chip 
-                          label={match.fixture.status.short} 
-                          size="small" 
-                          color={match.fixture.status.short === 'FT' ? 'default' : 'primary'}
-                          sx={{ height: 20, fontSize: '0.65rem' }}
+
+                        <Chip
+                          label={isLive && match.fixture.status.elapsed ? `${match.fixture.status.elapsed}'` : match.fixture.status.short}
+                          size='small'
+                          color={isLive ? 'error' : match.fixture.status.short === 'FT' ? 'default' : 'primary'}
+                          sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem',
+                              fontWeight: isLive ? 'bold' : 'normal',
+                              animation: isLive ? `${pulseAnimation} 2s infinite` : 'none',
+                              borderRadius: '4px'
+                            }}
                         />
                       </Box>
                     </Box>
@@ -290,8 +338,9 @@ const Fixtures = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredFixtures?.map((match, index) => {
+                {processedFixtures?.map((match, index) => {
                   const matchDate = new Date(match.fixture.date);
+                  const isLive = statusPriority[match.fixture.status.short] === 1;
                   return (
                     <TableRow key={match.fixture.id || index}>
                       <TableCell>
@@ -315,11 +364,17 @@ const Fixtures = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          label={match.fixture.status.short} 
-                          size="small" 
-                          color={match.fixture.status.short === 'FT' ? 'default' : 'primary'}
-                          sx={{ height: 20, fontSize: '0.65rem' }}
+                        <Chip
+                          label={isLive && match.fixture.status.elapsed ? `${match.fixture.status.elapsed}'` : match.fixture.status.short}
+                          size='small'
+                          color={isLive ? 'error' : match.fixture.status.short === 'FT' ? 'default' : 'primary'}
+                          sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem',
+                              fontWeight: isLive ? 'bold' : 'normal',
+                              animation: isLive ? `${pulseAnimation} 2s infinite` : 'none',
+                              borderRadius: '4px'
+                            }}
                         />
                       </TableCell>
                       <TableCell>
