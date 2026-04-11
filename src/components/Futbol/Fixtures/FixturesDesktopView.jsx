@@ -2,8 +2,21 @@ import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
 import PropTypes from "prop-types";
 import LiveStatusChip from './LiveStatusChip';
 import { Insights } from '@mui/icons-material';
+import { React } from 'react';
 
-export default function FixturesDesktopView({ processedFixtures, handleOpenH2HModal }) {
+// Use just some chages.
+const onlyUpdateIfAreChange = (prevProps, nextProps) => {
+  const oldMatch = prevProps.match;
+  const newMatch = nextProps.match;
+
+  return (
+    oldMatch.fixture.status.short === newMatch.fixture.status.short &&
+    oldMatch.goals.home === newMatch.goals.home &&
+    oldMatch.goals.away === newMatch.goals.away
+  );
+}
+
+function FixturesDesktopView({ matches, handleOpenH2HModal }) {
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} aria-label="tabla de partidos">
@@ -19,7 +32,7 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
           </TableRow>
         </TableHead>
         <TableBody>
-          {processedFixtures?.map((match, index) => {
+          {matches?.map((match, index) => {
             return (
               <TableRow key={match.fixture.id || index}>
                 <TableCell>
@@ -101,6 +114,8 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
 }
 
 FixturesDesktopView.propTypes = {
-  processedFixtures: PropTypes.array.isRequired,
+  matches: PropTypes.array.isRequired,
   handleOpenH2HModal: PropTypes.func.isRequired,
 };
+
+export default React.memo(FixturesDesktopView, onlyUpdateIfAreChange);
