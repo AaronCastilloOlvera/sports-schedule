@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Avatar, Box, Chip, IconButton, LinearProgress, Typography, Stack, Tooltip, useMediaQuery } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -22,6 +22,35 @@ const Fixtures = () => {
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
+  const loadMatchesData = useCallback((forceRefresh = false) => {
+    setLoading(true);
+
+    const localTargetDate = selectedDate.format('YYYY-MM-DD');
+    const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
+
+    const method = forceRefresh ? 'fetchRefreshFixtures' : 'fetchFixtures';
+
+    Promise.all([
+      apiClient[method](localTargetDate),
+      apiClient[method](nextDay)
+    ])
+      .then(([responseToday, responseTomorrow]) => {
+        const combinedFixtures = [...responseToday.data, ...responseTomorrow.data];
+
+        const trueLocalFixtures = combinedFixtures.filter(match => {
+          const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
+          return matchLocalDay === localTargetDate;
+        });
+
+        setFixtures(trueLocalFixtures);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading matches:', error);
+        setLoading(false);
+      });
+  }, [selectedDate]);
+
   useEffect(() => {
     loadMatchesData(false);
 
@@ -31,9 +60,7 @@ const Fixtures = () => {
 
     return () => clearInterval(interva);
 
-  }, [selectedDate]);
-
-  
+  }, [selectedDate, loadMatchesData]);
 
   const processedFixtures = useMemo(() => {
 
@@ -92,35 +119,6 @@ const Fixtures = () => {
     setH2hModalOpen(false);
     setSelectedTeams({ team1: null, team2: null });
   };
-
-  const loadMatchesData = (forceRefresh = false) => {
-    setLoading(true);
-
-    const localTargetDate = selectedDate.format('YYYY-MM-DD');
-    const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
-
-    const method = forceRefresh ? 'fetchRefreshFixtures' : 'fetchFixtures';
-
-    Promise.all([
-      apiClient[method](localTargetDate),
-      apiClient[method](nextDay)
-    ])
-      .then(([responseToday, responseTomorrow]) => {
-        const combinedFixtures = [...responseToday.data, ...responseTomorrow.data];
-
-        const trueLocalFixtures = combinedFixtures.filter(match => {
-          const matchLocalDay = dayjs(match.fixture.date).format('YYYY-MM-DD');
-          return matchLocalDay === localTargetDate;
-        });
-
-        setFixtures(trueLocalFixtures);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Error loading matches:', error);
-        setLoading(false);
-      });
-  }
 
   const leaguesSummary = fixtures?.reduce((summary, match) => {
     const leagueId = match.league.id;

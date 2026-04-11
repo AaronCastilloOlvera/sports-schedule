@@ -127,7 +127,7 @@ MatchRow.propTypes = {
   handleOpenH2HModal: PropTypes.func.isRequired,
 };
 
-function FixturesDesktopView({ matches, handleOpenH2HModal }) {
+function FixturesDesktopView({ processedFixtures, handleOpenH2HModal }) {
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }} aria-label="tabla de partidos">
@@ -143,7 +143,7 @@ function FixturesDesktopView({ matches, handleOpenH2HModal }) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {matches?.map((match) => (
+          {processedFixtures?.map((match) => (
             <MatchRow key={match.fixture.id} match={match} handleOpenH2HModal={handleOpenH2HModal} />
           ))}
         </TableBody>
@@ -153,7 +153,7 @@ function FixturesDesktopView({ matches, handleOpenH2HModal }) {
 }
 
 FixturesDesktopView.propTypes = {
-  matches: PropTypes.array.isRequired,
+  processedFixtures: PropTypes.array.isRequired,
   handleOpenH2HModal: PropTypes.func.isRequired,
 };
 
