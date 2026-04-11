@@ -21,12 +21,7 @@ export default function FixtureMobileView({ processedFixtures, handleOpenH2HModa
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Typography>
-
-                  <LiveStatusChip statusShort={match.fixture.status.short} elapsed={match.fixture.status.elapsed} />
-                  
+                  <LiveStatusChip fixture={match.fixture} />
                 </Box>
               </Box>
 

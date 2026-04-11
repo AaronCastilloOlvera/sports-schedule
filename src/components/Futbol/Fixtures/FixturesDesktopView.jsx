@@ -10,7 +10,6 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
         <TableHead>
           <TableRow>
             <TableCell>Liga</TableCell>
-            <TableCell>Status</TableCell>
             <TableCell>Hora</TableCell>
             <TableCell align="right">Local</TableCell>
             <TableCell align="center">Marcador</TableCell>
@@ -21,7 +20,6 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
         </TableHead>
         <TableBody>
           {processedFixtures?.map((match, index) => {
-            const matchDate = new Date(match.fixture.date);
             return (
               <TableRow key={match.fixture.id || index}>
                 <TableCell>
@@ -45,12 +43,7 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <LiveStatusChip statusShort={match.fixture.status.short} elapsed={match.fixture.status.elapsed} />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Typography>
+                  <LiveStatusChip fixture={match.fixture} />
                 </TableCell>
                 <TableCell align="right">
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
