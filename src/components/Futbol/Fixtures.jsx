@@ -56,7 +56,7 @@ const Fixtures = () => {
 
     const interva = setInterval(() => {
       loadMatchesData(false, false);
-    }, 60000);
+    }, 15000);
 
     return () => clearInterval(interva);
 

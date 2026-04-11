@@ -4,14 +4,13 @@ import LiveStatusChip from './LiveStatusChip';
 import { Insights } from '@mui/icons-material';
 import React from 'react';
 
-// Comparación para filas individuales
 const areRowsEqual = (prevProps, nextProps) => {
   const prev = prevProps.match;
   const next = nextProps.match;
   return (
-    prev.fixture.status.short === next.fixture.status.short &&
     prev.goals.home === next.goals.home &&
     prev.goals.away === next.goals.away &&
+    prev.fixture.status.elapsed === next.fixture.status.elapsed &&
     prev.fixture.id === next.fixture.id
   );
 };
