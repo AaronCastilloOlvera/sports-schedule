@@ -1,6 +1,7 @@
 import { Chip, Typography } from '@mui/material';
 import { keyframes } from '@mui/system';
 import PropTypes from "prop-types";
+import { statusPriority } from './consts';
 
 const pulseAnimation = keyframes`
   0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
@@ -8,21 +9,12 @@ const pulseAnimation = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
 `;
 
-const statusPriority = {
-    // In Progress (Priority 1)
-    '1H': 1, 'HT': 1, '2H': 1, 'ET': 1, 'BT': 1, 'P': 1, 'LIVE': 1, 'INT': 1,
-    // Not Started (Priority 2)
-    'NS': 2, 'TBD': 2,
-    // Finished (Priority 3)
-    'FT': 3, 'AET': 3, 'PEN': 3, 'PST': 3, 'CANC': 3
-  };
-
 export default function LiveStatusChip({ fixture }) {
   const { status, date } = fixture;
   const shortStatus = status.short;
   const isLive = statusPriority[shortStatus] === 1;
   const isFinished = statusPriority[shortStatus] === 3;
-  
+
   // Case 1. Not started matches show the scheduled time
   if (shortStatus === 'NS' || shortStatus === 'TBD') {
     const localTime = new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

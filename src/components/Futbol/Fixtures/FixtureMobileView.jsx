@@ -7,7 +7,6 @@ export default function FixtureMobileView({ processedFixtures, handleOpenH2HModa
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {processedFixtures.map((match, index) => {
-        const matchDate = new Date(match.fixture.date);
         return (
           <Card key={match.fixture.id || index} elevation={2} sx={{ borderRadius: 2 }}>
             <CardContent sx={{ pb: '16px !important' }}>
