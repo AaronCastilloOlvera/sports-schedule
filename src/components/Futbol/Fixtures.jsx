@@ -11,6 +11,8 @@ import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
 import { statusPriority } from './Fixtures/consts';
 
+const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000; 
+
 const Fixtures = () => {
 
   const [fixtures, setFixtures] = useState(null);
@@ -56,7 +58,7 @@ const Fixtures = () => {
 
     const interva = setInterval(() => {
       loadMatchesData(false, false);
-    }, 15000);
+    }, POLLING_TIME);
 
     return () => clearInterval(interva);
 
