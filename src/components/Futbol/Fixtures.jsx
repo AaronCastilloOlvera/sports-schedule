@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Avatar, Box, Card, CardContent, Chip, IconButton, LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
   Typography, Paper, Stack, Tooltip, useMediaQuery } from '@mui/material';
-import { keyframes } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -9,6 +8,7 @@ import { ChevronLeft, ChevronRight, Refresh, Insights } from '@mui/icons-materia
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import H2HModal from '../modals/H2HModal';
+import LiveStatusChip from './Fixtures/LiveStatusChip';
 
 const Fixtures = () => {
 
@@ -121,11 +121,7 @@ const Fixtures = () => {
       });
   }
 
-  const pulseAnimation = keyframes`
-    0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
-    70% { box-shadow: 0 0 0 6px rgba(229, 57, 53, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
-  `;
+ 
 
   const leaguesSummary = fixtures?.reduce((summary, match) => {
     const leagueId = match.league.id;
@@ -249,7 +245,6 @@ const Fixtures = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {processedFixtures.map((match, index) => {
               const matchDate = new Date(match.fixture.date);
-              const isLive = statusPriority[match.fixture.status.short] === 1; // Prioridad 1 = En Vivo
               return (
                 <Card key={match.fixture.id || index} elevation={2} sx={{ borderRadius: 2 }}>
                   <CardContent sx={{ pb: '16px !important' }}>
@@ -267,18 +262,8 @@ const Fixtures = () => {
                           {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Typography>
 
-                        <Chip
-                          label={isLive && match.fixture.status.elapsed ? `${match.fixture.status.elapsed}'` : match.fixture.status.short}
-                          size='small'
-                          color={isLive ? 'error' : match.fixture.status.short === 'FT' ? 'default' : 'primary'}
-                          sx={{ 
-                              height: 20, 
-                              fontSize: '0.65rem',
-                              fontWeight: isLive ? 'bold' : 'normal',
-                              animation: isLive ? `${pulseAnimation} 2s infinite` : 'none',
-                              borderRadius: '4px'
-                            }}
-                        />
+                        <LiveStatusChip statusShort={match.fixture.status.short} elapsed={match.fixture.status.elapsed} />
+                        
                       </Box>
                     </Box>
 
@@ -340,7 +325,6 @@ const Fixtures = () => {
               <TableBody>
                 {processedFixtures?.map((match, index) => {
                   const matchDate = new Date(match.fixture.date);
-                  const isLive = statusPriority[match.fixture.status.short] === 1;
                   return (
                     <TableRow key={match.fixture.id || index}>
                       <TableCell>
@@ -364,18 +348,7 @@ const Fixtures = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={isLive && match.fixture.status.elapsed ? `${match.fixture.status.elapsed}'` : match.fixture.status.short}
-                          size='small'
-                          color={isLive ? 'error' : match.fixture.status.short === 'FT' ? 'default' : 'primary'}
-                          sx={{ 
-                              height: 20, 
-                              fontSize: '0.65rem',
-                              fontWeight: isLive ? 'bold' : 'normal',
-                              animation: isLive ? `${pulseAnimation} 2s infinite` : 'none',
-                              borderRadius: '4px'
-                            }}
-                        />
+                        <LiveStatusChip statusShort={match.fixture.status.short} elapsed={match.fixture.status.elapsed} />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
