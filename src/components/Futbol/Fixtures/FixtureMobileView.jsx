@@ -31,11 +31,15 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
             {match.teams.home.name}
           </Typography>
         </Box>
-
+        
         <Box sx={{ px: 2 }}>
           <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
-            <Typography variant="h6" fontWeight="bold">
-              {match.goals.home ?? '-'} : {match.goals.away ?? '-'}
+            <Typography variant="h5" fontWeight="bold">
+              {match.fixture.status.elapsed !== null ?  
+               ( <Typography variant="h5" fontWeight="bold"> {match.goals.home} - {match.goals.away}</Typography>)
+               : 
+               ( <Typography fontWeight="bold" > VS </Typography>)
+              }
             </Typography>
           </Box>
         </Box>
