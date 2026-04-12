@@ -194,7 +194,7 @@ const Fixtures = () => {
             const isSelected = selectedLeagues.includes(league.id);
             return (
               <Chip
-                key={league.name}
+                key={league.id}
                 label={`${league.name} (${league.count})`}
                 onClick={() => handleLeagueClick(league.id)}
                 color={isSelected ? 'primary' : 'default'}
