@@ -74,15 +74,29 @@ function MatchRow({ match, handleOpenH2HModal }) {
       <TableCell align="center">
         <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-flex', gap: 1, alignItems: 'center' }}>
           <Typography
-            variant="subtitle1" fontWeight="bold"
-            sx={{ animation: goalEvent === 'home' ? `${goalFlash} 3s ease-out` : 'none', px: 1, borderRadius: '4px' }}
+            key={`home-score-${match.goals.home}`}
+            variant="subtitle1" 
+            fontWeight="bold"
+            sx={{ 
+              display: 'inline-block',
+              px: 1, 
+              borderRadius: '4px',
+              animation: goalEvent === 'home' ? `${goalFlash} 3s ease-out` : 'none'}}
           >
             {match.goals.home}
           </Typography>
+
           <Typography variant="subtitle1" fontWeight="bold">-</Typography>
           <Typography
-            variant="subtitle1" fontWeight="bold"
-            sx={{ animation: goalEvent === 'away' ? `${goalFlash} 3s ease-out` : 'none', px: 1, borderRadius: '4px' }}
+            key={`away-score-${match.goals.away}`}
+            variant="subtitle1" 
+            fontWeight="bold"
+            sx={{ 
+              display: 'inline-block',
+              px: 1, 
+              borderRadius: '4px',
+              animation: goalEvent === 'away' ? `${goalFlash} 3s ease-out` : 'none'
+            }}
           >
             {match.goals.away}
           </Typography>
