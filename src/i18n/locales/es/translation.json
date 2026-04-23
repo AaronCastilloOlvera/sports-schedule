@@ -19,5 +19,23 @@
   "leagues": {
     "searchPlaceholder": "Buscar liga o tipo (Cup, League)...",
     "notFound": "Ligas no encontradas."
+  },
+  "h2h": {
+    "nextMatch": "Próximo Encuentro",
+    "lastMatches": "Últimos Partidos",
+    "noData": "No se encontraron datos.",
+    "noMatchesFilter": "No hay partidos previos con este filtro.",
+    "filters": {
+      "all": "Todos",
+      "home": "Local",
+      "away": "Visita"
+    },
+    "table": {
+      "date": "Fecha",
+      "home": "Local",
+      "result": "Resultado",
+      "away": "Visitante",
+      "league": "Liga"
+    }
   }
 }

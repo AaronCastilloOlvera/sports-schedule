@@ -19,5 +19,23 @@
   "leagues": {
     "searchPlaceholder": "Search league or type (Cup, League)...",
     "notFound": "No leagues found."
+  },
+  "h2h": {
+    "nextMatch": "Next Match",
+    "lastMatches": "Last Matches",
+    "noData": "No data found.",
+    "noMatchesFilter": "No previous matches with this filter.",
+    "filters": {
+      "all": "All",
+      "home": "Home",
+      "away": "Away"
+    },
+    "table": {
+      "date": "Date",
+      "home": "Home",
+      "result": "Result",
+      "away": "Away",
+      "league": "League"
+    }
   }
 }
