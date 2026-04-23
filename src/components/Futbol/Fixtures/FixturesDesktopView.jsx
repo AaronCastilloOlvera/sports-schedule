@@ -5,6 +5,7 @@ import { Insights } from '@mui/icons-material';
 import React, { useEffect, useRef, useState } from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { keyframes } from '@mui/system';
+import { useTranslation } from 'react-i18next';
 
 // Gol animation keyframes
 const goalFlash = keyframes`
@@ -16,6 +17,7 @@ const goalFlash = keyframes`
 
 // Match row component for desktop view, showing matches in a table format
 function MatchRow({ match, handleOpenH2HModal }) {
+  const { t } = useTranslation();
   const prevHomeGoals = useRef(match.goals.home);
   const prevAwayGoals = useRef(match.goals.away);
   const [goalEvent, setGoalEvent] = useState(null);
@@ -119,7 +121,7 @@ function MatchRow({ match, handleOpenH2HModal }) {
         <Typography variant="caption" color="textSecondary">{match.fixture.venue.name}</Typography>
       </TableCell>
       <TableCell>
-        <Tooltip title="Head to Head">
+        <Tooltip title={t('fixtures.headToHead')}>
           <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)}>
             <Insights />
           </IconButton>
@@ -138,18 +140,20 @@ const MemoMatchRow = React.memo(MatchRow, areRowsEqual);
 MemoMatchRow.displayName = 'MatchRow';
 
 export default function FixturesDesktopView({ processedFixtures, handleOpenH2HModal }) {
+  const { t } = useTranslation();
+
   return (
     <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }} aria-label="tabla de partidos">
+      <Table sx={{ minWidth: 650 }} aria-label={t('fixtures.tableAriaLabel')}>
         <TableHead>
           <TableRow>
-            <TableCell>Liga</TableCell>
-            <TableCell>Hora</TableCell>
-            <TableCell align="right">Local</TableCell>
-            <TableCell align="center">Marcador</TableCell>
-            <TableCell align="left">Visitante</TableCell>
-            <TableCell>Estadio</TableCell>
-            <TableCell>Acciones</TableCell>
+            <TableCell>{t('fixtures.table.league')}</TableCell>
+            <TableCell>{t('fixtures.table.time')}</TableCell>
+            <TableCell align="right">{t('fixtures.table.home')}</TableCell>
+            <TableCell align="center">{t('fixtures.table.score')}</TableCell>
+            <TableCell align="left">{t('fixtures.table.away')}</TableCell>
+            <TableCell>{t('fixtures.table.stadium')}</TableCell>
+            <TableCell>{t('fixtures.table.actions')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

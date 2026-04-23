@@ -1,0 +1,23 @@
+{
+  "fixtures": {
+    "tableAriaLabel": "matches table",
+    "table": {
+      "league": "League",
+      "time": "Time",
+      "home": "Home",
+      "score": "Score",
+      "away": "Away",
+      "stadium": "Stadium",
+      "actions": "Actions"
+    },
+    "headToHead": "Head to Head",
+    "selectDate": "Select Date",
+    "refreshLeagues": "Refresh Leagues",
+    "noMatches": "No matches available for this date.",
+    "stadiumTBD": "Stadium TBD"
+  },
+  "leagues": {
+    "searchPlaceholder": "Search league or type (Cup, League)...",
+    "notFound": "No leagues found."
+  }
+}

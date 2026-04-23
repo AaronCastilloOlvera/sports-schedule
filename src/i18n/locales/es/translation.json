@@ -1,0 +1,23 @@
+{
+  "fixtures": {
+    "tableAriaLabel": "tabla de partidos",
+    "table": {
+      "league": "Liga",
+      "time": "Hora",
+      "home": "Local",
+      "score": "Marcador",
+      "away": "Visitante",
+      "stadium": "Estadio",
+      "actions": "Acciones"
+    },
+    "headToHead": "Head to Head",
+    "selectDate": "Seleccionar Fecha",
+    "refreshLeagues": "Refrescar Ligas",
+    "noMatches": "No hay partidos disponibles para esta fecha.",
+    "stadiumTBD": "Estadio por definir"
+  },
+  "leagues": {
+    "searchPlaceholder": "Buscar liga o tipo (Cup, League)...",
+    "notFound": "Ligas no encontradas."
+  }
+}
