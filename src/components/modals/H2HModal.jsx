@@ -17,6 +17,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
 
   useEffect(() => {
     if (open && team1Id && team2Id) {
+      setFilter('all');
       setLoading(true);
       apiClient.fetchHeadToHeadMatches(team1Id, team2Id)
         .then(response => setH2hData(response?.data.slice(0, 10)))
@@ -25,22 +26,13 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
     }
   }, [open, team1Id, team2Id]);
 
-  const { nextMatch, teamHome, teamAway, record } = useMemo(() => {
+  const { nextMatch, teamHome, teamAway } = useMemo(() => {
     if (!h2hData.length) return {};
     const next = h2hData.find(m => m.fixture.status.short === 'NS');
     const sample = h2hData[0];
     const tHome = sample.teams.home.id === team1Id ? sample.teams.home : sample.teams.away;
     const tAway = sample.teams.away.id === team2Id ? sample.teams.away : sample.teams.home;
-
-    const past = h2hData.filter(m => m.fixture.status.short === 'FT');
-    const team1Wins = past.filter(m =>
-      (m.teams.home.id === team1Id && m.teams.home.winner) ||
-      (m.teams.away.id === team1Id && m.teams.away.winner)
-    ).length;
-    const draws = past.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
-    const team2Wins = past.length - team1Wins - draws;
-
-    return { nextMatch: next, teamHome: tHome, teamAway: tAway, record: { team1Wins, draws, team2Wins } };
+    return { nextMatch: next, teamHome: tHome, teamAway: tAway };
   }, [h2hData, team1Id, team2Id]);
 
   const filteredMatches = useMemo(() => {
@@ -51,6 +43,16 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
     if (filter === 'away') return past.filter(m => m.teams.away.id === team1Id);
     return past;
   }, [h2hData, filter, team1Id]);
+
+  const record = useMemo(() => {
+    const team1Wins = filteredMatches.filter(m =>
+      (m.teams.home.id === team1Id && m.teams.home.winner) ||
+      (m.teams.away.id === team1Id && m.teams.away.winner)
+    ).length;
+    const draws = filteredMatches.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
+    const team2Wins = filteredMatches.length - team1Wins - draws;
+    return { team1Wins, draws, team2Wins };
+  }, [filteredMatches, team1Id]);
 
   return (
     <Modal open={open} onClose={onClose}>
