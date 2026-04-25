@@ -67,6 +67,8 @@ TeamColumn.propTypes = {
 export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, record }) {
   const { t } = useTranslation();
   const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
+  // Only show the upcoming match banner when the viewed fixture hasn't started.
+  const showNextMatch = nextMatch && (!currentMatch || currentMatch.fixture.status.short === 'NS');
 
   const badges = record ? [
     { label: t('h2h.wins'),  value: record.team1Wins, color: '#28CD41', bgColor: 'rgba(40,205,65,0.08)',   borderColor: 'rgba(40,205,65,0.28)' },
@@ -172,8 +174,8 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
         </Stack>
       )}
 
-      {/* Next match info */}
-      {nextMatch && (
+      {/* Next match info — hidden when the viewed fixture is live or finished */}
+      {showNextMatch && (
         <Box sx={{
           mt: '20px',
           px: { xs: 2, sm: 3 }, py: '12px',
