@@ -9,9 +9,7 @@ import H2HMatchHistory from './H2HMatchHistory';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
-const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'SUSP', 'INT']);
-
-const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
+const H2HModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
   const { t } = useTranslation();
   const [h2hData, setH2hData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,14 +26,13 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
     }
   }, [open, team1Id, team2Id]);
 
-  const { nextMatch, currentMatch, teamHome, teamAway } = useMemo(() => {
+  const { nextMatch, teamHome, teamAway } = useMemo(() => {
     if (!h2hData.length) return {};
     const next = h2hData.find(m => m.fixture.status.short === 'NS');
-    const live = h2hData.find(m => LIVE_STATUSES.has(m.fixture.status.short));
     const sample = h2hData[0];
     const tHome = sample.teams.home.id === team1Id ? sample.teams.home : sample.teams.away;
     const tAway = sample.teams.away.id === team2Id ? sample.teams.away : sample.teams.home;
-    return { nextMatch: next, currentMatch: live, teamHome: tHome, teamAway: tAway };
+    return { nextMatch: next, teamHome: tHome, teamAway: tAway };
   }, [h2hData, team1Id, team2Id]);
 
   const filteredMatches = useMemo(() => {
@@ -128,6 +125,7 @@ H2HModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   team1Id: PropTypes.number.isRequired,
   team2Id: PropTypes.number.isRequired,
+  currentMatch: PropTypes.object,
 };
 
 export default H2HModal;

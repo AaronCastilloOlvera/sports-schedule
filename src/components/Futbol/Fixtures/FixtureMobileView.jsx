@@ -57,7 +57,7 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
         <Typography variant="caption" color="textSecondary" sx={{ maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           🏟️ {match.fixture.venue.name || 'Estadio por definir'}
         </Typography>
-        <IconButton size="small" onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)} color="primary">
+        <IconButton size="small" onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)} color="primary">
           <Insights fontSize="small" />
         </IconButton>
       </Box>

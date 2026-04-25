@@ -122,7 +122,7 @@ function MatchRow({ match, handleOpenH2HModal }) {
       </TableCell>
       <TableCell>
         <Tooltip title={t('fixtures.headToHead')}>
-          <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id)}>
+          <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}>
             <Insights />
           </IconButton>
         </Tooltip>

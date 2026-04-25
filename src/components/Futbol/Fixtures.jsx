@@ -21,6 +21,7 @@ const Fixtures = () => {
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -92,6 +93,12 @@ const Fixtures = () => {
 
   }, [fixtures, selectedLeagues]);
 
+  // Re-derived on every poll so the modal always receives the freshest fixture data.
+  const activeMatch = useMemo(
+    () => selectedMatchId ? (processedFixtures.find(m => m.fixture.id === selectedMatchId) ?? null) : null,
+    [selectedMatchId, processedFixtures]
+  );
+
   const handlePreviousDay = () => {
     setSelectedDate(prevDate => prevDate.subtract(1, 'day'));
   };
@@ -114,14 +121,16 @@ const Fixtures = () => {
     return () => window.removeEventListener('refresh-leagues', handler);
   }, [loadMatchesData]);
 
-  const handleOpenH2HModal = (team1Id, team2Id) => {
+  const handleOpenH2HModal = (team1Id, team2Id, fixtureId) => {
     setSelectedTeams({ team1: team1Id, team2: team2Id });
+    setSelectedMatchId(fixtureId ?? null);
     setH2hModalOpen(true);
   };
 
   const handleCloseH2HModal = () => {
     setH2hModalOpen(false);
     setSelectedTeams({ team1: null, team2: null });
+    setSelectedMatchId(null);
   };
 
   const leaguesSummary = fixtures?.reduce((summary, match) => {
@@ -252,6 +261,7 @@ const Fixtures = () => {
           onClose={handleCloseH2HModal}
           team1Id={selectedTeams.team1}
           team2Id={selectedTeams.team2}
+          currentMatch={activeMatch}
         />
       </Box>
     </LocalizationProvider>
