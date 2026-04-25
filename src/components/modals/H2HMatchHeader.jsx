@@ -16,7 +16,7 @@ function TeamColumn({ team }) {
     <Stack alignItems="center" sx={{ gap: '12px', flex: 1 }}>
       <Box
         sx={{
-          width: 76, height: 76, borderRadius: '50%',
+          width: { xs: 60, sm: 76 }, height: { xs: 60, sm: 76 }, borderRadius: '50%',
           background: '#f5f5f7',
           border: '2px solid rgba(0,0,0,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -35,7 +35,7 @@ function TeamColumn({ team }) {
         )}
       </Box>
       <Box sx={{ textAlign: 'center' }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT }}>
+        <Typography sx={{ fontSize: { xs: 13, sm: 16 }, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT }}>
           {team?.name}
         </Typography>
       </Box>
@@ -66,12 +66,12 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, record }
         {/* VS circle + H2H label */}
         <Stack alignItems="center" sx={{ gap: '4px', px: { xs: '16px', sm: '20px' } }}>
           <Box sx={{
-            width: 48, height: 48, borderRadius: '50%',
+            width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '50%',
             background: '#f0f0f5',
             border: '1px solid rgba(0,0,0,0.08)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#8e8e93', letterSpacing: '0.5px', fontFamily: FONT }}>
+            <Typography sx={{ fontSize: { xs: 11, sm: 13 }, fontWeight: 700, color: '#8e8e93', letterSpacing: '0.5px', fontFamily: FONT }}>
               VS
             </Typography>
           </Box>
@@ -91,11 +91,11 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, record }
               background: item.bgColor,
               border: `1px solid ${item.borderColor}`,
               borderRadius: '10px',
-              px: '16px', py: '8px',
+              px: { xs: '10px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
-              minWidth: 72,
+              minWidth: { xs: 58, sm: 72 },
             }}>
-              <Typography sx={{ fontSize: 20, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+              <Typography sx={{ fontSize: { xs: 17, sm: 20 }, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                 {item.value}
               </Typography>
               <Typography sx={{ fontSize: 10, color: '#8e8e93', fontWeight: 600, letterSpacing: '0.3px', fontFamily: FONT, lineHeight: 1.4, textTransform: 'uppercase' }}>

@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
-const GRID_COLS = '110px 1fr 80px 1fr 100px';
+
+// Desktop keeps all 5 columns. Mobile drops the League column and tightens the date.
+const GRID_COLS        = '110px 1fr 80px 1fr 100px';
+const GRID_COLS_MOBILE = '80px 1fr 64px 1fr';
 
 function SegmentedControl({ options, value, onChange }) {
   return (
@@ -17,8 +20,9 @@ function SegmentedControl({ options, value, onChange }) {
             background: value === opt.value ? '#ffffff' : 'transparent',
             border: 'none', outline: 'none', cursor: 'pointer',
             borderRadius: '7px',
-            px: '14px', py: '5px',
-            fontSize: 13,
+            px: { xs: '10px', sm: '14px' },
+            py: { xs: '4px', sm: '5px' },
+            fontSize: { xs: 12, sm: 13 },
             fontWeight: value === opt.value ? 600 : 400,
             color: value === opt.value ? '#1c1c1e' : 'rgba(0,0,0,0.45)',
             transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
@@ -48,7 +52,7 @@ function ScoreBadge({ homeScore, awayScore, homeWon, awayWon }) {
       background: '#f2f2f7',
       border: '1px solid rgba(0,0,0,0.08)',
       borderRadius: '10px', px: '10px', py: '5px',
-      minWidth: 62, justifyContent: 'center',
+      minWidth: { xs: 52, sm: 62 }, justifyContent: 'center',
     }}>
       <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: homeWon ? '#28CD41' : awayWon ? '#FF3B30' : '#8e8e93' }}>
         {homeScore}
@@ -107,8 +111,12 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
   return (
     <Box sx={{ background: '#ffffff', borderTop: '0.5px solid rgba(0,0,0,0.08)', fontFamily: FONT }}>
 
-      {/* Title + filter row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: { xs: 2, sm: '20px' }, pt: { xs: 2, sm: '18px' }, pb: '10px' }}>
+      {/* Title + filter row — wraps on xs so long translated labels don't overflow */}
+      <Box sx={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: '8px',
+        px: { xs: 2, sm: '20px' }, pt: { xs: 2, sm: '18px' }, pb: '10px',
+      }}>
         <Box>
           <Typography sx={{ fontSize: 17, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.4px', lineHeight: 1, fontFamily: FONT }}>
             {t('h2h.lastMatches')}
@@ -117,31 +125,45 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
             {filteredMatches.length} {t('h2h.results')}
           </Typography>
         </Box>
-        <SegmentedControl options={filterOptions} value={filter} onChange={onFilterChange} />
+        <Box sx={{ ml: 'auto' }}>
+          <SegmentedControl options={filterOptions} value={filter} onChange={onFilterChange} />
+        </Box>
       </Box>
 
-      {/* Column headers */}
+      {/* Column headers
+          gridTemplateColumns switches between 4-col (xs) and 5-col (sm+).
+          The League header cell is hidden on xs via display:none. */}
       <Box sx={{
-        display: 'grid', gridTemplateColumns: GRID_COLS, gap: '8px',
-        px: { xs: 2, sm: '16px' }, py: '6px',
+        display: 'grid',
+        gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
+        gap: '8px',
+        px: { xs: '12px', sm: '16px' },
+        py: '6px',
         borderBottom: '0.5px solid rgba(0,0,0,0.08)',
-        minWidth: 480,
       }}>
         {[
-          { label: t('h2h.table.date'),   align: 'left' },
-          { label: t('h2h.table.home'),   align: 'right' },
-          { label: t('h2h.table.result'), align: 'center' },
-          { label: t('h2h.table.away'),   align: 'left' },
-          { label: t('h2h.table.league'), align: 'center' },
+          { label: t('h2h.table.date'),   align: 'left',   hideXs: false },
+          { label: t('h2h.table.home'),   align: 'right',  hideXs: false },
+          { label: t('h2h.table.result'), align: 'center', hideXs: false },
+          { label: t('h2h.table.away'),   align: 'left',   hideXs: false },
+          { label: t('h2h.table.league'), align: 'center', hideXs: true  },
         ].map(col => (
-          <Typography key={col.label} sx={{ fontSize: 11, fontWeight: 600, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: col.align, fontFamily: FONT }}>
+          <Typography
+            key={col.label}
+            sx={{
+              display: col.hideXs ? { xs: 'none', sm: 'block' } : 'block',
+              fontSize: 11, fontWeight: 600, color: '#aeaeb2',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+              textAlign: col.align, fontFamily: FONT,
+            }}
+          >
             {col.label}
           </Typography>
         ))}
       </Box>
 
-      {/* Scrollable match rows */}
-      <Box sx={{ maxHeight: { xs: 280, sm: 320 }, overflowY: 'auto', overflowX: 'auto', px: '4px', pt: '4px', pb: '8px', minWidth: 480 }}>
+      {/* Match rows */}
+      <Box sx={{ maxHeight: { xs: 260, sm: 320 }, overflowY: 'auto', pt: '4px', pb: '8px' }}>
         {filteredMatches.length === 0 ? (
           <Box sx={{ py: 5, textAlign: 'center' }}>
             <Typography sx={{ color: '#aeaeb2', fontSize: 14, fontFamily: FONT }}>
@@ -154,14 +176,18 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
           return (
             <Box key={match.fixture.id}>
               <Box sx={{
-                display: 'grid', gridTemplateColumns: GRID_COLS, alignItems: 'center',
-                gap: '8px', px: { xs: 1.5, sm: '16px' }, py: '12px',
+                display: 'grid',
+                gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
+                alignItems: 'center',
+                gap: '8px',
+                px: { xs: '12px', sm: '16px' },
+                py: '12px',
                 borderRadius: '12px', cursor: 'default',
                 transition: 'background 0.15s ease',
                 '&:hover': { background: 'rgba(0,0,0,0.03)' },
               }}>
 
-                {/* Date (bold) + weekday (muted) — visual hierarchy */}
+                {/* Date (bold) + weekday (muted) */}
                 <Box>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', letterSpacing: '-0.2px', lineHeight: 1.2, fontFamily: FONT }}>
                     {new Date(match.fixture.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -171,9 +197,13 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                   </Typography>
                 </Box>
 
-                {/* Home team (right-aligned) */}
-                <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ gap: '8px' }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: '#3c3c43', textAlign: 'right', letterSpacing: '-0.2px', fontFamily: FONT }}>
+                {/* Home team — name truncates with ellipsis when space is tight */}
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ gap: '6px', minWidth: 0 }}>
+                  <Typography sx={{
+                    fontSize: 13, fontWeight: 500, color: '#3c3c43',
+                    textAlign: 'right', letterSpacing: '-0.2px', fontFamily: FONT,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
                     {match.teams.home.name}
                   </Typography>
                   <MiniLogo logo={match.teams.home.logo} name={match.teams.home.name} />
@@ -184,16 +214,20 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                   <ScoreBadge homeScore={match.goals.home} awayScore={match.goals.away} homeWon={homeWon} awayWon={awayWon} />
                 </Box>
 
-                {/* Away team (left-aligned) */}
-                <Stack direction="row" alignItems="center" sx={{ gap: '8px' }}>
+                {/* Away team — name truncates with ellipsis when space is tight */}
+                <Stack direction="row" alignItems="center" sx={{ gap: '6px', minWidth: 0 }}>
                   <MiniLogo logo={match.teams.away.logo} name={match.teams.away.name} />
-                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: '#3c3c43', letterSpacing: '-0.2px', fontFamily: FONT }}>
+                  <Typography sx={{
+                    fontSize: 13, fontWeight: 500, color: '#3c3c43',
+                    letterSpacing: '-0.2px', fontFamily: FONT,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
                     {match.teams.away.name}
                   </Typography>
                 </Stack>
 
-                {/* League pill (centered) */}
-                <Box sx={{ textAlign: 'center' }}>
+                {/* League pill — hidden on xs, visible on sm+ */}
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center' }}>
                   <Typography component="span" sx={{ fontSize: 11, color: '#636366', fontWeight: 500, background: '#f2f2f7', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
                     {match.league.name}
                   </Typography>
@@ -202,7 +236,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
 
               {/* Hairline separator between rows */}
               {i < filteredMatches.length - 1 && (
-                <Box sx={{ height: '0.5px', background: 'rgba(0,0,0,0.07)', mx: '16px' }} />
+                <Box sx={{ height: '0.5px', background: 'rgba(0,0,0,0.07)', mx: '12px' }} />
               )}
             </Box>
           );

@@ -44,7 +44,9 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
   }, [h2hData, team1Id, team2Id]);
 
   const filteredMatches = useMemo(() => {
-    const past = h2hData.filter(m => m.fixture.status.short === 'FT');
+    const past = h2hData
+      .filter(m => m.fixture.status.short === 'FT')
+      .sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date));
     if (filter === 'home') return past.filter(m => m.teams.home.id === team1Id);
     if (filter === 'away') return past.filter(m => m.teams.away.id === team1Id);
     return past;
@@ -60,7 +62,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
           transform: 'translate(-50%, -50%)',
           width: { xs: '95%', sm: '90%' },
           maxWidth: 680,
-          borderRadius: '20px',
+          borderRadius: { xs: '16px', sm: '20px' },
           bgcolor: '#ffffff',
           boxShadow: '0 8px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
           maxHeight: '90vh',
@@ -76,7 +78,7 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
           size="small"
           sx={{
             position: 'absolute', right: 12, top: 12, zIndex: 10,
-            width: 28, height: 28,
+            width: { xs: 36, sm: 28 }, height: { xs: 36, sm: 28 },
             bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.45)',
             '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
           }}
