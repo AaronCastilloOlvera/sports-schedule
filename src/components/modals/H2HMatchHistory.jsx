@@ -96,7 +96,7 @@ MiniLogo.propTypes = {
 };
 
 export default function H2HMatchHistory({ filteredMatches, filter, onFilterChange, team1Id }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const filterOptions = [
     { value: 'all',  label: t('h2h.filters.all') },
@@ -167,7 +167,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                     {new Date(match.fixture.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: '#aeaeb2', mt: '2px', textTransform: 'capitalize', lineHeight: 1.2, fontFamily: FONT }}>
-                    {new Date(match.fixture.date).toLocaleDateString('es-MX', { weekday: 'long' })}
+                    {new Date(match.fixture.date).toLocaleDateString(i18n.language, { weekday: 'long' })}
                   </Typography>
                 </Box>
 
