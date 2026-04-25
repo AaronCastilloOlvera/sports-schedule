@@ -25,6 +25,9 @@
     "lastMatches": "Últimos Partidos",
     "noData": "No se encontraron datos.",
     "noMatchesFilter": "No hay partidos previos con este filtro.",
+    "wins": "Victorias",
+    "draws": "Empates",
+    "results": "resultados",
     "filters": {
       "all": "Todos",
       "home": "Local",

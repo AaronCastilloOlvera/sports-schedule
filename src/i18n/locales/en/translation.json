@@ -25,6 +25,9 @@
     "lastMatches": "Last Matches",
     "noData": "No data found.",
     "noMatchesFilter": "No previous matches with this filter.",
+    "wins": "Wins",
+    "draws": "Draws",
+    "results": "results",
     "filters": {
       "all": "All",
       "home": "Home",

@@ -7,6 +7,8 @@ import PropTypes from 'prop-types';
 import H2HMatchHeader from './H2HMatchHeader';
 import H2HMatchHistory from './H2HMatchHistory';
 
+const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
+
 const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
   const { t } = useTranslation();
   const [h2hData, setH2hData] = useState([]);
@@ -23,13 +25,22 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
     }
   }, [open, team1Id, team2Id]);
 
-  const { nextMatch, teamHome, teamAway } = useMemo(() => {
+  const { nextMatch, teamHome, teamAway, record } = useMemo(() => {
     if (!h2hData.length) return {};
     const next = h2hData.find(m => m.fixture.status.short === 'NS');
     const sample = h2hData[0];
     const tHome = sample.teams.home.id === team1Id ? sample.teams.home : sample.teams.away;
     const tAway = sample.teams.away.id === team2Id ? sample.teams.away : sample.teams.home;
-    return { nextMatch: next, teamHome: tHome, teamAway: tAway };
+
+    const past = h2hData.filter(m => m.fixture.status.short === 'FT');
+    const team1Wins = past.filter(m =>
+      (m.teams.home.id === team1Id && m.teams.home.winner) ||
+      (m.teams.away.id === team1Id && m.teams.away.winner)
+    ).length;
+    const draws = past.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
+    const team2Wins = past.length - team1Wins - draws;
+
+    return { nextMatch: next, teamHome: tHome, teamAway: tAway, record: { team1Wins, draws, team2Wins } };
   }, [h2hData, team1Id, team2Id]);
 
   const filteredMatches = useMemo(() => {
@@ -48,32 +59,34 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
           left: '50%',
           transform: 'translate(-50%, -50%)',
           width: { xs: '95%', sm: '90%' },
-          maxWidth: 860,
-          borderRadius: 3,
-          boxShadow: '0 32px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.2)',
+          maxWidth: 680,
+          borderRadius: '20px',
+          bgcolor: '#ffffff',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
           maxHeight: '90vh',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           outline: 'none',
-          bgcolor: 'background.paper',
+          fontFamily: FONT,
         }}
       >
         <IconButton
           onClick={onClose}
           size="small"
           sx={{
-            position: 'absolute', right: 10, top: 10, zIndex: 10,
-            bgcolor: 'rgba(0,0,0,0.4)', color: 'white',
-            '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' },
+            position: 'absolute', right: 12, top: 12, zIndex: 10,
+            width: 28, height: 28,
+            bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.45)',
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
           }}
         >
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: 14 }} />
         </IconButton>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: '#f5f5f7' }}>
+            <CircularProgress sx={{ color: '#007AFF' }} />
           </Box>
         ) : h2hData.length > 0 ? (
           <Box sx={{ overflow: 'auto', flex: 1 }}>
@@ -81,29 +94,20 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
               teamHome={teamHome}
               teamAway={teamAway}
               nextMatch={nextMatch}
+              record={record}
             />
-            {/* Lifted-card body overlaps the header bottom by 28px */}
-            <Box
-              sx={{
-                borderRadius: '22px 22px 0 0',
-                bgcolor: 'background.paper',
-                mt: '-28px',
-                position: 'relative',
-                zIndex: 1,
-                boxShadow: '0 -6px 20px rgba(0,0,0,0.18)',
-              }}
-            >
-              <H2HMatchHistory
-                filteredMatches={filteredMatches}
-                filter={filter}
-                onFilterChange={setFilter}
-                team1Id={team1Id}
-              />
-            </Box>
+            <H2HMatchHistory
+              filteredMatches={filteredMatches}
+              filter={filter}
+              onFilterChange={setFilter}
+              team1Id={team1Id}
+            />
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1 }}>
-            <Typography color="text.secondary">{t('h2h.noData')}</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: '#f5f5f7' }}>
+            <Typography sx={{ color: 'rgba(0,0,0,0.4)', fontFamily: FONT }}>
+              {t('h2h.noData')}
+            </Typography>
           </Box>
         )}
       </Box>

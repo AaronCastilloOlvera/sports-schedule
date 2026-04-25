@@ -3,202 +3,138 @@ import { CalendarToday, LocationOn } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
-// Stacked CSS gradients: two soft radial glows (one per team side) over a deep slate base.
-// This gives a "spotlight on each team" feel without needing any image.
+const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
+
 const HEADER_BG = [
-  'radial-gradient(ellipse 45% 70% at 15% 55%, rgba(99,102,241,0.22) 0%, transparent 70%)',
-  'radial-gradient(ellipse 45% 70% at 85% 55%, rgba(168,85,247,0.18) 0%, transparent 70%)',
-  'linear-gradient(160deg, #0d1117 0%, #161b22 55%, #0d1117 100%)',
+  'radial-gradient(ellipse 60% 80% at 25% 50%, rgba(0,122,255,0.04) 0%, transparent 70%)',
+  'radial-gradient(ellipse 60% 80% at 75% 50%, rgba(0,122,255,0.03) 0%, transparent 70%)',
+  'linear-gradient(160deg, #ffffff 0%, #f8f8fa 60%, #f5f5f7 100%)',
 ].join(', ');
 
-export default function H2HMatchHeader({ teamHome, teamAway, nextMatch }) {
-  const { t } = useTranslation();
-
+function TeamColumn({ team }) {
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        minHeight: { xs: 210, sm: 250 },
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-end',
-        background: HEADER_BG,
-      }}
-    >
-      {/* Subtle top highlight line */}
+    <Stack alignItems="center" sx={{ gap: '12px', flex: 1 }}>
       <Box
         sx={{
-          position: 'absolute',
-          top: 0,
-          left: '10%',
-          right: '10%',
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)',
+          width: 76, height: 76, borderRadius: '50%',
+          background: '#f5f5f7',
+          border: '2px solid rgba(0,0,0,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          flexShrink: 0,
         }}
-      />
+      >
+        {team?.logo ? (
+          <Box component="img" src={team.logo} alt={team.name}
+            sx={{ width: '72%', height: '72%', objectFit: 'contain' }} />
+        ) : (
+          <Typography sx={{ fontSize: 22, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.5px', fontFamily: FONT }}>
+            {team?.name?.split(' ').map(w => w[0]).join('').slice(0, 3)}
+          </Typography>
+        )}
+      </Box>
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography sx={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT }}>
+          {team?.name}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
 
-      <Box sx={{ px: { xs: 2, sm: 4 }, pt: { xs: 2.5, sm: 3.5 }, pb: { xs: 3.5, sm: 4.5 } }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          {/* Home team */}
-          <Stack alignItems="center" spacing={1.25} sx={{ flex: 1 }}>
-            <Box
-              sx={{
-                width: { xs: 64, sm: 92 },
-                height: { xs: 64, sm: 92 },
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                p: 1.25,
-              }}
-            >
-              <Box
-                component="img"
-                src={teamHome?.logo}
-                alt={teamHome?.name}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))',
-                }}
-              />
-            </Box>
-            <Typography
-              fontWeight={700}
-              textAlign="center"
-              sx={{
-                color: 'rgba(255,255,255,0.92)',
-                fontSize: { xs: '0.82rem', sm: '0.95rem' },
-                textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-                maxWidth: 130,
-                lineHeight: 1.3,
-              }}
-            >
-              {teamHome?.name}
-            </Typography>
-          </Stack>
+TeamColumn.propTypes = {
+  team: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
+};
 
-          {/* VS badge */}
-          <Box
-            sx={{
-              px: { xs: 1.75, sm: 2.5 },
-              py: { xs: 0.75, sm: 1.25 },
-              borderRadius: '50px',
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              boxShadow: '0 0 20px rgba(99,102,241,0.2)',
-            }}
-          >
-            <Typography
-              fontWeight={900}
-              sx={{
-                color: 'rgba(255,255,255,0.9)',
-                fontSize: { xs: '1rem', sm: '1.4rem' },
-                letterSpacing: { xs: 2, sm: 3 },
-              }}
-            >
+export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, record }) {
+  const { t } = useTranslation();
+
+  const badges = record ? [
+    { label: t('h2h.wins'), value: record.team1Wins, color: '#28CD41', bgColor: 'rgba(40,205,65,0.08)', borderColor: 'rgba(40,205,65,0.28)' },
+    { label: t('h2h.draws'), value: record.draws, color: '#8e8e93', bgColor: '#f2f2f7', borderColor: 'rgba(0,0,0,0.1)' },
+    { label: t('h2h.wins'), value: record.team2Wins, color: '#FF9500', bgColor: 'rgba(255,149,0,0.08)', borderColor: 'rgba(255,149,0,0.28)' },
+  ] : [];
+
+  return (
+    <Box sx={{ background: HEADER_BG, px: { xs: 3, sm: '28px' }, pt: { xs: 3, sm: '28px' }, pb: { xs: 3, sm: '32px' }, position: 'relative', overflow: 'hidden', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+
+      {/* Teams row */}
+      <Stack direction="row" alignItems="center" justifyContent="center">
+        <TeamColumn team={teamHome} />
+
+        {/* VS circle + H2H label */}
+        <Stack alignItems="center" sx={{ gap: '4px', px: { xs: '16px', sm: '20px' } }}>
+          <Box sx={{
+            width: 48, height: 48, borderRadius: '50%',
+            background: '#f0f0f5',
+            border: '1px solid rgba(0,0,0,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#8e8e93', letterSpacing: '0.5px', fontFamily: FONT }}>
               VS
             </Typography>
           </Box>
-
-          {/* Away team */}
-          <Stack alignItems="center" spacing={1.25} sx={{ flex: 1 }}>
-            <Box
-              sx={{
-                width: { xs: 64, sm: 92 },
-                height: { xs: 64, sm: 92 },
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                p: 1.25,
-              }}
-            >
-              <Box
-                component="img"
-                src={teamAway?.logo}
-                alt={teamAway?.name}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))',
-                }}
-              />
-            </Box>
-            <Typography
-              fontWeight={700}
-              textAlign="center"
-              sx={{
-                color: 'rgba(255,255,255,0.92)',
-                fontSize: { xs: '0.82rem', sm: '0.95rem' },
-                textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-                maxWidth: 130,
-                lineHeight: 1.3,
-              }}
-            >
-              {teamAway?.name}
-            </Typography>
-          </Stack>
+          <Typography sx={{ fontSize: 10, color: '#aeaeb2', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, fontFamily: FONT }}>
+            H2H
+          </Typography>
         </Stack>
 
-        {nextMatch && (
-          <Box
-            sx={{
-              mt: { xs: 2.5, sm: 3 },
-              px: { xs: 2, sm: 3 },
-              py: { xs: 1.25, sm: 1.75 },
-              borderRadius: 2,
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="overline"
-              sx={{
-                color: 'rgba(255,255,255,0.5)',
-                fontWeight: 700,
-                letterSpacing: 2.5,
-                fontSize: '0.62rem',
-                display: 'block',
-                mb: 0.75,
-              }}
-            >
-              {t('h2h.nextMatch')}
-            </Typography>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              justifyContent="center"
-              spacing={{ xs: 0.5, sm: 2.5 }}
-              alignItems="center"
-            >
-              <Stack direction="row" alignItems="center" spacing={0.75}>
-                <CalendarToday sx={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }} />
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.82)', textTransform: 'capitalize', fontWeight: 500 }}
-                >
-                  {new Date(nextMatch.fixture.date).toLocaleDateString('es-MX', {
-                    weekday: 'long', day: 'numeric', month: 'long',
-                  })}
-                </Typography>
-              </Stack>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
-                <LocationOn sx={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.82)', fontWeight: 500 }}>
-                  {nextMatch.fixture.venue.name}
-                </Typography>
-              </Stack>
+        <TeamColumn team={teamAway} />
+      </Stack>
+
+      {/* Record summary pills — team names removed; position + accent color convey ownership */}
+      {record && (
+        <Stack direction="row" justifyContent="center" sx={{ gap: '8px', mt: '20px' }}>
+          {badges.map((item, i) => (
+            <Box key={i} sx={{
+              background: item.bgColor,
+              border: `1px solid ${item.borderColor}`,
+              borderRadius: '10px',
+              px: '16px', py: '8px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+              minWidth: 72,
+            }}>
+              <Typography sx={{ fontSize: 20, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                {item.value}
+              </Typography>
+              <Typography sx={{ fontSize: 10, color: '#8e8e93', fontWeight: 600, letterSpacing: '0.3px', fontFamily: FONT, lineHeight: 1.4, textTransform: 'uppercase' }}>
+                {item.label}
+              </Typography>
+            </Box>
+          ))}
+        </Stack>
+      )}
+
+      {/* Next match info */}
+      {nextMatch && (
+        <Box sx={{
+          mt: '20px',
+          px: { xs: 2, sm: 3 }, py: '12px',
+          borderRadius: 2,
+          background: '#f0f0f5',
+          border: '1px solid rgba(0,0,0,0.08)',
+          textAlign: 'center',
+        }}>
+          <Typography sx={{ fontSize: '0.62rem', color: '#8e8e93', fontWeight: 700, letterSpacing: 2.5, display: 'block', mb: '6px', textTransform: 'uppercase', fontFamily: FONT }}>
+            {t('h2h.nextMatch')}
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="center" spacing={{ xs: 0.5, sm: 2.5 }} alignItems="center">
+            <Stack direction="row" alignItems="center" spacing="6px">
+              <CalendarToday sx={{ fontSize: 12, color: '#8e8e93' }} />
+              <Typography sx={{ fontSize: 12, color: '#3c3c43', textTransform: 'capitalize', fontFamily: FONT }}>
+                {new Date(nextMatch.fixture.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </Typography>
             </Stack>
-          </Box>
-        )}
-      </Box>
+            <Stack direction="row" alignItems="center" spacing="6px">
+              <LocationOn sx={{ fontSize: 12, color: '#8e8e93' }} />
+              <Typography sx={{ fontSize: 12, color: '#3c3c43', fontFamily: FONT }}>
+                {nextMatch.fixture.venue.name}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Box>
+      )}
     </Box>
   );
 }
@@ -207,4 +143,5 @@ H2HMatchHeader.propTypes = {
   teamHome: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   teamAway: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   nextMatch: PropTypes.object,
+  record: PropTypes.shape({ team1Wins: PropTypes.number, draws: PropTypes.number, team2Wins: PropTypes.number }),
 };
