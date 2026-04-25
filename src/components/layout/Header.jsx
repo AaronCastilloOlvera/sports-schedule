@@ -4,21 +4,26 @@ import {
   Tab, Tabs, Toolbar, Tooltip, Typography,
 } from "@mui/material";
 import {
-  Refresh as RefreshIcon, Settings as SettingsIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
+  Refresh as RefreshIcon,
+  Settings as SettingsIcon,
   SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { useThemeMode } from "../../context/ThemeContext.jsx";
 import Status from "./../common/Status.jsx";
 
-// ── tiny helpers ────────────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────────
 
+// Uses MUI theme tokens so these automatically adapt to light / dark mode.
 const SECTION_LABEL_SX = {
   fontSize: 11, fontWeight: 600, letterSpacing: '0.6px',
-  textTransform: 'uppercase', color: '#8e8e93', display: 'block', mb: '8px',
+  textTransform: 'uppercase', color: 'text.disabled', display: 'block', mb: '8px',
 };
 
 const DIVIDER_SX = {
-  height: '0.5px', background: 'rgba(0,0,0,0.08)', my: '16px',
+  height: '0.5px', bgcolor: 'divider', my: '16px',
 };
 
 const LANG_OPTIONS = [
@@ -26,12 +31,13 @@ const LANG_OPTIONS = [
   { code: 'es', label: 'ES', flag: '🇲🇽' },
 ];
 
-// ── component ───────────────────────────────────────────────────────────────
+// ── component ─────────────────────────────────────────────────────────────────
 
 const Header = () => {
   const [tab, setTab] = useState(0);
   const [anchor, setAnchor] = useState(null);
   const { i18n } = useTranslation();
+  const { mode, toggleTheme } = useThemeMode();
 
   const open = Boolean(anchor);
 
@@ -43,7 +49,7 @@ const Header = () => {
   return (
     <AppBar position="sticky" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        <Typography variant="h6">Sports Schedule</Typography>
+        <Typography variant="h6">🔥 HotPicks365</Typography>
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -54,10 +60,10 @@ const Header = () => {
             textColor="inherit"
             indicatorColor="secondary"
           >
-            <Tab icon={<SportsSoccer />}      label="Soccer"     iconPosition="start" />
-            <Tab icon={<SportsBasketball />}  label="Basketball" iconPosition="start" />
-            <Tab icon={<SportsBaseball />}    label="Baseball"   iconPosition="start" />
-            <Tab icon={<SportsFootball />}    label="Football"   iconPosition="start" />
+            <Tab icon={<SportsSoccer />}     label="Soccer"     iconPosition="start" />
+            <Tab icon={<SportsBasketball />} label="Basketball" iconPosition="start" />
+            <Tab icon={<SportsBaseball />}   label="Baseball"   iconPosition="start" />
+            <Tab icon={<SportsFootball />}   label="Football"   iconPosition="start" />
           </Tabs>
         </Box>
 
@@ -85,7 +91,7 @@ const Header = () => {
             sx: {
               mt: '8px',
               borderRadius: '14px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06)',
               minWidth: 230,
             },
           }}
@@ -107,17 +113,20 @@ const Header = () => {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       gap: '6px',
                       py: '7px', px: '10px',
-                      border: `1.5px solid ${active ? '#1976d2' : 'rgba(0,0,0,0.1)'}`,
+                      border: '1.5px solid',
+                      borderColor: active ? 'primary.main' : 'divider',
                       borderRadius: '8px',
-                      background: active ? 'rgba(25,118,210,0.08)' : 'transparent',
-                      color: active ? '#1976d2' : '#3c3c43',
+                      bgcolor: active ? 'primary.main' : 'transparent',
+                      // bgColor alpha handled via sx opacity workaround below
+                      background: active ? 'rgba(25,118,210,0.1)' : 'transparent',
+                      color: active ? 'primary.main' : 'text.primary',
                       fontSize: 13,
                       fontWeight: active ? 600 : 400,
                       cursor: 'pointer',
                       outline: 'none',
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        background: active ? 'rgba(25,118,210,0.12)' : 'rgba(0,0,0,0.04)',
+                        background: active ? 'rgba(25,118,210,0.16)' : 'action.hover',
                       },
                     }}
                   >
@@ -136,18 +145,22 @@ const Header = () => {
 
             <Box sx={DIVIDER_SX} />
 
-            {/* ── dark mode placeholder ── */}
+            {/* ── dark mode ── */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography sx={{ fontSize: 14, fontWeight: 500, color: '#1c1c1e', lineHeight: 1.2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {mode === 'dark'
+                  ? <DarkModeIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  : <LightModeIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                }
+                <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'text.primary', lineHeight: 1.2 }}>
                   Dark Mode
                 </Typography>
-                <Typography sx={{ fontSize: 11, color: '#8e8e93', mt: '2px' }}>
-                  Coming soon
-                </Typography>
               </Box>
-              {/* TODO: wire up dark mode theme toggle */}
-              <Switch disabled size="small" />
+              <Switch
+                checked={mode === 'dark'}
+                onChange={toggleTheme}
+                size="small"
+              />
             </Box>
 
             <Box sx={DIVIDER_SX} />
@@ -164,12 +177,12 @@ const Header = () => {
                 borderRadius: '8px',
                 textTransform: 'none',
                 fontSize: 13,
-                borderColor: 'rgba(0,0,0,0.15)',
-                color: '#3c3c43',
+                borderColor: 'divider',
+                color: 'text.primary',
                 justifyContent: 'flex-start',
                 '&:hover': {
-                  borderColor: 'rgba(0,0,0,0.28)',
-                  background: 'rgba(0,0,0,0.04)',
+                  borderColor: 'text.disabled',
+                  bgcolor: 'action.hover',
                 },
               }}
             >

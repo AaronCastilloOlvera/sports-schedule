@@ -1,4 +1,9 @@
 {
+  "tabs": {
+    "live": "En Vivo",
+    "myLeagues": "Mis Ligas",
+    "control": "Control"
+  },
   "fixtures": {
     "tableAriaLabel": "tabla de partidos",
     "table": {

@@ -74,7 +74,7 @@ function MatchRow({ match, handleOpenH2HModal }) {
         </Box>
       </TableCell>
       <TableCell align="center">
-        <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'inline-flex', gap: 1, alignItems: 'center' }}>
           <Typography
             key={`home-score-${match.goals.home}`}
             variant="subtitle1" 

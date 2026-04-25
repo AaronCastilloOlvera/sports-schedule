@@ -65,8 +65,8 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
           width: { xs: '95%', sm: '90%' },
           maxWidth: 680,
           borderRadius: { xs: '16px', sm: '20px' },
-          bgcolor: '#ffffff',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06)',
+          bgcolor: 'background.paper',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08)',
           maxHeight: '90vh',
           overflow: 'hidden',
           display: 'flex',
@@ -81,16 +81,16 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
           sx={{
             position: 'absolute', right: 12, top: 12, zIndex: 10,
             width: { xs: 36, sm: 28 }, height: { xs: 36, sm: 28 },
-            bgcolor: 'rgba(0,0,0,0.06)', color: 'rgba(0,0,0,0.45)',
-            '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
+            bgcolor: 'action.hover', color: 'text.secondary',
+            '&:hover': { bgcolor: 'action.selected' },
           }}
         >
           <CloseIcon sx={{ fontSize: 14 }} />
         </IconButton>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: '#f5f5f7' }}>
-            <CircularProgress sx={{ color: '#007AFF' }} />
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: 'background.default' }}>
+            <CircularProgress color="primary" />
           </Box>
         ) : h2hData.length > 0 ? (
           <Box sx={{ overflow: 'auto', flex: 1 }}>
@@ -108,8 +108,8 @@ const H2HModal = ({ open, onClose, team1Id, team2Id }) => {
             />
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: '#f5f5f7' }}>
-            <Typography sx={{ color: 'rgba(0,0,0,0.4)', fontFamily: FONT }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: 'background.default' }}>
+            <Typography sx={{ color: 'text.secondary', fontFamily: FONT }}>
               {t('h2h.noData')}
             </Typography>
           </Box>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { Box, Tab, Tabs }  from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import Fixtures from '../components/Futbol/Fixtures';
 import Leagues from '../components/Futbol/Leagues';
 import Bets from '../components/Futbol/Bets';
@@ -32,6 +33,7 @@ function FutbolTab(props) {
 
 export default function FutbolDashboard() {
   const [tabValue, setTabValue] = useState(0);
+  const { t } = useTranslation();
 
   const handleChange = (event, newValue) => {
     setTabValue(newValue);
@@ -40,16 +42,16 @@ export default function FutbolDashboard() {
   return (
     <Box sx={{ width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}>
-        <Tabs 
-          value={tabValue} 
+        <Tabs
+          value={tabValue}
           onChange={handleChange}
           variant="scrollable"
           scrollButtons="auto"
           allowScrollButtonsMobile
         >
-          <Tab label="En Vivo" />
-          <Tab label="Mis Ligas" />
-          <Tab label="Control" />
+          <Tab label={t('tabs.live')} />
+          <Tab label={t('tabs.myLeagues')} />
+          <Tab label={t('tabs.control')} />
         </Tabs>
       </Box>
       

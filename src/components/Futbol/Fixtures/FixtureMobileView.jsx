@@ -33,7 +33,7 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
         </Box>
         
         <Box sx={{ px: 2 }}>
-          <Box sx={{ p: 1, backgroundColor: '#f5f5f5', borderRadius: 1, display: 'inline-block' }}>
+          <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'inline-block' }}>
             <Typography variant="h5" fontWeight="bold">
               {match.fixture.status.elapsed !== null ?  
                ( <Typography variant="h5" fontWeight="bold"> {match.goals.home} - {match.goals.away}</Typography>)
@@ -53,7 +53,7 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 1.5, borderTop: '1px solid #eeeeee' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="textSecondary" sx={{ maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           🏟️ {match.fixture.venue.name || 'Estadio por definir'}
         </Typography>

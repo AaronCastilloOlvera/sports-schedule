@@ -10,21 +10,21 @@ const GRID_COLS_MOBILE = '80px 1fr 64px 1fr';
 
 function SegmentedControl({ options, value, onChange }) {
   return (
-    <Box sx={{ display: 'inline-flex', background: 'rgba(0,0,0,0.06)', borderRadius: '9px', p: '2px' }}>
+    <Box sx={{ display: 'inline-flex', bgcolor: 'action.hover', borderRadius: '9px', p: '2px' }}>
       {options.map(opt => (
         <Box
           key={opt.value}
           component="button"
           onClick={() => onChange(opt.value)}
           sx={{
-            background: value === opt.value ? '#ffffff' : 'transparent',
+            bgcolor: value === opt.value ? 'background.paper' : 'transparent',
             border: 'none', outline: 'none', cursor: 'pointer',
             borderRadius: '7px',
             px: { xs: '10px', sm: '14px' },
             py: { xs: '4px', sm: '5px' },
             fontSize: { xs: 12, sm: 13 },
             fontWeight: value === opt.value ? 600 : 400,
-            color: value === opt.value ? '#1c1c1e' : 'rgba(0,0,0,0.45)',
+            color: value === opt.value ? 'text.primary' : 'text.disabled',
             transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
             boxShadow: value === opt.value ? '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
             letterSpacing: '-0.1px',
@@ -49,18 +49,19 @@ function ScoreBadge({ homeScore, awayScore, homeWon, awayWon }) {
   return (
     <Box sx={{
       display: 'inline-flex', alignItems: 'center', gap: '2px',
-      background: '#f2f2f7',
-      border: '1px solid rgba(0,0,0,0.08)',
+      bgcolor: 'action.selected',
+      border: '1px solid',
+      borderColor: 'divider',
       borderRadius: '10px', px: '10px', py: '5px',
       minWidth: { xs: 52, sm: 62 }, justifyContent: 'center',
     }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: homeWon ? '#28CD41' : awayWon ? '#FF3B30' : '#8e8e93' }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: homeWon ? '#28CD41' : awayWon ? '#FF3B30' : 'text.secondary' }}>
         {homeScore}
       </Typography>
-      <Typography sx={{ fontSize: 11, color: '#aeaeb2', fontWeight: 500, mx: '2px', lineHeight: 1, fontFamily: FONT }}>
+      <Typography sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500, mx: '2px', lineHeight: 1, fontFamily: FONT }}>
         –
       </Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: awayWon ? '#28CD41' : homeWon ? '#FF3B30' : '#8e8e93' }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: awayWon ? '#28CD41' : homeWon ? '#FF3B30' : 'text.secondary' }}>
         {awayScore}
       </Typography>
     </Box>
@@ -78,15 +79,16 @@ function MiniLogo({ logo, name }) {
   return (
     <Box sx={{
       width: 24, height: 24, borderRadius: '50%',
-      background: '#f2f2f7',
-      border: '1px solid rgba(0,0,0,0.06)',
+      bgcolor: 'action.hover',
+      border: '1px solid',
+      borderColor: 'divider',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', flexShrink: 0,
     }}>
       {logo ? (
         <Box component="img" src={logo} alt={name} sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
       ) : (
-        <Typography sx={{ fontSize: 9, fontWeight: 700, color: '#8e8e93', fontFamily: FONT }}>
+        <Typography sx={{ fontSize: 9, fontWeight: 700, color: 'text.disabled', fontFamily: FONT }}>
           {name?.split(' ').map(w => w[0]).join('').slice(0, 3)}
         </Typography>
       )}
@@ -109,7 +111,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
   ];
 
   return (
-    <Box sx={{ background: '#ffffff', borderTop: '0.5px solid rgba(0,0,0,0.08)', fontFamily: FONT }}>
+    <Box sx={{ bgcolor: 'background.paper', borderTop: '0.5px solid', borderColor: 'divider', fontFamily: FONT }}>
 
       {/* Title + filter row — wraps on xs so long translated labels don't overflow */}
       <Box sx={{
@@ -118,10 +120,10 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
         px: { xs: 2, sm: '20px' }, pt: { xs: 2, sm: '18px' }, pb: '10px',
       }}>
         <Box>
-          <Typography sx={{ fontSize: 17, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.4px', lineHeight: 1, fontFamily: FONT }}>
+          <Typography sx={{ fontSize: 17, fontWeight: 700, color: 'text.primary', letterSpacing: '-0.4px', lineHeight: 1, fontFamily: FONT }}>
             {t('h2h.lastMatches')}
           </Typography>
-          <Typography sx={{ fontSize: 12, color: '#8e8e93', mt: '2px', fontFamily: FONT }}>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: '2px', fontFamily: FONT }}>
             {filteredMatches.length} {t('h2h.results')}
           </Typography>
         </Box>
@@ -139,7 +141,8 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
         gap: '8px',
         px: { xs: '12px', sm: '16px' },
         py: '6px',
-        borderBottom: '0.5px solid rgba(0,0,0,0.08)',
+        borderBottom: '0.5px solid',
+        borderColor: 'divider',
       }}>
         {[
           { label: t('h2h.table.date'),   align: 'left',   hideXs: false },
@@ -152,7 +155,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
             key={col.label}
             sx={{
               display: col.hideXs ? { xs: 'none', sm: 'block' } : 'block',
-              fontSize: 11, fontWeight: 600, color: '#aeaeb2',
+              fontSize: 11, fontWeight: 600, color: 'text.disabled',
               textTransform: 'uppercase', letterSpacing: '0.5px',
               textAlign: col.align, fontFamily: FONT,
             }}
@@ -166,7 +169,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
       <Box sx={{ maxHeight: { xs: 260, sm: 320 }, overflowY: 'auto', pt: '4px', pb: '8px' }}>
         {filteredMatches.length === 0 ? (
           <Box sx={{ py: 5, textAlign: 'center' }}>
-            <Typography sx={{ color: '#aeaeb2', fontSize: 14, fontFamily: FONT }}>
+            <Typography sx={{ color: 'text.disabled', fontSize: 14, fontFamily: FONT }}>
               {t('h2h.noMatchesFilter')}
             </Typography>
           </Box>
@@ -183,16 +186,16 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                 px: { xs: '12px', sm: '16px' },
                 py: '12px',
                 borderRadius: '12px', cursor: 'default',
-                transition: 'background 0.15s ease',
-                '&:hover': { background: 'rgba(0,0,0,0.03)' },
+                transition: 'background-color 0.15s ease',
+                '&:hover': { bgcolor: 'action.hover' },
               }}>
 
                 {/* Date (bold) + weekday (muted) */}
                 <Box>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', letterSpacing: '-0.2px', lineHeight: 1.2, fontFamily: FONT }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary', letterSpacing: '-0.2px', lineHeight: 1.2, fontFamily: FONT }}>
                     {new Date(match.fixture.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </Typography>
-                  <Typography sx={{ fontSize: 11, color: '#aeaeb2', mt: '2px', textTransform: 'capitalize', lineHeight: 1.2, fontFamily: FONT }}>
+                  <Typography sx={{ fontSize: 11, color: 'text.disabled', mt: '2px', textTransform: 'capitalize', lineHeight: 1.2, fontFamily: FONT }}>
                     {new Date(match.fixture.date).toLocaleDateString(i18n.language, { weekday: 'long' })}
                   </Typography>
                 </Box>
@@ -200,7 +203,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                 {/* Home team — name truncates with ellipsis when space is tight */}
                 <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ gap: '6px', minWidth: 0 }}>
                   <Typography sx={{
-                    fontSize: 13, fontWeight: 500, color: '#3c3c43',
+                    fontSize: 13, fontWeight: 500, color: 'text.primary',
                     textAlign: 'right', letterSpacing: '-0.2px', fontFamily: FONT,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
@@ -218,7 +221,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                 <Stack direction="row" alignItems="center" sx={{ gap: '6px', minWidth: 0 }}>
                   <MiniLogo logo={match.teams.away.logo} name={match.teams.away.name} />
                   <Typography sx={{
-                    fontSize: 13, fontWeight: 500, color: '#3c3c43',
+                    fontSize: 13, fontWeight: 500, color: 'text.primary',
                     letterSpacing: '-0.2px', fontFamily: FONT,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
@@ -228,7 +231,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
 
                 {/* League pill — hidden on xs, visible on sm+ */}
                 <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center' }}>
-                  <Typography component="span" sx={{ fontSize: 11, color: '#636366', fontWeight: 500, background: '#f2f2f7', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
+                  <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 500, bgcolor: 'action.selected', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
                     {match.league.name}
                   </Typography>
                 </Box>
@@ -236,7 +239,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
 
               {/* Hairline separator between rows */}
               {i < filteredMatches.length - 1 && (
-                <Box sx={{ height: '0.5px', background: 'rgba(0,0,0,0.07)', mx: '12px' }} />
+                <Box sx={{ height: '0.5px', bgcolor: 'divider', mx: '12px' }} />
               )}
             </Box>
           );
