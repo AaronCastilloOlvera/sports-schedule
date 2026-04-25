@@ -1,9 +1,24 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { CalendarToday, LocationOn } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { keyframes } from '@mui/system';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
+
+const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'SUSP', 'INT']);
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.7); }
+`;
+
+function getLiveLabel({ short, elapsed }) {
+  if (short === 'HT') return 'HT';
+  if (short === 'BT') return 'BT';
+  if (elapsed != null) return `${elapsed}'`;
+  return short;
+}
 
 // Subtle blue radial glows layered over background.paper via backgroundImage.
 // background-color (bgcolor) is theme-aware; backgroundImage just adds the tint.
@@ -49,8 +64,9 @@ TeamColumn.propTypes = {
   team: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
 };
 
-export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, record }) {
+export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, record }) {
   const { t } = useTranslation();
+  const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
 
   const badges = record ? [
     { label: t('h2h.wins'),  value: record.team1Wins, color: '#28CD41', bgColor: 'rgba(40,205,65,0.08)',   borderColor: 'rgba(40,205,65,0.28)' },
@@ -72,22 +88,61 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, record }
       <Stack direction="row" alignItems="center" justifyContent="center">
         <TeamColumn team={teamHome} />
 
-        {/* VS circle + H2H label */}
-        <Stack alignItems="center" sx={{ gap: '4px', px: { xs: '16px', sm: '20px' } }}>
-          <Box sx={{
-            width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '50%',
-            bgcolor: 'action.selected',
-            border: '1px solid',
-            borderColor: 'divider',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Typography sx={{ fontSize: { xs: 11, sm: 13 }, fontWeight: 700, color: 'text.secondary', letterSpacing: '0.5px', fontFamily: FONT }}>
-              VS
-            </Typography>
-          </Box>
-          <Typography sx={{ fontSize: 10, color: 'text.disabled', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, fontFamily: FONT }}>
-            H2H
-          </Typography>
+        {/* Center: live score when match is in progress, VS circle otherwise */}
+        <Stack alignItems="center" sx={{ gap: '6px', px: { xs: '12px', sm: '20px' } }}>
+          {isLive ? (
+            <>
+              {/* Live score pill */}
+              <Box sx={{
+                bgcolor: 'action.selected',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '12px',
+                px: { xs: '12px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
+                display: 'flex', alignItems: 'center', gap: { xs: '8px', sm: '10px' },
+              }}>
+                <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: 'text.primary', fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  {currentMatch.goals.home ?? 0}
+                </Typography>
+                <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 500, color: 'text.disabled', fontFamily: FONT, lineHeight: 1 }}>
+                  –
+                </Typography>
+                <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: 'text.primary', fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  {currentMatch.goals.away ?? 0}
+                </Typography>
+              </Box>
+              {/* Pulsing live indicator + elapsed time */}
+              <Stack direction="row" alignItems="center" sx={{ gap: '5px' }}>
+                <Box sx={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  bgcolor: 'error.main',
+                  animation: `${pulse} 1.4s ease-in-out infinite`,
+                  flexShrink: 0,
+                }} />
+                <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'error.main', fontFamily: FONT, letterSpacing: '0.4px' }}>
+                  {getLiveLabel(currentMatch.fixture.status)}
+                </Typography>
+              </Stack>
+            </>
+          ) : (
+            <>
+              {/* Static VS circle */}
+              <Box sx={{
+                width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '50%',
+                bgcolor: 'action.selected',
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Typography sx={{ fontSize: { xs: 11, sm: 13 }, fontWeight: 700, color: 'text.secondary', letterSpacing: '0.5px', fontFamily: FONT }}>
+                  VS
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: 10, color: 'text.disabled', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, fontFamily: FONT }}>
+                H2H
+              </Typography>
+            </>
+          )}
         </Stack>
 
         <TeamColumn team={teamAway} />
@@ -155,5 +210,6 @@ H2HMatchHeader.propTypes = {
   teamHome: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   teamAway: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   nextMatch: PropTypes.object,
+  currentMatch: PropTypes.object,
   record: PropTypes.shape({ team1Wins: PropTypes.number, draws: PropTypes.number, team2Wins: PropTypes.number }),
 };
