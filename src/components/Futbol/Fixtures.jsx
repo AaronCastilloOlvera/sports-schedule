@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Avatar, Box, Chip, IconButton, LinearProgress, Typography, Stack, Tooltip, useMediaQuery } from '@mui/material';
+import { Avatar, Box, Chip, IconButton, LinearProgress, Typography, Stack, useMediaQuery } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { ChevronLeft, ChevronRight, Refresh } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import H2HModal from '../modals/H2HModal';
@@ -108,9 +108,11 @@ const Fixtures = () => {
     );
   };
 
-  const handleRefreshFixtures = () => {
-    loadMatchesData(true);
-  };
+  useEffect(() => {
+    const handler = () => loadMatchesData(true);
+    window.addEventListener('refresh-leagues', handler);
+    return () => window.removeEventListener('refresh-leagues', handler);
+  }, [loadMatchesData]);
 
   const handleOpenH2HModal = (team1Id, team2Id) => {
     setSelectedTeams({ team1: team1Id, team2: team2Id });
@@ -169,14 +171,6 @@ const Fixtures = () => {
             </IconButton>
           </Box>
 
-          <Box sx={{ flexGrow: 1, order: { xs: 3, sm: 0 } }} />
-          <Box sx={{ order: { xs: 2, sm: 0 } }}>
-            <Tooltip title="Refrescar Ligas">
-              <IconButton onClick={handleRefreshFixtures} color='primary'>
-                <Refresh />
-              </IconButton>
-            </Tooltip>
-          </Box>
         </Box>
 
         <Stack
