@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { keyframes } from '@mui/system';
 import { useTranslation } from 'react-i18next';
+import { statusPriority } from './consts';
 
 // Gol animation keyframes
 const goalFlash = keyframes`
@@ -42,8 +43,10 @@ function MatchRow({ match, handleOpenH2HModal }) {
     return () => clearTimeout(timeoutId);
   }, [match.goals.home, match.goals.away]);
 
+  const isFinished = statusPriority[match.fixture.status.short] === 3;
+
   return (
-    <TableRow>
+    <TableRow sx={{ opacity: isFinished ? 0.55 : 1, transition: 'opacity 0.2s' }}>
       <TableCell>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           {match.league.logo && (

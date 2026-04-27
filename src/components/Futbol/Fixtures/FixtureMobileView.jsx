@@ -4,10 +4,13 @@ import LiveStatusChip from './LiveStatusChip';
 import PropTypes from "prop-types";
 import React from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
+import { statusPriority } from './consts';
 
 // Component rendered for mobile view, showing matches in a card format
-const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
-  <Card key={match.fixture.id} elevation={2} sx={{ borderRadius: 2 }}>
+const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
+  const isFinished = statusPriority[match.fixture.status.short] === 3;
+  return (
+  <Card key={match.fixture.id} elevation={2} sx={{ borderRadius: 2, opacity: isFinished ? 0.55 : 1, transition: 'opacity 0.2s' }}>
     <CardContent sx={{ pb: '16px !important' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -64,7 +67,8 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => (
 
     </CardContent>
   </Card>
-), areRowsEqual);
+  );
+}, areRowsEqual);
 
 MatchMobileCard.displayName = 'MatchMobileCard';
 

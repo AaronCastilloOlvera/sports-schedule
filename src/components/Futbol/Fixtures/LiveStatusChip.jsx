@@ -44,18 +44,18 @@ export default function LiveStatusChip({ fixture }) {
     );
   }
 
-  // Case 3. Finished matches show "FT" or the appropriate status in a gray chip
+  // Case 3. Finished matches show "FT" or the appropriate status in a muted chip
   return (
-    <Chip 
-      label={shortStatus} 
-      size="small" 
-      sx={{ 
-        height: 18, 
-        fontSize: '0.65rem', 
-        backgroundColor: isFinished ? '#f5f5f5' : '#fff3e0',
-        color: isFinished ? '#9e9e9e' : '#e65100',
+    <Chip
+      label={shortStatus}
+      size="small"
+      sx={{
+        height: 18,
+        fontSize: '0.65rem',
+        backgroundColor: isFinished ? 'action.selected' : 'warning.light',
+        color: isFinished ? 'text.secondary' : 'warning.dark',
         borderRadius: 1
-      }} 
+      }}
     />
   );
 }
