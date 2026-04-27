@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Avatar, Box, Chip, IconButton, LinearProgress, Typography, Stack, useMediaQuery } from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import PropTypes from 'prop-types';
+import { Avatar, Box, Chip, LinearProgress, Typography, Stack, useMediaQuery } from '@mui/material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import H2HModal from '../modals/H2HModal';
@@ -11,13 +8,12 @@ import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
 import { statusPriority } from './Fixtures/consts';
 
-const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000; 
+const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
 
-const Fixtures = () => {
+const Fixtures = ({ selectedDate, searchTerm }) => {
 
   const [fixtures, setFixtures] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
@@ -70,9 +66,18 @@ const Fixtures = () => {
     if (!fixtures) return [];
 
     // Filter by favorite leagues
-    const filtered = selectedLeagues.length > 0
+    const byLeague = selectedLeagues.length > 0
       ? fixtures.filter((match) => selectedLeagues.includes(match.league.id))
       : fixtures;
+
+    // Filter by search term (home or away team name)
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = term
+      ? byLeague.filter((match) =>
+          match.teams.home.name.toLowerCase().includes(term) ||
+          match.teams.away.name.toLowerCase().includes(term)
+        )
+      : byLeague;
 
     // Order by status priority and then by time
     return [...filtered].sort((a, b) => {
@@ -82,30 +87,18 @@ const Fixtures = () => {
       const priorityA = statusPriority[statusA] || 2;
       const priorityB = statusPriority[statusB] || 2;
 
-      // Priority: 1 = Live, 2 = Not Started, 3 = Finished
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
+      if (priorityA !== priorityB) return priorityA - priorityB;
 
-      // If same priority, order by time
       return new Date(a.fixture.date) - new Date(b.fixture.date);
     });
 
-  }, [fixtures, selectedLeagues]);
+  }, [fixtures, selectedLeagues, searchTerm]);
 
   // Re-derived on every poll so the modal always receives the freshest fixture data.
   const activeMatch = useMemo(
     () => selectedMatchId ? (processedFixtures.find(m => m.fixture.id === selectedMatchId) ?? null) : null,
     [selectedMatchId, processedFixtures]
   );
-
-  const handlePreviousDay = () => {
-    setSelectedDate(prevDate => prevDate.subtract(1, 'day'));
-  };
-
-  const handleNextDay = () => {
-    setSelectedDate(prevDate => prevDate.add(1, 'day'));
-  };
 
   const handleLeagueClick = (leagueId) => {
     setSelectedLeagues((prev) =>
@@ -158,114 +151,94 @@ const Fixtures = () => {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1, mb: 3 }}>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, order: { xs: 1, sm: 0 } }}>
-            <IconButton onClick={handlePreviousDay} color='primary'>
-              <ChevronLeft />
-            </IconButton>
-
-            <DatePicker
-              label="Seleccionar Fecha"
-              value={selectedDate}
-              onChange={(newValue) => setSelectedDate(newValue)}
-              format='DD/MM/YYYY'
-              slotProps={{ textField: { size: 'small', readOnly: true } }}
-            />
-
-            <IconButton onClick={handleNextDay} color='primary'>
-              <ChevronRight />
-            </IconButton>
-          </Box>
-
-        </Box>
-
-        <Stack
-          direction="row"
-          sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
-        >
-          <Chip
-            label="All"
-            onClick={() => setSelectedLeagues([])}
-            color={selectedLeagues.length === 0 ? 'primary' : 'default'}
-            variant={selectedLeagues.length === 0 ? 'filled' : 'outlined'}
-            clickable
-          />
-          {summaryArray.map((league) => {
-            const isSelected = selectedLeagues.includes(league.id);
-            return (
-              <Chip
-                key={league.id}
-                label={`${league.name} (${league.count})`}
-                onClick={() => handleLeagueClick(league.id)}
-                color={isSelected ? 'primary' : 'default'}
-                variant={isSelected ? 'filled' : 'outlined'}
-                clickable
-                sx={{
-                  transition: 'all 0.2s ease',
-                  backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.12)' : 'transparent',
-                  color: isSelected ? 'primary.main' : 'text.secondary',
-                  borderColor: isSelected ? 'primary.main' : 'divider',
-                  borderWidth: 1,
-                  borderStyle: 'solid',
-                  fontWeight: isSelected ? 600 : 400,
-                  '&:hover': {
-                    backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.20)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                  '& .MuiChip-avatar': {
-                    margin: 0,
-                    marginLeft: '4px'
-                  }
-                }}
-                avatar={
-                  <Avatar
-                    src={league.logo}
-                    alt={league.name}
-                    variant="rounded"
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      backgroundColor: 'transparent !important',
-                      '& .MuiAvatar-img': {
-                        objectFit: 'contain',
-                      }
-                    }}
-                  />
-                }
-              />
-            );
-          })}
-        </Stack>
-
-        {
-        loading ? (
-          <LinearProgress />
-        ) :
-          processedFixtures.length === 0 ? (
-            <Typography>No hay partidos disponibles para esta fecha.</Typography>
-          ) : isMobile ?
-            <FixtureMobileView
-              processedFixtures={processedFixtures}
-              handleOpenH2HModal={handleOpenH2HModal}
-            />
-            :
-            <FixturesDesktopView
-              processedFixtures={processedFixtures}
-              handleOpenH2HModal={handleOpenH2HModal}
-             />
-         }
-        <H2HModal
-          open={h2hModalOpen}
-          onClose={handleCloseH2HModal}
-          team1Id={selectedTeams.team1}
-          team2Id={selectedTeams.team2}
-          currentMatch={activeMatch}
+    <Box>
+      <Stack
+        direction="row"
+        sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
+      >
+        <Chip
+          label="All"
+          onClick={() => setSelectedLeagues([])}
+          color={selectedLeagues.length === 0 ? 'primary' : 'default'}
+          variant={selectedLeagues.length === 0 ? 'filled' : 'outlined'}
+          clickable
         />
-      </Box>
-    </LocalizationProvider>
+        {summaryArray.map((league) => {
+          const isSelected = selectedLeagues.includes(league.id);
+          return (
+            <Chip
+              key={league.id}
+              label={`${league.name} (${league.count})`}
+              onClick={() => handleLeagueClick(league.id)}
+              color={isSelected ? 'primary' : 'default'}
+              variant={isSelected ? 'filled' : 'outlined'}
+              clickable
+              sx={{
+                transition: 'all 0.2s ease',
+                backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.12)' : 'transparent',
+                color: isSelected ? 'primary.main' : 'text.secondary',
+                borderColor: isSelected ? 'primary.main' : 'divider',
+                borderWidth: 1,
+                borderStyle: 'solid',
+                fontWeight: isSelected ? 600 : 400,
+                '&:hover': {
+                  backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.20)' : 'rgba(0, 0, 0, 0.04)',
+                },
+                '& .MuiChip-avatar': {
+                  margin: 0,
+                  marginLeft: '4px'
+                }
+              }}
+              avatar={
+                <Avatar
+                  src={league.logo}
+                  alt={league.name}
+                  variant="rounded"
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    backgroundColor: 'transparent !important',
+                    '& .MuiAvatar-img': {
+                      objectFit: 'contain',
+                    }
+                  }}
+                />
+              }
+            />
+          );
+        })}
+      </Stack>
+
+      {loading ? (
+        <LinearProgress />
+      ) : processedFixtures.length === 0 ? (
+        <Typography>No hay partidos disponibles para esta fecha.</Typography>
+      ) : isMobile ? (
+        <FixtureMobileView
+          processedFixtures={processedFixtures}
+          handleOpenH2HModal={handleOpenH2HModal}
+        />
+      ) : (
+        <FixturesDesktopView
+          processedFixtures={processedFixtures}
+          handleOpenH2HModal={handleOpenH2HModal}
+        />
+      )}
+
+      <H2HModal
+        open={h2hModalOpen}
+        onClose={handleCloseH2HModal}
+        team1Id={selectedTeams.team1}
+        team2Id={selectedTeams.team2}
+        currentMatch={activeMatch}
+      />
+    </Box>
   );
+};
+
+Fixtures.propTypes = {
+  selectedDate: PropTypes.object.isRequired,
+  searchTerm: PropTypes.string.isRequired,
 };
 
 export default Fixtures;
