@@ -76,8 +76,10 @@ export default function FutbolDashboard() {
           <Box
             sx={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' },
+              justifyContent: { sm: 'space-between' },
+              gap: 2,
               backgroundColor: 'background.paper',
               px: { xs: 1, sm: 2 },
               mt: 2,
@@ -98,7 +100,7 @@ export default function FutbolDashboard() {
                   textField: {
                     size: 'small',
                     readOnly: true,
-                    sx: { minWidth: 180 },
+                    sx: { minWidth: 180, width: { xs: '100%', sm: 'auto' } },
                   },
                 }}
               />
@@ -108,7 +110,16 @@ export default function FutbolDashboard() {
             </Box>
 
             {/* Search — far RIGHT (expandable) */}
-            <Box onBlur={handleSearchBlur} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box
+              onBlur={handleSearchBlur}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexGrow: isSearchOpen ? 1 : 0,
+                transition: 'flex-grow 0.25s ease',
+                overflow: 'hidden',
+              }}
+            >
               {isSearchOpen ? (
                 <TextField
                   autoFocus
@@ -133,7 +144,12 @@ export default function FutbolDashboard() {
                     },
                   }}
                   sx={{
-                    width: { xs: 160, sm: 200 },
+                    width: '100%',
+                    '@keyframes slideIn': {
+                      from: { opacity: 0, transform: 'translateX(8px)' },
+                      to:   { opacity: 1, transform: 'translateX(0)' },
+                    },
+                    animation: 'slideIn 0.2s ease',
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: 'background.paper',
                       color: 'text.primary',
