@@ -1,18 +1,5 @@
 import axios from "axios"
 
-export const fetchStatus = async (apiKey, apiURL) => {
-  const options = {
-    method: 'GET',
-    url: `https://${apiURL}/status`,
-    headers: {
-      'x-rapidapi-key': apiKey,
-      'x-rapidapi-host': apiURL
-    }
-  }
-  const response = await axios.request(options);
-  return response.data;
-};
-
 class ApiClient {
   constructor(baseURL, opts = {}) {
     if (!baseURL) throw new Error('ApiClient requires a baseURL');
@@ -32,6 +19,14 @@ class ApiClient {
     );
   }
 
+  
+  // Usage 
+  async fetchUsage() {
+    const response = await this.client.get('/status/usage');
+    return response.data.requests;
+  }
+
+  // Leagues
   async fetchLeagues() {
     try {
       const response = await this.client.get('/leagues');

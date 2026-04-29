@@ -1,26 +1,34 @@
-import { useEffect, useState }  from 'react';
-import { Typography } from "@mui/material";
-import { fetchStatus } from './../../api/api.js';
+import { useEffect, useState, useCallback }  from 'react';
+import { Typography, IconButton, Tooltip } from "@mui/material";
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { apiClient } from '../../api/api';
 
-const Status = () => {  
+const Status = () => {
   const [status, setStatus] = useState(null);
-  const { VITE_API_KEY: apiKey,  VITE_API_URL: apiURL } = import.meta.env;
 
-  useEffect(() => {
-    fetchStatus(apiKey, apiURL)
+  const loadUsage = useCallback(() => {
+    setStatus(null);
+    apiClient.fetchUsage()
       .then((status) => setStatus(status))
-      .catch((error) => console.error(error))
-  }, [apiKey, apiURL]);
+      .catch((error) => console.error(error));
+  }, []);
 
-  if (!status || !status === '') {
-    return <Typography variant="body1">Loading...</Typography>;
-  }
+  useEffect(() => { loadUsage(); }, [loadUsage]);
 
-  const currentRequests = status.response.requests?.current;
-  const limitDay = status.response.requests?.limit_day;
+  const currentRequests = status?.current;
+  const limitDay = status?.limit_day;
 
-  return(
-    <Typography variant="body1"> Requests: {currentRequests} / {limitDay} </Typography>
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <Typography variant="body1">
+        Requests: {status ? `${currentRequests} / ${limitDay}` : 'Loading...'}
+      </Typography>
+      <Tooltip title="Refresh usage">
+        <IconButton size="small" onClick={loadUsage}>
+          <RefreshIcon fontSize="inherit" />
+        </IconButton>
+      </Tooltip>
+    </span>
   );
 };
 
