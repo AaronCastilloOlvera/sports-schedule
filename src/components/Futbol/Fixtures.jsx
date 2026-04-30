@@ -10,7 +10,9 @@ import { statusPriority } from './Fixtures/consts';
 
 const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
 
-const Fixtures = ({ selectedDate, searchTerm }) => {
+const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT']);
+
+const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
 
   const [fixtures, setFixtures] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +95,12 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
     });
 
   }, [fixtures, selectedLeagues, searchTerm]);
+
+  useEffect(() => {
+    if (!onLiveChange) return;
+    const hasLive = (fixtures ?? []).some(m => LIVE_STATUSES.has(m.fixture.status.short));
+    onLiveChange(hasLive);
+  }, [fixtures, onLiveChange]);
 
   // Re-derived on every poll so the modal always receives the freshest fixture data.
   const activeMatch = useMemo(
@@ -239,6 +247,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
 Fixtures.propTypes = {
   selectedDate: PropTypes.object.isRequired,
   searchTerm: PropTypes.string.isRequired,
+  onLiveChange: PropTypes.func,
 };
 
 export default Fixtures;

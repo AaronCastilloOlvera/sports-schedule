@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, IconButton, InputAdornment, Tab, Tabs, TextField } from '@mui/material';
+import { Box, IconButton, InputAdornment, Stack, Tab, Tabs, TextField } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -35,6 +35,7 @@ export default function FutbolDashboard() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [hasLiveMatches, setHasLiveMatches] = useState(false);
   const { t } = useTranslation();
 
   const handleTabChange = (_, newValue) => setTabValue(newValue);
@@ -65,7 +66,19 @@ export default function FutbolDashboard() {
             scrollButtons="auto"
             allowScrollButtonsMobile
           >
-            <Tab label={t('tabs.live')} />
+            <Tab label={
+              <Stack direction="row" alignItems="center" spacing={1}>
+                {hasLiveMatches && (
+                  <Box sx={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    backgroundColor: 'error.main',
+                    animation: 'livePulse 1.5s ease-in-out infinite',
+                    flexShrink: 0,
+                  }} />
+                )}
+                <span>{t('tabs.live')}</span>
+              </Stack>
+            } />
             <Tab label={t('tabs.myLeagues')} />
             <Tab label={t('tabs.control')} />
           </Tabs>
@@ -176,7 +189,7 @@ export default function FutbolDashboard() {
 
         {/* ── Tab panels ──────────────────────────────────────────────────────── */}
         <FutbolTab value={tabValue} index={0}>
-          <Fixtures selectedDate={selectedDate} searchTerm={searchTerm} />
+          <Fixtures selectedDate={selectedDate} searchTerm={searchTerm} onLiveChange={setHasLiveMatches} />
         </FutbolTab>
 
         <FutbolTab value={tabValue} index={1}>
