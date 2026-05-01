@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { Avatar, Box, Chip, LinearProgress, Typography, Stack, useMediaQuery } from '@mui/material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
-import H2HModal from '../modals/H2HModal';
+import FixtureDetailsModal from '../modals/FixtureDetailsModal';
 import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
 import { statusPriority } from './Fixtures/consts';
@@ -233,7 +233,7 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
         />
       )}
 
-      <H2HModal
+      <FixtureDetailsModal
         open={h2hModalOpen}
         onClose={handleCloseH2HModal}
         team1Id={selectedTeams.team1}

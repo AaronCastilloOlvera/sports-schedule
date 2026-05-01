@@ -1,4 +1,7 @@
 {
+  "loading": "Loading...",
+  "error_fetching_data": "Error fetching data.",
+  "no_recent_matches": "No recent matches found.",
   "tabs": {
     "live": "Live",
     "myLeagues": "My Leagues",
@@ -33,6 +36,10 @@
     "wins": "Wins",
     "draws": "Draws",
     "results": "results",
+    "tabs": {
+      "h2h": "H2H",
+      "recent": "Recent Matches"
+    },
     "filters": {
       "all": "All",
       "home": "Home",
@@ -44,6 +51,20 @@
       "result": "Result",
       "away": "Away",
       "league": "League"
+    }
+  },
+  "recent": {
+    "results": "results",
+    "table": {
+      "date": "Date",
+      "result": "Res",
+      "opponent": "Opponent",
+      "score": "Score",
+      "league": "League"
+    },
+    "stats": {
+      "title": "Match Statistics",
+      "noData": "Statistics not available for this match."
     }
   }
 }

@@ -58,6 +58,11 @@ class ApiClient {
     return response.data;
   }
 
+  async fetchRecentMatches(teamId) {
+    const response = await this.client.get(`/teams/${teamId}/recent-matches`);
+    return response.data;
+  }
+
   async fetchRefreshFixtures(date='2025-12-14') {
     const response = await this.client.post(`/redis/refresh-fixtures-cache?date=${date}`);
     return response.data;

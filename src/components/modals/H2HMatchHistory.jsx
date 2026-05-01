@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
+import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
 
-// Desktop keeps all 5 columns. Mobile drops the League column and tightens the date.
-const GRID_COLS        = '110px 1fr 80px 1fr 100px';
-const GRID_COLS_MOBILE = '80px 1fr 64px 1fr';
+// Desktop: 5 data columns + chevron. Mobile: 4 data columns + chevron.
+const GRID_COLS        = '110px 1fr 80px 1fr 100px 24px';
+const GRID_COLS_MOBILE = '80px 1fr 64px 1fr 24px';
 
 function SegmentedControl({ options, value, onChange }) {
   return (
@@ -101,8 +103,13 @@ MiniLogo.propTypes = {
   name: PropTypes.string,
 };
 
+const STAT_PLACEHOLDERS = ['Posesión', 'Tiros a puerta', 'Tiros totales', 'Córners', 'Faltas'];
+
 export default function H2HMatchHistory({ filteredMatches, filter, onFilterChange, team1Id }) {
   const { t, i18n } = useTranslation();
+  const [expandedId, setExpandedId] = useState(null);
+
+  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
 
   const filterOptions = [
     { value: 'all',  label: t('h2h.filters.all') },
@@ -111,7 +118,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
   ];
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', borderTop: '0.5px solid', borderColor: 'divider', fontFamily: FONT }}>
+    <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT }}>
 
       {/* Title + filter row — wraps on xs so long translated labels don't overflow */}
       <Box sx={{
@@ -150,6 +157,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
           { label: t('h2h.table.result'), align: 'center', hideXs: false },
           { label: t('h2h.table.away'),   align: 'left',   hideXs: false },
           { label: t('h2h.table.league'), align: 'center', hideXs: true  },
+          { label: '',                    align: 'center', hideXs: false },
         ].map(col => (
           <Typography
             key={col.label}
@@ -174,23 +182,29 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
             </Typography>
           </Box>
         ) : filteredMatches.map((match, i) => {
-          const homeWon = match.teams.home.winner;
-          const awayWon = match.teams.away.winner;
+          const homeWon    = match.teams.home.winner;
+          const awayWon    = match.teams.away.winner;
+          const isExpanded = expandedId === match.fixture.id;
+
           return (
             <Box key={match.fixture.id}>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
-                alignItems: 'center',
-                gap: '8px',
-                px: { xs: '12px', sm: '16px' },
-                py: '12px',
-                borderRadius: '12px', cursor: 'default',
-                transition: 'background-color 0.15s ease',
-                '&:hover': { bgcolor: 'action.hover' },
-              }}>
-
-                {/* Date (bold) + weekday (muted) */}
+              {/* ── Clickable row ── */}
+              <Box
+                onClick={() => toggleExpand(match.fixture.id)}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
+                  alignItems: 'center',
+                  gap: '8px',
+                  px: { xs: '12px', sm: '16px' },
+                  py: '12px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease',
+                  bgcolor: isExpanded ? 'action.hover' : 'transparent',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                {/* Date */}
                 <Box>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary', letterSpacing: '-0.2px', lineHeight: 1.2, fontFamily: FONT }}>
                     {new Date(match.fixture.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -200,44 +214,73 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                   </Typography>
                 </Box>
 
-                {/* Home team — name truncates with ellipsis when space is tight */}
+                {/* Home team */}
                 <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ gap: '6px', minWidth: 0 }}>
-                  <Typography sx={{
-                    fontSize: 13, fontWeight: 500, color: 'text.primary',
-                    textAlign: 'right', letterSpacing: '-0.2px', fontFamily: FONT,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary', textAlign: 'right', letterSpacing: '-0.2px', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {match.teams.home.name}
                   </Typography>
                   <MiniLogo logo={match.teams.home.logo} name={match.teams.home.name} />
                 </Stack>
 
-                {/* Score badge */}
+                {/* Score */}
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <ScoreBadge homeScore={match.goals.home} awayScore={match.goals.away} homeWon={homeWon} awayWon={awayWon} />
                 </Box>
 
-                {/* Away team — name truncates with ellipsis when space is tight */}
+                {/* Away team */}
                 <Stack direction="row" alignItems="center" sx={{ gap: '6px', minWidth: 0 }}>
                   <MiniLogo logo={match.teams.away.logo} name={match.teams.away.name} />
-                  <Typography sx={{
-                    fontSize: 13, fontWeight: 500, color: 'text.primary',
-                    letterSpacing: '-0.2px', fontFamily: FONT,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 500, color: 'text.primary', letterSpacing: '-0.2px', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {match.teams.away.name}
                   </Typography>
                 </Stack>
 
-                {/* League pill — hidden on xs, visible on sm+ */}
+                {/* League — hidden on xs */}
                 <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center' }}>
                   <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 500, bgcolor: 'action.selected', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
                     {match.league.name}
                   </Typography>
                 </Box>
+
+                {/* Expand chevron */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <ExpandMoreIcon sx={{
+                    fontSize: 16, color: 'text.disabled', flexShrink: 0,
+                    transition: 'transform 0.25s ease',
+                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }} />
+                </Box>
               </Box>
 
-              {/* Hairline separator between rows */}
+              {/* ── Expandable stats placeholder ── */}
+              <Box sx={{
+                maxHeight: isExpanded ? '400px' : 0,
+                overflow: 'hidden',
+                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>
+                <Box sx={{
+                  mx: { xs: '12px', sm: '16px' }, mb: '8px',
+                  borderRadius: '12px',
+                  bgcolor: 'action.selected',
+                  border: '1px dashed', borderColor: 'divider',
+                  p: '14px',
+                }}>
+                  <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.8px', mb: '12px', fontFamily: FONT }}>
+                    Estadísticas detalladas
+                  </Typography>
+                  {STAT_PLACEHOLDERS.map(stat => (
+                    <Box key={stat} sx={{ mb: '10px', '&:last-child': { mb: 0 } }}>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: '5px' }}>
+                        <Typography sx={{ fontSize: 11, color: 'text.secondary', fontFamily: FONT }}>{stat}</Typography>
+                        <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT }}>— vs —</Typography>
+                      </Stack>
+                      <Box sx={{ height: 4, bgcolor: 'divider', borderRadius: 2 }} />
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Hairline separator */}
               {i < filteredMatches.length - 1 && (
                 <Box sx={{ height: '0.5px', bgcolor: 'divider', mx: '12px' }} />
               )}

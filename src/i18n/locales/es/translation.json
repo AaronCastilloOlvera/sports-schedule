@@ -1,4 +1,7 @@
 {
+  "loading": "Cargando...",
+  "error_fetching_data": "Error al obtener datos.",
+  "no_recent_matches": "No se encontraron partidos recientes.",
   "tabs": {
     "live": "En Vivo",
     "myLeagues": "Mis Ligas",
@@ -33,6 +36,10 @@
     "wins": "Victorias",
     "draws": "Empates",
     "results": "resultados",
+    "tabs": {
+      "h2h": "H2H",
+      "recent": "Últimos Partidos"
+    },
     "filters": {
       "all": "Todos",
       "home": "Local",
@@ -44,6 +51,20 @@
       "result": "Resultado",
       "away": "Visitante",
       "league": "Liga"
+    }
+  },
+  "recent": {
+    "results": "resultados",
+    "table": {
+      "date": "Fecha",
+      "result": "Res",
+      "opponent": "Rival",
+      "score": "Marcador",
+      "league": "Liga"
+    },
+    "stats": {
+      "title": "Estadísticas del Partido",
+      "noData": "Estadísticas no disponibles para este partido."
     }
   }
 }
