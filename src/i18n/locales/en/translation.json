@@ -35,6 +35,7 @@
     "noMatchesFilter": "No previous matches with this filter.",
     "wins": "Wins",
     "draws": "Draws",
+    "losses": "Losses",
     "results": "results",
     "tabs": {
       "h2h": "H2H",

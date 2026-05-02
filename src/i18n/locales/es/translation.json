@@ -35,6 +35,7 @@
     "noMatchesFilter": "No hay partidos previos con este filtro.",
     "wins": "Victorias",
     "draws": "Empates",
+    "losses": "Derrotas",
     "results": "resultados",
     "tabs": {
       "h2h": "H2H",

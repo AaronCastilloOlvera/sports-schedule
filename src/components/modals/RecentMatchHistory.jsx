@@ -227,7 +227,7 @@ export default function RecentMatchHistory({ homeMatches, awayMatches, teamHome,
   const teamId  = teamView === 'home' ? team1Id : team2Id;
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT }}>
+    <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* Title + team toggle */}
       <Box sx={{
@@ -283,7 +283,7 @@ export default function RecentMatchHistory({ homeMatches, awayMatches, teamHome,
       </Box>
 
       {/* Match rows */}
-      <Box sx={{ maxHeight: { xs: 280, sm: 340 }, overflowY: 'auto', pt: '4px', pb: '8px' }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', pt: '4px', pb: '8px' }}>
         {matches.map((match, i) => {
           const isHome     = match.teams.home.id === teamId;
           const opponent   = isHome ? match.teams.away : match.teams.home;

@@ -118,7 +118,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
   ];
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT }}>
+    <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* Title + filter row — wraps on xs so long translated labels don't overflow */}
       <Box sx={{
@@ -174,7 +174,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
       </Box>
 
       {/* Match rows */}
-      <Box sx={{ maxHeight: { xs: 260, sm: 320 }, overflowY: 'auto', pt: '4px', pb: '8px' }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', pt: '4px', pb: '8px' }}>
         {filteredMatches.length === 0 ? (
           <Box sx={{ py: 5, textAlign: 'center' }}>
             <Typography sx={{ color: 'text.disabled', fontSize: 14, fontFamily: FONT }}>

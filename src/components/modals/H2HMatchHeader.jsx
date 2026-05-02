@@ -21,8 +21,7 @@ function getLiveLabel({ short, elapsed }) {
   return short;
 }
 
-// Subtle blue radial glows layered over background.paper via backgroundImage.
-// background-color (bgcolor) is theme-aware; backgroundImage just adds the tint.
+// Subtle blue radial glows — only used when there is no stadium image.
 const HEADER_OVERLAYS = [
   'radial-gradient(ellipse 60% 80% at 25% 50%, rgba(0,122,255,0.05) 0%, transparent 70%)',
   'radial-gradient(ellipse 60% 80% at 75% 50%, rgba(0,122,255,0.04) 0%, transparent 70%)',
@@ -82,18 +81,18 @@ function FormGuide({ form, isLoading }) {
 
 FormGuide.propTypes = { form: PropTypes.array, isLoading: PropTypes.bool };
 
-function TeamColumn({ team, form, isLoadingForm }) {
+function TeamColumn({ team, form, isLoadingForm, textPrimary, dividerColor }) {
   return (
     <Stack alignItems="center" sx={{ gap: '12px', flex: 1 }}>
       <Box
         sx={{
           width: { xs: 60, sm: 76 }, height: { xs: 60, sm: 76 }, borderRadius: '50%',
-          bgcolor: 'action.hover',
+          bgcolor: 'rgba(255,255,255,0.10)',
           border: '2px solid',
-          borderColor: 'divider',
+          borderColor: dividerColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
           flexShrink: 0,
         }}
       >
@@ -101,13 +100,17 @@ function TeamColumn({ team, form, isLoadingForm }) {
           <Box component="img" src={team.logo} alt={team.name}
             sx={{ width: '72%', height: '72%', objectFit: 'contain' }} />
         ) : (
-          <Typography sx={{ fontSize: 22, fontWeight: 700, color: 'text.primary', letterSpacing: '-0.5px', fontFamily: FONT }}>
+          <Typography sx={{ fontSize: 22, fontWeight: 700, color: textPrimary, letterSpacing: '-0.5px', fontFamily: FONT }}>
             {team?.name?.split(' ').map(w => w[0]).join('').slice(0, 3)}
           </Typography>
         )}
       </Box>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography sx={{ fontSize: { xs: 13, sm: 16 }, fontWeight: 700, color: 'text.primary', letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT }}>
+      <Box sx={{ textAlign: 'center', minWidth: 0, px: '4px' }}>
+        <Typography sx={{
+          fontSize: { xs: 13, sm: 16 }, fontWeight: 700, color: textPrimary,
+          letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
           {team?.name}
         </Typography>
         <FormGuide form={form} isLoading={isLoadingForm} />
@@ -120,148 +123,186 @@ TeamColumn.propTypes = {
   team:          PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   form:          PropTypes.array,
   isLoadingForm: PropTypes.bool,
+  textPrimary:   PropTypes.string,
+  dividerColor:  PropTypes.string,
 };
 
-export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, record, homeForm, awayForm, isLoadingForm }) {
+export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, headerRecord, homeForm, awayForm, isLoadingForm }) {
   const { t } = useTranslation();
   const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
-  // Only show the upcoming match banner when the viewed fixture hasn't started.
   const showNextMatch = nextMatch && (!currentMatch || currentMatch.fixture.status.short === 'NS');
 
-  const badges = record ? [
-    { label: t('h2h.wins'),  value: record.team1Wins, color: '#28CD41', bgColor: 'rgba(40,205,65,0.08)',   borderColor: 'rgba(40,205,65,0.28)' },
-    { label: t('h2h.draws'), value: record.draws,     color: 'text.secondary', bgColor: 'action.selected', borderColor: 'divider' },
-    { label: t('h2h.wins'),  value: record.team2Wins, color: '#FF9500', bgColor: 'rgba(255,149,0,0.08)',   borderColor: 'rgba(255,149,0,0.28)' },
+  // Prefer the current fixture's venue; fall back to the next match's venue.
+  const venueId = (currentMatch ?? nextMatch)?.fixture?.venue?.id ?? null;
+  const onImage = Boolean(venueId);
+
+  // Conditional colour tokens so every child reads correctly on both light and image backgrounds.
+  const textPrimary   = onImage ? 'rgba(255,255,255,0.95)' : 'text.primary';
+  const textSecondary = onImage ? 'rgba(255,255,255,0.60)' : 'text.secondary';
+  const textDisabled  = onImage ? 'rgba(255,255,255,0.35)' : 'text.disabled';
+  const dividerColor  = onImage ? 'rgba(255,255,255,0.18)' : 'divider';
+  const surfaceBg     = onImage ? 'rgba(255,255,255,0.10)' : 'action.selected';
+
+  const isRecentMode = headerRecord?.mode === 'recent';
+  const badges = headerRecord ? [
+    { label: t('h2h.wins'),                                         value: headerRecord.stat1, color: '#28CD41', bgColor: 'rgba(40,205,65,0.12)',  borderColor: 'rgba(40,205,65,0.32)'  },
+    { label: t('h2h.draws'),                                        value: headerRecord.stat2, color: textSecondary, bgColor: surfaceBg,            borderColor: dividerColor            },
+    { label: isRecentMode ? t('h2h.losses') : t('h2h.wins'), value: headerRecord.stat3, color: '#FF3B30', bgColor: 'rgba(255,59,48,0.12)', borderColor: 'rgba(255,59,48,0.32)' },
   ] : [];
 
   return (
     <Box sx={{
+      position: 'relative',
+      overflow: 'hidden',
       bgcolor: 'background.paper',
-      backgroundImage: HEADER_OVERLAYS,
       px: { xs: 3, sm: '28px' }, pt: { xs: 3, sm: '28px' }, pb: { xs: 3, sm: '32px' },
-      position: 'relative', overflow: 'hidden',
       borderBottom: '1px solid',
       borderColor: 'divider',
     }}>
 
-      {/* Teams row */}
-      <Stack direction="row" alignItems="center" justifyContent="center">
-        <TeamColumn team={teamHome} form={homeForm} isLoadingForm={isLoadingForm} />
+      {/* ── Layer 1: blurred stadium image ── */}
+      {onImage && (
+        <Box sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(https://media.api-sports.io/football/venues/${venueId}.png)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 30%',
+          filter: 'blur(3px)',
+          transform: 'scale(1.05)', // prevent visible blur fringe at edges
+          zIndex: 0,
+        }} />
+      )}
 
-        {/* Center: live score when match is in progress, VS circle otherwise */}
-        <Stack alignItems="center" sx={{ gap: '6px', px: { xs: '12px', sm: '20px' } }}>
-          {isLive ? (
-            <>
-              {/* Live score pill */}
-              <Box sx={{
-                bgcolor: 'action.selected',
+      {/* ── Layer 2: overlay (dark tint when image, subtle glow otherwise) ── */}
+      <Box sx={{
+        position: 'absolute',
+        inset: 0,
+        bgcolor: onImage ? 'rgba(0,0,0,0.62)' : 'transparent',
+        backgroundImage: onImage ? 'none' : HEADER_OVERLAYS,
+        zIndex: 1,
+      }} />
+
+      {/* ── Layer 3: content ── */}
+      <Box sx={{ position: 'relative', zIndex: 2 }}>
+
+        {/* Teams row */}
+        <Stack direction="row" alignItems="center" justifyContent="center">
+          <TeamColumn team={teamHome} form={homeForm} isLoadingForm={isLoadingForm} textPrimary={textPrimary} dividerColor={dividerColor} />
+
+          {/* Center: live score or VS */}
+          <Stack alignItems="center" sx={{ gap: '6px', px: { xs: '12px', sm: '20px' } }}>
+            {isLive ? (
+              <>
+                <Box sx={{
+                  bgcolor: surfaceBg,
+                  border: '1px solid',
+                  borderColor: dividerColor,
+                  borderRadius: '12px',
+                  px: { xs: '12px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
+                  display: 'flex', alignItems: 'center', gap: { xs: '8px', sm: '10px' },
+                }}>
+                  <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                    {currentMatch.goals.home ?? 0}
+                  </Typography>
+                  <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>
+                    –
+                  </Typography>
+                  <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                    {currentMatch.goals.away ?? 0}
+                  </Typography>
+                </Box>
+                <Stack direction="row" alignItems="center" sx={{ gap: '5px' }}>
+                  <Box sx={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    bgcolor: 'error.main',
+                    animation: `${pulse} 1.4s ease-in-out infinite`,
+                    flexShrink: 0,
+                  }} />
+                  <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'error.main', fontFamily: FONT, letterSpacing: '0.4px' }}>
+                    {getLiveLabel(currentMatch.fixture.status)}
+                  </Typography>
+                </Stack>
+              </>
+            ) : (
+              <>
+                <Box sx={{
+                  width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '50%',
+                  bgcolor: surfaceBg,
+                  border: '1px solid',
+                  borderColor: dividerColor,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Typography sx={{ fontSize: { xs: 11, sm: 13 }, fontWeight: 700, color: textSecondary, letterSpacing: '0.5px', fontFamily: FONT }}>
+                    VS
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: 10, color: textDisabled, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, fontFamily: FONT }}>
+                  H2H
+                </Typography>
+              </>
+            )}
+          </Stack>
+
+          <TeamColumn team={teamAway} form={awayForm} isLoadingForm={isLoadingForm} textPrimary={textPrimary} dividerColor={dividerColor} />
+        </Stack>
+
+        {/* Record summary pills */}
+        {headerRecord && (
+          <Stack direction="row" justifyContent="center" sx={{ gap: '8px', mt: '20px' }}>
+            {badges.map((item, i) => (
+              <Box key={i} sx={{
+                bgcolor: item.bgColor,
                 border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: '12px',
-                px: { xs: '12px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
-                display: 'flex', alignItems: 'center', gap: { xs: '8px', sm: '10px' },
+                borderColor: item.borderColor,
+                borderRadius: '10px',
+                px: { xs: '10px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                minWidth: { xs: 58, sm: 72 },
               }}>
-                <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: 'text.primary', fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
-                  {currentMatch.goals.home ?? 0}
+                <Typography sx={{ fontSize: { xs: 17, sm: 20 }, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  {item.value}
                 </Typography>
-                <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 500, color: 'text.disabled', fontFamily: FONT, lineHeight: 1 }}>
-                  –
-                </Typography>
-                <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: 'text.primary', fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
-                  {currentMatch.goals.away ?? 0}
+                <Typography sx={{ fontSize: 10, color: textSecondary, fontWeight: 600, letterSpacing: '0.3px', fontFamily: FONT, lineHeight: 1.4, textTransform: 'uppercase' }}>
+                  {item.label}
                 </Typography>
               </Box>
-              {/* Pulsing live indicator + elapsed time */}
-              <Stack direction="row" alignItems="center" sx={{ gap: '5px' }}>
-                <Box sx={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  bgcolor: 'error.main',
-                  animation: `${pulse} 1.4s ease-in-out infinite`,
-                  flexShrink: 0,
-                }} />
-                <Typography sx={{ fontSize: 11, fontWeight: 700, color: 'error.main', fontFamily: FONT, letterSpacing: '0.4px' }}>
-                  {getLiveLabel(currentMatch.fixture.status)}
+            ))}
+          </Stack>
+        )}
+
+        {/* Next match info */}
+        {showNextMatch && (
+          <Box sx={{
+            mt: '20px',
+            px: { xs: 2, sm: 3 }, py: '12px',
+            borderRadius: 2,
+            bgcolor: surfaceBg,
+            border: '1px solid',
+            borderColor: dividerColor,
+            textAlign: 'center',
+          }}>
+            <Typography sx={{ fontSize: '0.62rem', color: textSecondary, fontWeight: 700, letterSpacing: 2.5, display: 'block', mb: '6px', textTransform: 'uppercase', fontFamily: FONT }}>
+              {t('h2h.nextMatch')}
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="center" spacing={{ xs: 0.5, sm: 2.5 }} alignItems="center">
+              <Stack direction="row" alignItems="center" spacing="6px">
+                <CalendarToday sx={{ fontSize: 12, color: textSecondary }} />
+                <Typography sx={{ fontSize: 12, color: textPrimary, textTransform: 'capitalize', fontFamily: FONT }}>
+                  {new Date(nextMatch.fixture.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </Typography>
               </Stack>
-            </>
-          ) : (
-            <>
-              {/* Static VS circle */}
-              <Box sx={{
-                width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '50%',
-                bgcolor: 'action.selected',
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Typography sx={{ fontSize: { xs: 11, sm: 13 }, fontWeight: 700, color: 'text.secondary', letterSpacing: '0.5px', fontFamily: FONT }}>
-                  VS
+              <Stack direction="row" alignItems="center" spacing="6px">
+                <LocationOn sx={{ fontSize: 12, color: textSecondary }} />
+                <Typography sx={{ fontSize: 12, color: textPrimary, fontFamily: FONT }}>
+                  {nextMatch.fixture.venue.name}
                 </Typography>
-              </Box>
-              <Typography sx={{ fontSize: 10, color: 'text.disabled', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, fontFamily: FONT }}>
-                H2H
-              </Typography>
-            </>
-          )}
-        </Stack>
-
-        <TeamColumn team={teamAway} form={awayForm} isLoadingForm={isLoadingForm} />
-      </Stack>
-
-      {/* Record summary pills */}
-      {record && (
-        <Stack direction="row" justifyContent="center" sx={{ gap: '8px', mt: '20px' }}>
-          {badges.map((item, i) => (
-            <Box key={i} sx={{
-              bgcolor: item.bgColor,
-              border: '1px solid',
-              borderColor: item.borderColor,
-              borderRadius: '10px',
-              px: { xs: '10px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
-              minWidth: { xs: 58, sm: 72 },
-            }}>
-              <Typography sx={{ fontSize: { xs: 17, sm: 20 }, fontWeight: 700, color: item.color, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
-                {item.value}
-              </Typography>
-              <Typography sx={{ fontSize: 10, color: 'text.secondary', fontWeight: 600, letterSpacing: '0.3px', fontFamily: FONT, lineHeight: 1.4, textTransform: 'uppercase' }}>
-                {item.label}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      )}
-
-      {/* Next match info — hidden when the viewed fixture is live or finished */}
-      {showNextMatch && (
-        <Box sx={{
-          mt: '20px',
-          px: { xs: 2, sm: 3 }, py: '12px',
-          borderRadius: 2,
-          bgcolor: 'action.selected',
-          border: '1px solid',
-          borderColor: 'divider',
-          textAlign: 'center',
-        }}>
-          <Typography sx={{ fontSize: '0.62rem', color: 'text.secondary', fontWeight: 700, letterSpacing: 2.5, display: 'block', mb: '6px', textTransform: 'uppercase', fontFamily: FONT }}>
-            {t('h2h.nextMatch')}
-          </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="center" spacing={{ xs: 0.5, sm: 2.5 }} alignItems="center">
-            <Stack direction="row" alignItems="center" spacing="6px">
-              <CalendarToday sx={{ fontSize: 12, color: 'text.secondary' }} />
-              <Typography sx={{ fontSize: 12, color: 'text.primary', textTransform: 'capitalize', fontFamily: FONT }}>
-                {new Date(nextMatch.fixture.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </Typography>
+              </Stack>
             </Stack>
-            <Stack direction="row" alignItems="center" spacing="6px">
-              <LocationOn sx={{ fontSize: 12, color: 'text.secondary' }} />
-              <Typography sx={{ fontSize: 12, color: 'text.primary', fontFamily: FONT }}>
-                {nextMatch.fixture.venue.name}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Box>
-      )}
+          </Box>
+        )}
+
+      </Box>
     </Box>
   );
 }
@@ -271,7 +312,7 @@ H2HMatchHeader.propTypes = {
   teamAway:     PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   nextMatch:    PropTypes.object,
   currentMatch: PropTypes.object,
-  record:       PropTypes.shape({ team1Wins: PropTypes.number, draws: PropTypes.number, team2Wins: PropTypes.number }),
+  headerRecord: PropTypes.shape({ stat1: PropTypes.number, stat2: PropTypes.number, stat3: PropTypes.number, mode: PropTypes.string }),
   homeForm:      PropTypes.array,
   awayForm:      PropTypes.array,
   isLoadingForm: PropTypes.bool,

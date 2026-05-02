@@ -87,6 +87,23 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
     return { team1Wins, draws, team2Wins };
   }, [filteredMatches, team1Id]);
 
+  const headerRecord = useMemo(() => {
+    if (activeTab === 'recent') {
+      const matches = recentTeamView === 'home' ? recentData.home : recentData.away;
+      const teamId  = recentTeamView === 'home' ? team1Id : team2Id;
+      let wins = 0, draws = 0, losses = 0;
+      matches.forEach(m => {
+        const isHome = m.teams.home.id === teamId;
+        if (!m.teams.home.winner && !m.teams.away.winner) draws++;
+        else if (isHome ? m.teams.home.winner : m.teams.away.winner) wins++;
+        else losses++;
+      });
+      return { stat1: wins, stat2: draws, stat3: losses, mode: 'recent' };
+    }
+    if (!record) return null;
+    return { stat1: record.team1Wins, stat2: record.draws, stat3: record.team2Wins, mode: 'h2h' };
+  }, [activeTab, record, recentTeamView, recentData, team1Id, team2Id]);
+
   // ── Form guide: last 5 results per team, oldest→newest (left→right) ─────────
   const toFormItem = (match, teamId) => {
     const isHome   = match.teams.home.id === teamId;
@@ -168,7 +185,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
           borderRadius: { xs: '16px', sm: '20px' },
           bgcolor: 'background.paper',
           boxShadow: '0 8px 40px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08)',
-          maxHeight: '90vh', overflow: 'hidden',
+          height: '80vh', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
           outline: 'none', fontFamily: FONT,
         }}
@@ -191,13 +208,13 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
             <CircularProgress color="primary" />
           </Box>
         ) : h2hData.length > 0 ? (
-          <Box sx={{ overflow: 'auto', flex: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             <H2HMatchHeader
               teamHome={teamHome}
               teamAway={teamAway}
               nextMatch={nextMatch}
               currentMatch={currentMatch}
-              record={record}
+              headerRecord={headerRecord}
               homeForm={homeForm}
               awayForm={awayForm}
               isLoadingForm={isLoadingRecent}
@@ -228,14 +245,16 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
             </Box>
 
             {/* ── Tab content ── */}
-            {activeTab === 'h2h' ? (
-              <H2HMatchHistory
-                filteredMatches={filteredMatches}
-                filter={filter}
-                onFilterChange={setFilter}
-                team1Id={team1Id}
-              />
-            ) : recentContent}
+            <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {activeTab === 'h2h' ? (
+                <H2HMatchHistory
+                  filteredMatches={filteredMatches}
+                  filter={filter}
+                  onFilterChange={setFilter}
+                  team1Id={team1Id}
+                />
+              ) : recentContent}
+            </Box>
           </Box>
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: 'background.default' }}>
