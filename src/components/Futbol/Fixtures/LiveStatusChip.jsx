@@ -27,7 +27,10 @@ export default function LiveStatusChip({ fixture }) {
 
   // Case 2. Live matches show the elapsed time or status in a red chip with pulse animation
   if (isLive) {
-    const displayLabel = status.elapsed && shortStatus !== 'HT' ? `${status.elapsed}'` : shortStatus;
+    const { elapsed, extra } = status;
+    const displayLabel = elapsed && shortStatus !== 'HT'
+      ? (extra > 0 ? `${elapsed} + ${extra}'` : `${elapsed}'`)
+      : shortStatus;
     return (
       <Chip
         label={displayLabel}

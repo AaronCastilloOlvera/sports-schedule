@@ -60,8 +60,10 @@ function MatchRow({ match, handleOpenH2HModal }) {
           <Typography variant="body2">{match.league.name}</Typography>
         </Box>
       </TableCell>
-      <TableCell>
-        <LiveStatusChip fixture={match.fixture} />
+      <TableCell align="center" sx={{ width: 96 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <LiveStatusChip fixture={match.fixture} />
+        </Box>
       </TableCell>
       <TableCell align="right">
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
@@ -151,7 +153,7 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
         <TableHead>
           <TableRow>
             <TableCell>{t('fixtures.table.league')}</TableCell>
-            <TableCell>{t('fixtures.table.time')}</TableCell>
+            <TableCell align="center" sx={{ width: 96 }}>{t('fixtures.table.time')}</TableCell>
             <TableCell align="right">{t('fixtures.table.home')}</TableCell>
             <TableCell align="center">{t('fixtures.table.score')}</TableCell>
             <TableCell align="left">{t('fixtures.table.away')}</TableCell>

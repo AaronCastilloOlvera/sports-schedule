@@ -18,7 +18,12 @@ const RESULT_STYLE = {
 };
 
 // Key stat types to display in the expandable section (from the football API).
-const KEY_STATS = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls'];
+const KEY_STATS = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards'];
+
+const CARD_ICON_COLOR = {
+  'Yellow Cards': { bg: '#F5C518', shadow: 'rgba(245,197,24,0.45)' },
+  'Red Cards':    { bg: '#FF3B30', shadow: 'rgba(255,59,48,0.45)'  },
+};
 
 function getResult(match, teamId) {
   const isHome = match.teams.home.id === teamId;
@@ -99,9 +104,20 @@ function StatRow({ type, homeValue, awayValue }) {
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, minWidth: 32 }}>
           {homeValue ?? '—'}
         </Typography>
-        <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', flex: 1, px: '6px' }}>
-          {type}
-        </Typography>
+        {CARD_ICON_COLOR[type] ? (
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', px: '6px' }}>
+            <Box sx={{
+              width: 11, height: 15,
+              bgcolor: CARD_ICON_COLOR[type].bg,
+              borderRadius: '2px',
+              boxShadow: `0 2px 6px ${CARD_ICON_COLOR[type].shadow}`,
+            }} />
+          </Box>
+        ) : (
+          <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', flex: 1, px: '6px' }}>
+            {type}
+          </Typography>
+        )}
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, minWidth: 32, textAlign: 'right' }}>
           {awayValue ?? '—'}
         </Typography>

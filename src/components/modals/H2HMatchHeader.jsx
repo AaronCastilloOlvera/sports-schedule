@@ -14,10 +14,10 @@ const pulse = keyframes`
   50%       { opacity: 0.3; transform: scale(0.7); }
 `;
 
-function getLiveLabel({ short, elapsed }) {
+function getLiveLabel({ short, elapsed, extra }) {
   if (short === 'HT') return 'HT';
   if (short === 'BT') return 'BT';
-  if (elapsed != null) return `${elapsed}'`;
+  if (elapsed != null) return extra > 0 ? `${elapsed} + ${extra}'` : `${elapsed}'`;
   return short;
 }
 
