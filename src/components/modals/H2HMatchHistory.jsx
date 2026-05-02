@@ -7,8 +7,8 @@ import PropTypes from 'prop-types';
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
 
 // Desktop: 5 data columns + chevron. Mobile: 4 data columns + chevron.
-const GRID_COLS        = '110px 1fr 80px 1fr 100px 24px';
-const GRID_COLS_MOBILE = '80px 1fr 64px 1fr 24px';
+const GRID_COLS        = '110px minmax(0, 1fr) 80px minmax(0, 1fr) 116px 24px';
+const GRID_COLS_MOBILE = '80px minmax(0, 1fr) 64px minmax(0, 1fr) 24px';
 
 function SegmentedControl({ options, value, onChange }) {
   return (
@@ -236,8 +236,14 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
                 </Stack>
 
                 {/* League — hidden on xs */}
-                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center' }}>
-                  <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 500, bgcolor: 'action.selected', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, justifyContent: 'center', overflow: 'hidden' }}>
+                  <Typography component="span" sx={{
+                    fontSize: 11, color: 'text.secondary', fontWeight: 500,
+                    bgcolor: 'action.selected', borderRadius: '6px',
+                    px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    maxWidth: '100%',
+                  }}>
                     {match.league.name}
                   </Typography>
                 </Box>

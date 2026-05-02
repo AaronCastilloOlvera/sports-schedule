@@ -8,8 +8,8 @@ const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue"
 
 // Desktop: date | result | opponent | score | league | chevron
 // Mobile:  date | result | opponent | score | chevron
-const GRID_COLS        = '90px 36px 1fr 72px 90px 24px';
-const GRID_COLS_MOBILE = '72px 36px 1fr 60px 24px';
+const GRID_COLS        = '90px 36px minmax(0, 1fr) 72px 116px 24px';
+const GRID_COLS_MOBILE = '72px 36px minmax(0, 1fr) 60px 24px';
 
 const RESULT_STYLE = {
   W: { label: 'W', color: '#28CD41', bg: 'rgba(40,205,65,0.10)',  border: 'rgba(40,205,65,0.28)' },
@@ -340,8 +340,14 @@ export default function RecentMatchHistory({ homeMatches, awayMatches, teamHome,
                 </Box>
 
                 {/* League — hidden on mobile */}
-                <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'center' }}>
-                  <Typography component="span" sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 500, bgcolor: 'action.selected', borderRadius: '6px', px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT }}>
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, justifyContent: 'center', overflow: 'hidden' }}>
+                  <Typography component="span" sx={{
+                    fontSize: 11, color: 'text.secondary', fontWeight: 500,
+                    bgcolor: 'action.selected', borderRadius: '6px',
+                    px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    maxWidth: '100%',
+                  }}>
                     {match.league.name}
                   </Typography>
                 </Box>
