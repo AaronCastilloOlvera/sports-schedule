@@ -1,4 +1,5 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Stack, Tooltip, Typography } from '@mui/material';
+import { green, red, grey } from '@mui/material/colors';
 import { CalendarToday, LocationOn } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { keyframes } from '@mui/system';
@@ -27,7 +28,61 @@ const HEADER_OVERLAYS = [
   'radial-gradient(ellipse 60% 80% at 75% 50%, rgba(0,122,255,0.04) 0%, transparent 70%)',
 ].join(', ');
 
-function TeamColumn({ team }) {
+const FORM_STYLES = {
+  W: { bg: green[50],  border: green[600], color: green[600] },
+  D: { bg: grey[100],  border: grey[500],  color: grey[500]  },
+  L: { bg: red[50],    border: red[600],   color: red[600]   },
+};
+
+function FormGuide({ form, isLoading }) {
+  const { t } = useTranslation();
+
+  if (isLoading) {
+    return (
+      <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ mt: '6px' }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Tooltip key={i} title={t('loading')} placement="top" arrow>
+            <Avatar variant="rounded" sx={{ width: 24, height: 24, bgcolor: grey[100], border: `2px solid ${grey[300]}`, color: grey[400], fontSize: '0.75rem', fontWeight: 'bold', fontFamily: FONT }} />
+          </Tooltip>
+        ))}
+      </Stack>
+    );
+  }
+
+  if (!form?.length) return null;
+
+  return (
+    <Stack direction="row" spacing={0.5} justifyContent="center" sx={{ mt: '6px' }}>
+      {form.map((item, i) => {
+        const style   = FORM_STYLES[item.result] ?? FORM_STYLES.D;
+        const tooltip = item.opponent ?? t('loading');
+        return (
+          <Tooltip key={i} title={tooltip} placement="top" arrow>
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 24, height: 24,
+                bgcolor: style.bg,
+                border: `2px solid ${style.border}`,
+                color: style.color,
+                fontSize: '0.75rem',
+                fontWeight: 'bold',
+                fontFamily: FONT,
+                cursor: 'default',
+              }}
+            >
+              {item.result}
+            </Avatar>
+          </Tooltip>
+        );
+      })}
+    </Stack>
+  );
+}
+
+FormGuide.propTypes = { form: PropTypes.array, isLoading: PropTypes.bool };
+
+function TeamColumn({ team, form, isLoadingForm }) {
   return (
     <Stack alignItems="center" sx={{ gap: '12px', flex: 1 }}>
       <Box
@@ -55,16 +110,19 @@ function TeamColumn({ team }) {
         <Typography sx={{ fontSize: { xs: 13, sm: 16 }, fontWeight: 700, color: 'text.primary', letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT }}>
           {team?.name}
         </Typography>
+        <FormGuide form={form} isLoading={isLoadingForm} />
       </Box>
     </Stack>
   );
 }
 
 TeamColumn.propTypes = {
-  team: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
+  team:          PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
+  form:          PropTypes.array,
+  isLoadingForm: PropTypes.bool,
 };
 
-export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, record }) {
+export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, record, homeForm, awayForm, isLoadingForm }) {
   const { t } = useTranslation();
   const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
   // Only show the upcoming match banner when the viewed fixture hasn't started.
@@ -88,7 +146,7 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
 
       {/* Teams row */}
       <Stack direction="row" alignItems="center" justifyContent="center">
-        <TeamColumn team={teamHome} />
+        <TeamColumn team={teamHome} form={homeForm} isLoadingForm={isLoadingForm} />
 
         {/* Center: live score when match is in progress, VS circle otherwise */}
         <Stack alignItems="center" sx={{ gap: '6px', px: { xs: '12px', sm: '20px' } }}>
@@ -147,7 +205,7 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
           )}
         </Stack>
 
-        <TeamColumn team={teamAway} />
+        <TeamColumn team={teamAway} form={awayForm} isLoadingForm={isLoadingForm} />
       </Stack>
 
       {/* Record summary pills */}
@@ -209,9 +267,12 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
 }
 
 H2HMatchHeader.propTypes = {
-  teamHome: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
-  teamAway: PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
-  nextMatch: PropTypes.object,
+  teamHome:     PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
+  teamAway:     PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
+  nextMatch:    PropTypes.object,
   currentMatch: PropTypes.object,
-  record: PropTypes.shape({ team1Wins: PropTypes.number, draws: PropTypes.number, team2Wins: PropTypes.number }),
+  record:       PropTypes.shape({ team1Wins: PropTypes.number, draws: PropTypes.number, team2Wins: PropTypes.number }),
+  homeForm:      PropTypes.array,
+  awayForm:      PropTypes.array,
+  isLoadingForm: PropTypes.bool,
 };

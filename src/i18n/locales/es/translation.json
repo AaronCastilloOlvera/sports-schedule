@@ -53,6 +53,11 @@
       "league": "Liga"
     }
   },
+  "form": {
+    "win":        "Victoria",
+    "draw":       "Empate",
+    "loss":       "Derrota"
+  },
   "recent": {
     "results": "resultados",
     "table": {

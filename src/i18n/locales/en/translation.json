@@ -53,6 +53,11 @@
       "league": "League"
     }
   },
+  "form": {
+    "win":        "Win",
+    "draw":       "Draw",
+    "loss":       "Loss"
+  },
   "recent": {
     "results": "results",
     "table": {

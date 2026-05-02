@@ -22,50 +22,41 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
   const [activeTab, setActiveTab] = useState('h2h');
 
   // ── Recent matches state ───────────────────────────────────────────────────
-  const [recentData, setRecentData]             = useState({ home: [], away: [] });
-  const [isLoadingRecent, setIsLoadingRecent]   = useState(false);
-  const [recentError, setRecentError]           = useState(false);
-  const [hasFetchedRecent, setHasFetchedRecent] = useState(false);
-  const [recentTeamView, setRecentTeamView]     = useState('home');
+  const [recentData, setRecentData]           = useState({ home: [], away: [] });
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
+  const [recentError, setRecentError]         = useState(false);
+  const [recentTeamView, setRecentTeamView]   = useState('home');
 
-  // ── Reset all state when modal opens with new fixture ──────────────────────
+  // ── Fetch H2H + recent matches together on open ────────────────────────────
   useEffect(() => {
     if (open && team1Id && team2Id) {
       setFilter('all');
       setActiveTab('h2h');
       setRecentData({ home: [], away: [] });
-      setHasFetchedRecent(false);
       setRecentError(false);
       setRecentTeamView('home');
       setLoading(true);
+      setIsLoadingRecent(true);
+
       apiClient.fetchHeadToHeadMatches(team1Id, team2Id)
         .then(response => setH2hData(response?.data?.slice(0, 10) ?? []))
         .catch(() => setH2hData([]))
         .finally(() => setLoading(false));
+
+      Promise.all([
+        apiClient.fetchRecentMatches(team1Id),
+        apiClient.fetchRecentMatches(team2Id),
+      ])
+        .then(([homeRes, awayRes]) => {
+          setRecentData({
+            home: homeRes?.data ?? homeRes ?? [],
+            away: awayRes?.data ?? awayRes ?? [],
+          });
+        })
+        .catch(() => setRecentError(true))
+        .finally(() => setIsLoadingRecent(false));
     }
   }, [open, team1Id, team2Id]);
-
-  // ── Lazy-fetch recent matches only when the tab is first activated ─────────
-  useEffect(() => {
-    if (activeTab !== 'recent' || !team1Id || !team2Id || hasFetchedRecent) return;
-
-    setHasFetchedRecent(true);
-    setIsLoadingRecent(true);
-    setRecentError(false);
-
-    Promise.all([
-      apiClient.fetchRecentMatches(team1Id),
-      apiClient.fetchRecentMatches(team2Id),
-    ])
-      .then(([homeRes, awayRes]) => {
-        setRecentData({
-          home: homeRes?.data ?? homeRes ?? [],
-          away: awayRes?.data ?? awayRes ?? [],
-        });
-      })
-      .catch(() => setRecentError(true))
-      .finally(() => setIsLoadingRecent(false));
-  }, [activeTab, team1Id, team2Id, hasFetchedRecent]);
 
   // ── Derived H2H values ─────────────────────────────────────────────────────
   const { nextMatch, teamHome, teamAway } = useMemo(() => {
@@ -96,6 +87,26 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
     return { team1Wins, draws, team2Wins };
   }, [filteredMatches, team1Id]);
 
+  // ── Form guide: last 5 results per team, oldest→newest (left→right) ─────────
+  const toFormItem = (match, teamId) => {
+    const isHome   = match.teams.home.id === teamId;
+    const opponent = isHome ? match.teams.away : match.teams.home;
+    const result   = (() => {
+      if (!match.teams.home.winner && !match.teams.away.winner) return 'D';
+      return (isHome ? match.teams.home.winner : match.teams.away.winner) ? 'W' : 'L';
+    })();
+    return { result, opponent: opponent.name, homeScore: match.goals.home, awayScore: match.goals.away, isHome };
+  };
+
+  const homeForm = useMemo(
+    () => recentData.home.slice(0, 5).reverse().map(m => toFormItem(m, team1Id)),
+    [recentData.home, team1Id]  // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const awayForm = useMemo(
+    () => recentData.away.slice(0, 5).reverse().map(m => toFormItem(m, team2Id)),
+    [recentData.away, team2Id]  // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   // ── Tab definitions (inside component so t() is available) ─────────────────
   const TABS = [
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
@@ -124,7 +135,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
       );
     }
     const activeMatches = recentTeamView === 'home' ? recentData.home : recentData.away;
-    if (!activeMatches.length && hasFetchedRecent) {
+    if (!activeMatches.length && !isLoadingRecent) {
       return (
         <Box sx={{ py: 8, textAlign: 'center' }}>
           <Typography sx={{ color: 'text.secondary', fontSize: 14, fontFamily: FONT }}>
@@ -187,6 +198,9 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
               nextMatch={nextMatch}
               currentMatch={currentMatch}
               record={record}
+              homeForm={homeForm}
+              awayForm={awayForm}
+              isLoadingForm={isLoadingRecent}
             />
 
             {/* ── Tab bar ── */}
