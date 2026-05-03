@@ -70,7 +70,16 @@
     },
     "stats": {
       "title": "Estadísticas del Partido",
-      "noData": "Estadísticas no disponibles para este partido."
+      "noData": "Estadísticas no disponibles para este partido.",
+      "types": {
+        "Ball Possession":  "Posesión del Balón",
+        "Total Shots":      "Tiros Totales",
+        "Shots on Goal":    "Tiros a Puerta",
+        "Corner Kicks":     "Tiros de Esquina",
+        "Fouls":            "Faltas",
+        "Yellow Cards":     "Tarjetas Amarillas",
+        "Red Cards":        "Tarjetas Rojas"
+      }
     }
   }
 }

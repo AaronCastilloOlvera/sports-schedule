@@ -95,6 +95,7 @@ ScoreBadge.propTypes = {
 
 // Renders a single stat row: homeValue — label — awayValue + optional split bar.
 function StatRow({ type, homeValue, awayValue }) {
+  const { t } = useTranslation();
   const isPossession = type === 'Ball Possession';
   const homeNum      = isPossession ? parseInt(homeValue) || 50 : null;
 
@@ -115,7 +116,7 @@ function StatRow({ type, homeValue, awayValue }) {
           </Box>
         ) : (
           <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', flex: 1, px: '6px' }}>
-            {type}
+            {t(`recent.stats.types.${type}`, type)}
           </Typography>
         )}
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, minWidth: 32, textAlign: 'right' }}>
@@ -151,8 +152,8 @@ function MatchStats({ statistics, homeTeamId, awayTeamId }) {
   const pairs = KEY_STATS
     .map(type => ({
       type,
-      homeValue: homeStats.find(s => s.type === type)?.value ?? null,
-      awayValue: awayStats.find(s => s.type === type)?.value ?? null,
+      homeValue: homeStats.find(s => s.type === type)?.value ?? (CARD_ICON_COLOR[type] ? 0 : null),
+      awayValue: awayStats.find(s => s.type === type)?.value ?? (CARD_ICON_COLOR[type] ? 0 : null),
     }))
     .filter(p => p.homeValue != null || p.awayValue != null);
 

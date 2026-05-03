@@ -37,13 +37,13 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
         
         <Box sx={{ px: 2 }}>
           <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'inline-block' }}>
-            <Typography variant="h5" fontWeight="bold">
-              {match.fixture.status.elapsed !== null ?  
-               ( <Typography variant="h5" fontWeight="bold"> {match.goals.home} - {match.goals.away}</Typography>)
-               : 
-               ( <Typography fontWeight="bold" > VS </Typography>)
-              }
-            </Typography>
+            {match.fixture.status.elapsed !== null ? (
+              <Typography variant="h5" fontWeight="bold">
+                {match.goals.home} - {match.goals.away}
+              </Typography>
+            ) : (
+              <Typography fontWeight="bold">VS</Typography>
+            )}
           </Box>
         </Box>
 

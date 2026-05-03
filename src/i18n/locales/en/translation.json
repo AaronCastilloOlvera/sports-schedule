@@ -70,7 +70,16 @@
     },
     "stats": {
       "title": "Match Statistics",
-      "noData": "Statistics not available for this match."
+      "noData": "Statistics not available for this match.",
+      "types": {
+        "Ball Possession":  "Ball Possession",
+        "Total Shots":      "Total Shots",
+        "Shots on Goal":    "Shots on Goal",
+        "Corner Kicks":     "Corner Kicks",
+        "Fouls":            "Fouls",
+        "Yellow Cards":     "Yellow Cards",
+        "Red Cards":        "Red Cards"
+      }
     }
   }
 }

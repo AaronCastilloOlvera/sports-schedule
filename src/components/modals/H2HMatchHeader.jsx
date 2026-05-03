@@ -133,21 +133,24 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
   const showNextMatch = nextMatch && (!currentMatch || currentMatch.fixture.status.short === 'NS');
 
   // Prefer the current fixture's venue; fall back to the next match's venue.
-  const venueId = (currentMatch ?? nextMatch)?.fixture?.venue?.id ?? null;
-  const onImage = Boolean(venueId);
+  const venueId    = (currentMatch ?? nextMatch)?.fixture?.venue?.id ?? null;
+  const stadiumSrc = venueId
+    ? `https://media.api-sports.io/football/venues/${venueId}.png`
+    : '/generic-stadium.jpg';
 
-  // Conditional colour tokens so every child reads correctly on both light and image backgrounds.
-  const textPrimary   = onImage ? 'rgba(255,255,255,0.95)' : 'text.primary';
-  const textSecondary = onImage ? 'rgba(255,255,255,0.60)' : 'text.secondary';
-  const textDisabled  = onImage ? 'rgba(255,255,255,0.35)' : 'text.disabled';
-  const dividerColor  = onImage ? 'rgba(255,255,255,0.18)' : 'divider';
-  const surfaceBg     = onImage ? 'rgba(255,255,255,0.10)' : 'action.selected';
+  // A background image is always present (real venue or local fallback), so colour
+  // tokens are fixed to the on-image (light-on-dark) variants.
+  const textPrimary   = 'rgba(255,255,255,0.95)';
+  const textSecondary = 'rgba(255,255,255,0.60)';
+  const textDisabled  = 'rgba(255,255,255,0.35)';
+  const dividerColor  = 'rgba(255,255,255,0.18)';
+  const surfaceBg     = 'rgba(255,255,255,0.10)';
 
   const isRecentMode = headerRecord?.mode === 'recent';
   const badges = headerRecord ? [
-    { label: t('h2h.wins'),                                         value: headerRecord.stat1, color: '#28CD41', bgColor: 'rgba(40,205,65,0.12)',  borderColor: 'rgba(40,205,65,0.32)'  },
-    { label: t('h2h.draws'),                                        value: headerRecord.stat2, color: textSecondary, bgColor: surfaceBg,            borderColor: dividerColor            },
-    { label: isRecentMode ? t('h2h.losses') : t('h2h.wins'), value: headerRecord.stat3, color: '#FF3B30', bgColor: 'rgba(255,59,48,0.12)', borderColor: 'rgba(255,59,48,0.32)' },
+    { label: t('h2h.wins'),                                  value: headerRecord.stat1, color: '#28CD41',   bgColor: 'rgba(40,205,65,0.12)', borderColor: 'rgba(40,205,65,0.32)'  },
+    { label: t('h2h.draws'),                                 value: headerRecord.stat2, color: textSecondary, bgColor: surfaceBg,                 borderColor: dividerColor            },
+    { label: isRecentMode ? t('h2h.losses') : t('h2h.wins'), value: headerRecord.stat3, color: '#FF3B30',   bgColor: 'rgba(255,59,48,0.12)', borderColor: 'rgba(255,59,48,0.32)' },
   ] : [];
 
   return (
@@ -161,27 +164,26 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
     }}>
 
       {/* ── Layer 1: blurred stadium image ── */}
-      {onImage && (
-        <Box sx={{
+      <Box
+        component="img"
+        src={stadiumSrc}
+        alt=""
+        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/img/generic-stadium.jpg'; }}
+        sx={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `url(https://media.api-sports.io/football/venues/${venueId}.png)`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 30%',
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center 30%',
           filter: 'blur(3px)',
-          transform: 'scale(1.05)', // prevent visible blur fringe at edges
+          transform: 'scale(1.05)',
           zIndex: 0,
-        }} />
-      )}
+        }}
+      />
 
-      {/* ── Layer 2: overlay (dark tint when image, subtle glow otherwise) ── */}
-      <Box sx={{
-        position: 'absolute',
-        inset: 0,
-        bgcolor: onImage ? 'rgba(0,0,0,0.62)' : 'transparent',
-        backgroundImage: onImage ? 'none' : HEADER_OVERLAYS,
-        zIndex: 1,
-      }} />
+      {/* ── Layer 2: dark overlay ── */}
+      <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.62)', zIndex: 1 }} />
 
       {/* ── Layer 3: content ── */}
       <Box sx={{ position: 'relative', zIndex: 2 }}>
