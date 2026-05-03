@@ -192,15 +192,16 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
       >
         <IconButton
           onClick={onClose}
-          size="small"
           sx={{
             position: 'absolute', right: 12, top: 12, zIndex: 10,
-            width: { xs: 36, sm: 28 }, height: { xs: 36, sm: 28 },
-            bgcolor: 'action.hover', color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.selected' },
+            width: 36, height: 36,
+            bgcolor: 'rgba(0,0,0,0.40)',
+            backdropFilter: 'blur(8px)',
+            color: '#ffffff',
+            '&:hover': { bgcolor: 'rgba(0,0,0,0.60)' },
           }}
         >
-          <CloseIcon sx={{ fontSize: 14 }} />
+          <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
 
         {loading ? (
