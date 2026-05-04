@@ -21,11 +21,9 @@ function FutbolTab({ children, value, index }) {
       aria-labelledby={`simple-tab-${index}`}
       sx={{ width: '100%', transition: 'all 0.3s ease', boxSizing: 'border-box' }}
     >
-      {value === index && (
-        <Box sx={{ p: { xs: 1, md: 3 }, width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
-          {children}
-        </Box>
-      )}
+      <Box sx={{ p: { xs: 1, md: 3 }, width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
+        {children}
+      </Box>
     </Box>
   );
 }
