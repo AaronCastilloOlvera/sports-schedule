@@ -127,6 +127,38 @@ TeamColumn.propTypes = {
   dividerColor:  PropTypes.string,
 };
 
+function EventRow({ event, isRight, textPrimary, textDisabled }) {
+  const isGoal    = event.type === 'Goal';
+  const isRedCard = event.type === 'Card' && event.detail === 'Red Card';
+  if (!isGoal && !isRedCard) return null;
+
+  const time = event.time.extra
+    ? `${event.time.elapsed}+${event.time.extra}'`
+    : `${event.time.elapsed}'`;
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flexDirection: isRight ? 'row-reverse' : 'row' }}>
+      {isGoal    && <Typography component="span" sx={{ fontSize: 12, lineHeight: 1 }}>⚽</Typography>}
+      {isRedCard && (
+        <Box component="span" sx={{ display: 'inline-block', width: 8, height: 11, bgcolor: 'error.main', borderRadius: '1.5px', flexShrink: 0 }} />
+      )}
+      <Typography sx={{ fontSize: 11, color: textPrimary,  fontFamily: FONT, lineHeight: 1.3 }}>
+        {event.player.name}
+      </Typography>
+      <Typography sx={{ fontSize: 10, color: textDisabled, fontFamily: FONT, lineHeight: 1.3, flexShrink: 0 }}>
+        {time}
+      </Typography>
+    </Box>
+  );
+}
+
+EventRow.propTypes = {
+  event:        PropTypes.object.isRequired,
+  isRight:      PropTypes.bool,
+  textPrimary:  PropTypes.string.isRequired,
+  textDisabled: PropTypes.string.isRequired,
+};
+
 export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, headerRecord, homeForm, awayForm, isLoadingForm }) {
   const { t } = useTranslation();
   const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
@@ -145,6 +177,12 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
   const textDisabled  = 'rgba(255,255,255,0.35)';
   const dividerColor  = 'rgba(255,255,255,0.18)';
   const surfaceBg     = 'rgba(255,255,255,0.10)';
+
+  const events     = currentMatch?.events ?? [];
+  const isRelevant = e => e.type === 'Goal' || (e.type === 'Card' && e.detail === 'Red Card');
+  const homeEvents = isLive ? events.filter(e => e.team.id === currentMatch.teams.home.id && isRelevant(e)) : [];
+  const awayEvents = isLive ? events.filter(e => e.team.id === currentMatch.teams.away.id && isRelevant(e)) : [];
+  const hasEvents  = homeEvents.length > 0 || awayEvents.length > 0;
 
   const isRecentMode = headerRecord?.mode === 'recent';
   const badges = headerRecord ? [
@@ -248,6 +286,23 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
 
           <TeamColumn team={teamAway} form={awayForm} isLoadingForm={isLoadingForm} textPrimary={textPrimary} dividerColor={dividerColor} />
         </Stack>
+
+        {/* ── Live match events ── */}
+        {isLive && hasEvents && (
+          <Box sx={{ display: 'flex', mt: '16px', gap: '12px' }}>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
+              {homeEvents.map((event, i) => (
+                <EventRow key={i} event={event} isRight={false} textPrimary={textPrimary} textDisabled={textDisabled} />
+              ))}
+            </Box>
+            <Box sx={{ width: '0.5px', bgcolor: dividerColor, flexShrink: 0 }} />
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+              {awayEvents.map((event, i) => (
+                <EventRow key={i} event={event} isRight={true} textPrimary={textPrimary} textDisabled={textDisabled} />
+              ))}
+            </Box>
+          </Box>
+        )}
 
         {/* Record summary pills */}
         {headerRecord && (
