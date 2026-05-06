@@ -21,12 +21,6 @@ function getLiveLabel({ short, elapsed, extra }) {
   return short;
 }
 
-// Subtle blue radial glows — only used when there is no stadium image.
-const HEADER_OVERLAYS = [
-  'radial-gradient(ellipse 60% 80% at 25% 50%, rgba(0,122,255,0.05) 0%, transparent 70%)',
-  'radial-gradient(ellipse 60% 80% at 75% 50%, rgba(0,122,255,0.04) 0%, transparent 70%)',
-].join(', ');
-
 const FORM_STYLES = {
   W: { bg: green[50],  border: green[600], color: green[600] },
   D: { bg: grey[100],  border: grey[500],  color: grey[500]  },
@@ -180,8 +174,8 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
 
   const events     = currentMatch?.events ?? [];
   const isRelevant = e => e.type === 'Goal' || (e.type === 'Card' && e.detail === 'Red Card');
-  const homeEvents = isLive ? events.filter(e => e.team.id === currentMatch.teams.home.id && isRelevant(e)) : [];
-  const awayEvents = isLive ? events.filter(e => e.team.id === currentMatch.teams.away.id && isRelevant(e)) : [];
+  const homeEvents = currentMatch ? events.filter(e => e.team.id === currentMatch.teams.home.id && isRelevant(e)) : [];
+  const awayEvents = currentMatch ? events.filter(e => e.team.id === currentMatch.teams.away.id && isRelevant(e)) : [];
   const hasEvents  = homeEvents.length > 0 || awayEvents.length > 0;
 
   const isRecentMode = headerRecord?.mode === 'recent';
@@ -287,8 +281,8 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
           <TeamColumn team={teamAway} form={awayForm} isLoadingForm={isLoadingForm} textPrimary={textPrimary} dividerColor={dividerColor} />
         </Stack>
 
-        {/* ── Live match events ── */}
-        {isLive && hasEvents && (
+        {/* ── Match events ── */}
+        {hasEvents && (
           <Box sx={{ display: 'flex', mt: '16px', gap: '12px' }}>
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
               {homeEvents.map((event, i) => (
