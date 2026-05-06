@@ -2,15 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import { Modal, Box, IconButton, CircularProgress, Typography } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { apiClient } from '../../api/api';
+import { apiClient } from '../../../api/api';
 import PropTypes from 'prop-types';
-import H2HMatchHeader from './H2HMatchHeader';
-import H2HMatchHistory from './H2HMatchHistory';
-import RecentMatchHistory from './RecentMatchHistory';
+import MatchHeader from './MatchHeader';
+import HeadToHead from './HeadToHead';
+import RecentForm from './RecentForm';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
-const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
+const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
   const { t } = useTranslation();
 
   // ── H2H state ──────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
       );
     }
     return (
-      <RecentMatchHistory
+      <RecentForm
         homeMatches={recentData.home}
         awayMatches={recentData.away}
         teamHome={teamHome}
@@ -210,7 +210,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
           </Box>
         ) : h2hData.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            <H2HMatchHeader
+            <MatchHeader
               teamHome={teamHome}
               teamAway={teamAway}
               nextMatch={nextMatch}
@@ -248,7 +248,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
             {/* ── Tab content ── */}
             <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {activeTab === 'h2h' ? (
-                <H2HMatchHistory
+                <HeadToHead
                   filteredMatches={filteredMatches}
                   filter={filter}
                   onFilterChange={setFilter}
@@ -269,7 +269,7 @@ const FixtureDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) 
   );
 };
 
-FixtureDetailsModal.propTypes = {
+MatchDetailsModal.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   team1Id: PropTypes.number.isRequired,
@@ -277,4 +277,4 @@ FixtureDetailsModal.propTypes = {
   currentMatch: PropTypes.object,
 };
 
-export default FixtureDetailsModal;
+export default MatchDetailsModal;

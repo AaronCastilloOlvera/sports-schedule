@@ -153,7 +153,7 @@ EventRow.propTypes = {
   textDisabled: PropTypes.string.isRequired,
 };
 
-export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentMatch, headerRecord, homeForm, awayForm, isLoadingForm }) {
+export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatch, headerRecord, homeForm, awayForm, isLoadingForm }) {
   const { t } = useTranslation();
   const isLive = currentMatch && LIVE_STATUSES.has(currentMatch.fixture.status.short);
   const showNextMatch = nextMatch && (!currentMatch || currentMatch.fixture.status.short === 'NS');
@@ -358,7 +358,7 @@ export default function H2HMatchHeader({ teamHome, teamAway, nextMatch, currentM
   );
 }
 
-H2HMatchHeader.propTypes = {
+MatchHeader.propTypes = {
   teamHome:     PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   teamAway:     PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
   nextMatch:    PropTypes.object,

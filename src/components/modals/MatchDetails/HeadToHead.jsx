@@ -105,7 +105,7 @@ MiniLogo.propTypes = {
 
 const STAT_PLACEHOLDERS = ['Posesión', 'Tiros a puerta', 'Tiros totales', 'Córners', 'Faltas'];
 
-export default function H2HMatchHistory({ filteredMatches, filter, onFilterChange, team1Id }) {
+export default function HeadToHead({ filteredMatches, filter, onFilterChange, team1Id }) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
 
@@ -298,7 +298,7 @@ export default function H2HMatchHistory({ filteredMatches, filter, onFilterChang
   );
 }
 
-H2HMatchHistory.propTypes = {
+HeadToHead.propTypes = {
   filteredMatches: PropTypes.array.isRequired,
   filter: PropTypes.string.isRequired,
   onFilterChange: PropTypes.func.isRequired,

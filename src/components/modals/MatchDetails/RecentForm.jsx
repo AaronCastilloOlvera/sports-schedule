@@ -235,7 +235,7 @@ TeamToggle.propTypes = {
 };
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function RecentMatchHistory({ homeMatches, awayMatches, teamHome, teamAway, team1Id, team2Id, teamView, onTeamViewChange }) {
+export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAway, team1Id, team2Id, teamView, onTeamViewChange }) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
@@ -412,7 +412,7 @@ export default function RecentMatchHistory({ homeMatches, awayMatches, teamHome,
   );
 }
 
-RecentMatchHistory.propTypes = {
+RecentForm.propTypes = {
   homeMatches:       PropTypes.array.isRequired,
   awayMatches:       PropTypes.array.isRequired,
   teamHome:          PropTypes.shape({ name: PropTypes.string, logo: PropTypes.string }),
