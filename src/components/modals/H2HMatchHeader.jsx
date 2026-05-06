@@ -122,7 +122,7 @@ TeamColumn.propTypes = {
 };
 
 function EventRow({ event, isRight, textPrimary, textDisabled }) {
-  const isGoal    = event.type === 'Goal';
+  const isGoal    = event.type === 'Goal' && event.detail !== 'Missed Penalty';
   const isRedCard = event.type === 'Card' && event.detail === 'Red Card';
   if (!isGoal && !isRedCard) return null;
 

@@ -28,7 +28,7 @@ function formatTime({ elapsed, extra }) {
   return extra ? `${elapsed}+${extra}'` : `${elapsed}'`;
 }
 
-const isGoal    = e => e.type === 'Goal';
+const isGoal    = e => e.type === 'Goal' && e.detail !== 'Missed Penalty';
 const isRedCard = e => e.type === 'Card' && e.detail === 'Red Card';
 
 // ── EventList ─────────────────────────────────────────────────────────────────
