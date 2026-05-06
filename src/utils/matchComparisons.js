@@ -5,10 +5,12 @@ export const areRowsEqual = (prevProps, nextProps) => {
   const prev = prevProps.match;
   const next = nextProps.match;
   return (
-    prev.goals.home === next.goals.home &&
-    prev.goals.away === next.goals.away &&
-    prev.fixture.status.elapsed === next.fixture.status.elapsed &&
-    prev.fixture.id === next.fixture.id
+    prev.fixture.id                  === next.fixture.id                  &&
+    prev.fixture.status.short        === next.fixture.status.short        &&
+    prev.fixture.status.elapsed      === next.fixture.status.elapsed      &&
+    prev.fixture.status.extra        === next.fixture.status.extra        &&
+    prev.goals.home                  === next.goals.home                  &&
+    prev.goals.away                  === next.goals.away
   );
 };
 
