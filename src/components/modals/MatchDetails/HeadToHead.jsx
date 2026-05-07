@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
+import { green, grey, red } from '@mui/material/colors';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
-
-// Desktop: 5 data columns + chevron. Mobile: 4 data columns + chevron.
 const GRID_COLS        = '110px minmax(0, 1fr) 80px minmax(0, 1fr) 116px 24px';
 const GRID_COLS_MOBILE = '80px minmax(0, 1fr) 64px minmax(0, 1fr) 24px';
+const FORM_STYLES = {  
+  W: { label: 'W', bg: green[50],  border: green[600], color: green[600] },
+  D: { label: 'D', bg: grey[100],  border: grey[500],  color: grey[500]  },
+  L: { label: 'L', bg: red[50],    border: red[600],   color: red[600]   },
+};
+
+const STAT_PLACEHOLDERS = ['Posesión', 'Tiros a puerta', 'Tiros totales', 'Córners', 'Faltas'];
+
+// ── Sub-components ─────
 
 function SegmentedControl({ options, value, onChange }) {
   return (
@@ -60,9 +68,7 @@ function ScoreBadge({ homeScore, awayScore, homeWon, awayWon }) {
       <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: homeWon ? '#28CD41' : awayWon ? '#FF3B30' : 'text.secondary' }}>
         {homeScore}
       </Typography>
-      <Typography sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500, mx: '2px', lineHeight: 1, fontFamily: FONT }}>
-        –
-      </Typography>
+      <Typography sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500, mx: '2px', lineHeight: 1, fontFamily: FONT }}>–</Typography>
       <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: awayWon ? '#28CD41' : homeWon ? '#FF3B30' : 'text.secondary' }}>
         {awayScore}
       </Typography>
@@ -73,17 +79,15 @@ function ScoreBadge({ homeScore, awayScore, homeWon, awayWon }) {
 ScoreBadge.propTypes = {
   homeScore: PropTypes.number,
   awayScore: PropTypes.number,
-  homeWon: PropTypes.bool,
-  awayWon: PropTypes.bool,
+  homeWon:   PropTypes.bool,
+  awayWon:   PropTypes.bool,
 };
 
 function MiniLogo({ logo, name }) {
   return (
     <Box sx={{
       width: 24, height: 24, borderRadius: '50%',
-      bgcolor: 'action.hover',
-      border: '1px solid',
-      borderColor: 'divider',
+      bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', flexShrink: 0,
     }}>
@@ -98,14 +102,159 @@ function MiniLogo({ logo, name }) {
   );
 }
 
-MiniLogo.propTypes = {
-  logo: PropTypes.string,
-  name: PropTypes.string,
+MiniLogo.propTypes = { logo: PropTypes.string, name: PropTypes.string };
+
+function FormDot({ result, opponent, homeScore, awayScore, isHome }) {
+  const style = FORM_STYLES[result] ?? FORM_STYLES.D;
+  const venue = isHome ? 'H' : 'A';
+  const title = `vs ${opponent}  ${homeScore}-${awayScore} (${venue})`;
+
+  return (
+    <Tooltip title={title} placement="top" arrow>
+      <Box sx={{
+        width: 22, height: 22, borderRadius: '6px', flexShrink: 0,
+        bgcolor: style.bg, border: '1px solid', borderColor: style.border,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'default',
+      }}>
+        <Typography sx={{ fontSize: 10, fontWeight: 700, color: style.color, fontFamily: FONT, lineHeight: 1 }}>
+          {style.label}
+        </Typography>
+      </Box>
+    </Tooltip>
+  );
+}
+
+FormDot.propTypes = {
+  result:    PropTypes.string,
+  opponent:  PropTypes.string,
+  homeScore: PropTypes.number,
+  awayScore: PropTypes.number,
+  isHome:    PropTypes.bool,
 };
 
-const STAT_PLACEHOLDERS = ['Posesión', 'Tiros a puerta', 'Tiros totales', 'Córners', 'Faltas'];
+function FormGuide({ form, team, align }) {
+  if (!form?.length) return null;
+  const isRight = align === 'right';
+  return (
+    <Stack direction={isRight ? 'row-reverse' : 'row'} alignItems="center" sx={{ gap: '6px', minWidth: 0 }}>
+      {team?.logo && (
+        <Box sx={{
+          width: 20, height: 20, borderRadius: '50%', bgcolor: 'action.hover',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden', flexShrink: 0,
+        }}>
+          <Box component="img" src={team.logo} alt={team.name}
+            sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+        </Box>
+      )}
+      <Stack direction={isRight ? 'row-reverse' : 'row'} sx={{ gap: '3px' }}>
+        {form.map((item, i) => <FormDot key={i} {...item} />)}
+      </Stack>
+    </Stack>
+  );
+}
 
-export default function HeadToHead({ filteredMatches, filter, onFilterChange, team1Id }) {
+FormGuide.propTypes = {
+  form:  PropTypes.array,
+  team:  PropTypes.object,
+  align: PropTypes.string,
+};
+
+function WinDistributionBar({ team1Wins, draws, team2Wins, teamHome, teamAway }) {
+  const total = team1Wins + draws + team2Wins;
+  if (total === 0) return null;
+
+  const pHome = Math.round((team1Wins / total) * 100);
+  const pDraw = Math.round((draws     / total) * 100);
+  const pAway = 100 - pHome - pDraw;
+
+  return (
+    <Box sx={{ px: { xs: 2, sm: '20px' }, pt: '14px', pb: '12px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: '8px' }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: '6px' }}>
+          {teamHome?.logo && (
+            <Box component="img" src={teamHome.logo} alt={teamHome.name}
+              sx={{ width: 18, height: 18, objectFit: 'contain' }} />
+          )}
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: 'primary.main', fontFamily: FONT }}>
+            {team1Wins}
+          </Typography>
+        </Stack>
+        <Typography sx={{ fontSize: 12, color: 'text.disabled', fontFamily: FONT }}>
+          {draws} {draws === 1 ? 'empate' : 'empates'}
+        </Typography>
+        <Stack direction="row" alignItems="center" sx={{ gap: '6px' }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: 'warning.main', fontFamily: FONT }}>
+            {team2Wins}
+          </Typography>
+          {teamAway?.logo && (
+            <Box component="img" src={teamAway.logo} alt={teamAway.name}
+              sx={{ width: 18, height: 18, objectFit: 'contain' }} />
+          )}
+        </Stack>
+      </Stack>
+
+      <Box sx={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', gap: '1px' }}>
+        {pHome > 0 && <Box sx={{ flex: pHome, bgcolor: 'primary.main', borderRadius: '3px 0 0 3px' }} />}
+        {pDraw > 0 && <Box sx={{ flex: pDraw, bgcolor: 'action.disabled' }} />}
+        {pAway > 0 && <Box sx={{ flex: pAway, bgcolor: 'warning.main', borderRadius: '0 3px 3px 0' }} />}
+      </Box>
+
+      <Stack direction="row" justifyContent="space-between" sx={{ mt: '4px' }}>
+        <Typography sx={{ fontSize: 10, color: 'primary.main', fontFamily: FONT }}>{pHome}%</Typography>
+        <Typography sx={{ fontSize: 10, color: 'text.disabled', fontFamily: FONT }}>{pDraw}%</Typography>
+        <Typography sx={{ fontSize: 10, color: 'warning.main', fontFamily: FONT }}>{pAway}%</Typography>
+      </Stack>
+    </Box>
+  );
+}
+
+WinDistributionBar.propTypes = {
+  team1Wins: PropTypes.number.isRequired,
+  draws:     PropTypes.number.isRequired,
+  team2Wins: PropTypes.number.isRequired,
+  teamHome:  PropTypes.object,
+  teamAway:  PropTypes.object,
+};
+
+function RecentFormSection({ homeForm, awayForm, teamHome, teamAway, isLoadingForm }) {
+  if (isLoadingForm) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: '10px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+        <CircularProgress size={16} />
+      </Box>
+    );
+  }
+  if (!homeForm?.length && !awayForm?.length) return null;
+
+  return (
+    <Box sx={{ px: { xs: 2, sm: '20px' }, py: '10px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+      <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.8px', mb: '8px', fontFamily: FONT }}>
+        Recent Form
+      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <FormGuide form={homeForm} team={teamHome} align="left" />
+        <FormGuide form={awayForm} team={teamAway} align="right" />
+      </Stack>
+    </Box>
+  );
+}
+
+RecentFormSection.propTypes = {
+  homeForm:      PropTypes.array,
+  awayForm:      PropTypes.array,
+  teamHome:      PropTypes.object,
+  teamAway:      PropTypes.object,
+  isLoadingForm: PropTypes.bool,
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export default function HeadToHead({
+  filteredMatches, filter, onFilterChange, team1Id,
+  teamHome, teamAway, homeForm, awayForm, isLoadingForm,
+}) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
 
@@ -117,10 +266,28 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
     { value: 'away', label: t('h2h.filters.away') },
   ];
 
+  const team1Wins = filteredMatches.filter(m =>
+    (m.teams.home.id === team1Id && m.teams.home.winner) ||
+    (m.teams.away.id === team1Id && m.teams.away.winner)
+  ).length;
+  const draws     = filteredMatches.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
+  const team2Wins = filteredMatches.length - team1Wins - draws;
+
   return (
     <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {/* Title + filter row — wraps on xs so long translated labels don't overflow */}
+      <WinDistributionBar
+        team1Wins={team1Wins} draws={draws} team2Wins={team2Wins}
+        teamHome={teamHome} teamAway={teamAway}
+      />
+
+      <RecentFormSection
+        homeForm={homeForm} awayForm={awayForm}
+        teamHome={teamHome} teamAway={teamAway}
+        isLoadingForm={isLoadingForm}
+      />
+
+      {/* Title + filter row */}
       <Box sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: '8px',
@@ -139,9 +306,7 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
         </Box>
       </Box>
 
-      {/* Column headers
-          gridTemplateColumns switches between 4-col (xs) and 5-col (sm+).
-          The League header cell is hidden on xs via display:none. */}
+      {/* Column headers */}
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
@@ -188,16 +353,13 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
 
           return (
             <Box key={match.fixture.id}>
-              {/* ── Clickable row ── */}
               <Box
                 onClick={() => toggleExpand(match.fixture.id)}
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
-                  alignItems: 'center',
-                  gap: '8px',
-                  px: { xs: '12px', sm: '16px' },
-                  py: '12px',
+                  alignItems: 'center', gap: '8px',
+                  px: { xs: '12px', sm: '16px' }, py: '12px',
                   cursor: 'pointer',
                   transition: 'background-color 0.15s ease',
                   bgcolor: isExpanded ? 'action.hover' : 'transparent',
@@ -241,8 +403,7 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
                     fontSize: 11, color: 'text.secondary', fontWeight: 500,
                     bgcolor: 'action.selected', borderRadius: '6px',
                     px: '7px', py: '3px', letterSpacing: '0.1px', fontFamily: FONT,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    maxWidth: '100%',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
                   }}>
                     {match.league.name}
                   </Typography>
@@ -258,7 +419,7 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
                 </Box>
               </Box>
 
-              {/* ── Expandable stats placeholder ── */}
+              {/* Expandable stats placeholder */}
               <Box sx={{
                 maxHeight: isExpanded ? '400px' : 0,
                 overflow: 'hidden',
@@ -266,10 +427,8 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
               }}>
                 <Box sx={{
                   mx: { xs: '12px', sm: '16px' }, mb: '8px',
-                  borderRadius: '12px',
-                  bgcolor: 'action.selected',
-                  border: '1px dashed', borderColor: 'divider',
-                  p: '14px',
+                  borderRadius: '12px', bgcolor: 'action.selected',
+                  border: '1px dashed', borderColor: 'divider', p: '14px',
                 }}>
                   <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.8px', mb: '12px', fontFamily: FONT }}>
                     Estadísticas detalladas
@@ -286,7 +445,6 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
                 </Box>
               </Box>
 
-              {/* Hairline separator */}
               {i < filteredMatches.length - 1 && (
                 <Box sx={{ height: '0.5px', bgcolor: 'divider', mx: '12px' }} />
               )}
@@ -300,7 +458,12 @@ export default function HeadToHead({ filteredMatches, filter, onFilterChange, te
 
 HeadToHead.propTypes = {
   filteredMatches: PropTypes.array.isRequired,
-  filter: PropTypes.string.isRequired,
-  onFilterChange: PropTypes.func.isRequired,
-  team1Id: PropTypes.number.isRequired,
+  filter:          PropTypes.string.isRequired,
+  onFilterChange:  PropTypes.func.isRequired,
+  team1Id:         PropTypes.number.isRequired,
+  teamHome:        PropTypes.object,
+  teamAway:        PropTypes.object,
+  homeForm:        PropTypes.array,
+  awayForm:        PropTypes.array,
+  isLoadingForm:   PropTypes.bool,
 };

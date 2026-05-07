@@ -77,33 +77,6 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
     return past;
   }, [h2hData, filter, team1Id]);
 
-  const record = useMemo(() => {
-    const team1Wins = filteredMatches.filter(m =>
-      (m.teams.home.id === team1Id && m.teams.home.winner) ||
-      (m.teams.away.id === team1Id && m.teams.away.winner)
-    ).length;
-    const draws     = filteredMatches.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
-    const team2Wins = filteredMatches.length - team1Wins - draws;
-    return { team1Wins, draws, team2Wins };
-  }, [filteredMatches, team1Id]);
-
-  const headerRecord = useMemo(() => {
-    if (activeTab === 'recent') {
-      const matches = recentTeamView === 'home' ? recentData.home : recentData.away;
-      const teamId  = recentTeamView === 'home' ? team1Id : team2Id;
-      let wins = 0, draws = 0, losses = 0;
-      matches.forEach(m => {
-        const isHome = m.teams.home.id === teamId;
-        if (!m.teams.home.winner && !m.teams.away.winner) draws++;
-        else if (isHome ? m.teams.home.winner : m.teams.away.winner) wins++;
-        else losses++;
-      });
-      return { stat1: wins, stat2: draws, stat3: losses, mode: 'recent' };
-    }
-    if (!record) return null;
-    return { stat1: record.team1Wins, stat2: record.draws, stat3: record.team2Wins, mode: 'h2h' };
-  }, [activeTab, record, recentTeamView, recentData, team1Id, team2Id]);
-
   // ── Form guide: last 5 results per team, oldest→newest (left→right) ─────────
   const toFormItem = (match, teamId) => {
     const isHome   = match.teams.home.id === teamId;
@@ -215,10 +188,6 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
               teamAway={teamAway}
               nextMatch={nextMatch}
               currentMatch={currentMatch}
-              headerRecord={headerRecord}
-              homeForm={homeForm}
-              awayForm={awayForm}
-              isLoadingForm={isLoadingRecent}
             />
 
             {/* ── Tab bar ── */}
@@ -253,6 +222,11 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                   filter={filter}
                   onFilterChange={setFilter}
                   team1Id={team1Id}
+                  teamHome={teamHome}
+                  teamAway={teamAway}
+                  homeForm={homeForm}
+                  awayForm={awayForm}
+                  isLoadingForm={isLoadingRecent}
                 />
               ) : recentContent}
             </Box>
