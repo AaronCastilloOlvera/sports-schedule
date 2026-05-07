@@ -38,6 +38,11 @@
     "losses": "Losses",
     "results": "results",
     "recentForm": "Recent Form",
+    "aggregate": {
+      "avgGoals":   "Avg Goals",
+      "bothScored": "Both Scored",
+      "matches":    "Matches"
+    },
     "tabs": {
       "h2h": "H2H",
       "recent": "Recent Matches"

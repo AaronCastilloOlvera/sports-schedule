@@ -38,6 +38,11 @@
     "losses": "Derrotas",
     "results": "resultados",
     "recentForm": "Forma Reciente",
+    "aggregate": {
+      "avgGoals":   "Prom. Goles",
+      "bothScored": "Ambos Anotan",
+      "matches":    "Partidos"
+    },
     "tabs": {
       "h2h": "H2H",
       "recent": "Últimos Partidos"

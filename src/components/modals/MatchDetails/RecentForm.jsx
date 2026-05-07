@@ -1,20 +1,25 @@
 import { useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
 
-// Desktop: date | result | opponent | score | league | chevron
-// Mobile:  date | result | opponent | score | chevron
-const GRID_COLS        = '90px 36px minmax(0, 1fr) 72px 116px 24px';
-const GRID_COLS_MOBILE = '72px 36px minmax(0, 1fr) 60px 24px';
+// Desktop: date | opponent | score | league | expand
+// Mobile:  date | opponent | score | expand
+const GRID_COLS        = '90px minmax(0, 1fr) 80px 116px 24px';
+const GRID_COLS_MOBILE = '72px minmax(0, 1fr) 64px 24px';
 
 const RESULT_STYLE = {
-  W: { label: 'W', color: '#28CD41', bg: 'rgba(40,205,65,0.10)',  border: 'rgba(40,205,65,0.28)' },
+  W: { label: 'W', color: '#28CD41', bg: 'rgba(40,205,65,0.10)',   border: 'rgba(40,205,65,0.28)' },
   D: { label: 'D', color: '#8E8E93', bg: 'rgba(142,142,147,0.10)', border: 'rgba(142,142,147,0.28)' },
-  L: { label: 'L', color: '#FF3B30', bg: 'rgba(255,59,48,0.10)',  border: 'rgba(255,59,48,0.28)' },
+  L: { label: 'L', color: '#FF3B30', bg: 'rgba(255,59,48,0.10)',   border: 'rgba(255,59,48,0.28)' },
+};
+
+const SCORE_STYLE = {
+  W: { color: '#28CD41', bg: 'rgba(40,205,65,0.12)',   border: 'rgba(40,205,65,0.32)' },
+  D: { color: '#8E8E93', bg: 'rgba(142,142,147,0.12)', border: 'rgba(142,142,147,0.32)' },
+  L: { color: '#FF3B30', bg: 'rgba(255,59,48,0.12)',   border: 'rgba(255,59,48,0.32)' },
 };
 
 // Key stat types to display in the expandable section (from the football API).
@@ -30,6 +35,8 @@ function getResult(match, teamId) {
   if (!match.teams.home.winner && !match.teams.away.winner) return 'D';
   return (isHome ? match.teams.home.winner : match.teams.away.winner) ? 'W' : 'L';
 }
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function MiniLogo({ logo, name }) {
   return (
@@ -56,9 +63,10 @@ function ResultPill({ result }) {
   const style = RESULT_STYLE[result] ?? RESULT_STYLE.D;
   return (
     <Box sx={{
-      width: 24, height: 24, borderRadius: '6px',
+      width: 22, height: 22, borderRadius: '6px',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       bgcolor: style.bg, border: '1px solid', borderColor: style.border,
+      flexShrink: 0,
     }}>
       <Typography sx={{ fontSize: 11, fontWeight: 700, color: style.color, fontFamily: FONT, lineHeight: 1 }}>
         {style.label}
@@ -69,31 +77,50 @@ function ResultPill({ result }) {
 
 ResultPill.propTypes = { result: PropTypes.string };
 
-function ScoreBadge({ homeScore, awayScore, homeWon, awayWon }) {
+// Last-5 form card: left = title + W/D/L summary, right = pills (oldest → newest).
+function FormRow({ matches, teamId }) {
+  const { t } = useTranslation();
+  if (!matches.length) return null;
+
+  const last5   = matches.slice(0, 5);
+  const results = last5.map(m => getResult(m, teamId));
+  const wins    = results.filter(r => r === 'W').length;
+  const draws   = results.filter(r => r === 'D').length;
+  const losses  = results.filter(r => r === 'L').length;
+
   return (
-    <Box sx={{
-      display: 'inline-flex', alignItems: 'center', gap: '2px',
-      bgcolor: 'action.selected', border: '1px solid', borderColor: 'divider',
-      borderRadius: '10px', px: '8px', py: '4px',
-      minWidth: { xs: 48, sm: 58 }, justifyContent: 'center',
-    }}>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: homeWon ? '#28CD41' : awayWon ? '#FF3B30' : 'text.secondary' }}>
-        {homeScore ?? '—'}
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500, mx: '2px', lineHeight: 1, fontFamily: FONT }}>–</Typography>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: awayWon ? '#28CD41' : homeWon ? '#FF3B30' : 'text.secondary' }}>
-        {awayScore ?? '—'}
-      </Typography>
+    <Box sx={{ px: { xs: 2, sm: '20px' }, py: '10px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+      <Box sx={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+        bgcolor: 'action.selected', borderRadius: '10px', px: '14px', py: '10px',
+      }}>
+        <Box>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, letterSpacing: '-0.2px' }}>
+            {t('h2h.recentForm')}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'text.secondary', fontFamily: FONT, mt: '3px', letterSpacing: '-0.1px' }}>
+            <Box component="span" sx={{ color: RESULT_STYLE.W.color }}>{wins}W</Box>
+            {' · '}
+            <Box component="span" sx={{ color: RESULT_STYLE.D.color }}>{draws}D</Box>
+            {' · '}
+            <Box component="span" sx={{ color: RESULT_STYLE.L.color }}>{losses}L</Box>
+          </Typography>
+        </Box>
+        <Stack direction="row" sx={{ gap: '4px', flexShrink: 0 }}>
+          {[...results].reverse().map((result, i) => (
+            <ResultPill key={i} result={result} />
+          ))}
+        </Stack>
+      </Box>
     </Box>
   );
 }
 
-ScoreBadge.propTypes = {
-  homeScore: PropTypes.number, awayScore: PropTypes.number,
-  homeWon: PropTypes.bool,     awayWon: PropTypes.bool,
+FormRow.propTypes = {
+  matches: PropTypes.array.isRequired,
+  teamId:  PropTypes.number.isRequired,
 };
 
-// Renders a single stat row: homeValue — label — awayValue + optional split bar.
 function StatRow({ type, homeValue, awayValue }) {
   const { t } = useTranslation();
   const isPossession = type === 'Ball Possession';
@@ -108,10 +135,8 @@ function StatRow({ type, homeValue, awayValue }) {
         {CARD_ICON_COLOR[type] ? (
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', px: '6px' }}>
             <Box sx={{
-              width: 11, height: 15,
-              bgcolor: CARD_ICON_COLOR[type].bg,
-              borderRadius: '2px',
-              boxShadow: `0 2px 6px ${CARD_ICON_COLOR[type].shadow}`,
+              width: 11, height: 15, bgcolor: CARD_ICON_COLOR[type].bg,
+              borderRadius: '2px', boxShadow: `0 2px 6px ${CARD_ICON_COLOR[type].shadow}`,
             }} />
           </Box>
         ) : (
@@ -134,7 +159,6 @@ function StatRow({ type, homeValue, awayValue }) {
 
 StatRow.propTypes = { type: PropTypes.string, homeValue: PropTypes.any, awayValue: PropTypes.any };
 
-// Expandable match stats panel.
 function MatchStats({ statistics, homeTeamId, awayTeamId }) {
   const { t } = useTranslation();
 
@@ -181,7 +205,6 @@ MatchStats.propTypes = {
   awayTeamId:  PropTypes.number,
 };
 
-// ── Team sub-toggle ────────────────────────────────────────────────────────────
 function TeamToggle({ teamHome, teamAway, value, onChange }) {
   const teams = [
     { key: 'home', team: teamHome },
@@ -235,6 +258,7 @@ TeamToggle.propTypes = {
 };
 
 // ── Main component ─────────────────────────────────────────────────────────────
+
 export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAway, team1Id, team2Id, teamView, onTeamViewChange }) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
@@ -270,6 +294,9 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
         </Box>
       </Box>
 
+      {/* Form pill row */}
+      <FormRow matches={matches} teamId={teamId} />
+
       {/* Column headers */}
       <Box sx={{
         display: 'grid',
@@ -279,7 +306,6 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
       }}>
         {[
           { label: t('recent.table.date'),     align: 'left',   hideXs: false },
-          { label: t('recent.table.result'),   align: 'center', hideXs: false },
           { label: t('recent.table.opponent'), align: 'left',   hideXs: false },
           { label: t('recent.table.score'),    align: 'center', hideXs: false },
           { label: t('recent.table.league'),   align: 'center', hideXs: true  },
@@ -306,6 +332,7 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
           const opponent   = isHome ? match.teams.away : match.teams.home;
           const result     = getResult(match, teamId);
           const isExpanded = expandedId === match.fixture.id;
+          const scoreStyle = SCORE_STYLE[result] ?? SCORE_STYLE.D;
 
           return (
             <Box key={match.fixture.id}>
@@ -316,7 +343,7 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
                   display: 'grid',
                   gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
                   alignItems: 'center', gap: '8px',
-                  px: { xs: '12px', sm: '16px' }, py: '10px',
+                  px: { xs: '12px', sm: '16px' }, py: '6px',
                   cursor: 'pointer',
                   bgcolor: isExpanded ? 'action.hover' : 'transparent',
                   transition: 'background-color 0.15s ease',
@@ -333,11 +360,6 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
                   </Typography>
                 </Box>
 
-                {/* W/D/L pill */}
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <ResultPill result={result} />
-                </Box>
-
                 {/* Opponent */}
                 <Stack direction="row" alignItems="center" sx={{ gap: '6px', minWidth: 0 }}>
                   <MiniLogo logo={opponent.logo} name={opponent.name} />
@@ -346,14 +368,18 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
                   </Typography>
                 </Stack>
 
-                {/* Score */}
+                {/* Score — bg/border/text all tinted by result */}
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <ScoreBadge
-                    homeScore={match.goals.home}
-                    awayScore={match.goals.away}
-                    homeWon={match.teams.home.winner}
-                    awayWon={match.teams.away.winner}
-                  />
+                  <Box sx={{
+                    display: 'inline-flex', alignItems: 'center',
+                    bgcolor: scoreStyle.bg, border: '1px solid', borderColor: scoreStyle.border,
+                    borderRadius: '10px', px: '8px', py: '4px',
+                    minWidth: { xs: 48, sm: 58 }, justifyContent: 'center',
+                  }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, fontFamily: FONT, fontVariantNumeric: 'tabular-nums', color: scoreStyle.color }}>
+                      {match.goals.home ?? '—'} – {match.goals.away ?? '—'}
+                    </Typography>
+                  </Box>
                 </Box>
 
                 {/* League — hidden on mobile */}
@@ -369,13 +395,15 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
                   </Typography>
                 </Box>
 
-                {/* Chevron */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <ExpandMoreIcon sx={{
-                    fontSize: 16, color: 'text.disabled', flexShrink: 0,
-                    transition: 'transform 0.25s ease',
-                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                  }} />
+                {/* Expand toggle */}
+                <Box sx={{
+                  display: 'flex', justifyContent: 'center', alignItems: 'center',
+                  width: 20, height: 20, borderRadius: '50%',
+                  border: '1px solid', borderColor: 'divider',
+                  color: 'text.secondary', fontSize: 14, fontWeight: 400,
+                  flexShrink: 0, userSelect: 'none', fontFamily: FONT,
+                }}>
+                  {isExpanded ? '−' : '+'}
                 </Box>
               </Box>
 

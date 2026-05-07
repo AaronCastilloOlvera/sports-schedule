@@ -77,26 +77,6 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
     return past;
   }, [h2hData, filter, team1Id]);
 
-  // ── Form guide: last 5 results per team, oldest→newest (left→right) ─────────
-  const toFormItem = (match, teamId) => {
-    const isHome   = match.teams.home.id === teamId;
-    const opponent = isHome ? match.teams.away : match.teams.home;
-    const result   = (() => {
-      if (!match.teams.home.winner && !match.teams.away.winner) return 'D';
-      return (isHome ? match.teams.home.winner : match.teams.away.winner) ? 'W' : 'L';
-    })();
-    return { result, opponent: opponent.name, homeScore: match.goals.home, awayScore: match.goals.away, isHome };
-  };
-
-  const homeForm = useMemo(
-    () => recentData.home.slice(0, 5).reverse().map(m => toFormItem(m, team1Id)),
-    [recentData.home, team1Id]  // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const awayForm = useMemo(
-    () => recentData.away.slice(0, 5).reverse().map(m => toFormItem(m, team2Id)),
-    [recentData.away, team2Id]  // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   // ── Tab definitions (inside component so t() is available) ─────────────────
   const TABS = [
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
@@ -224,9 +204,6 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                   team1Id={team1Id}
                   teamHome={teamHome}
                   teamAway={teamAway}
-                  homeForm={homeForm}
-                  awayForm={awayForm}
-                  isLoadingForm={isLoadingRecent}
                 />
               ) : recentContent}
             </Box>

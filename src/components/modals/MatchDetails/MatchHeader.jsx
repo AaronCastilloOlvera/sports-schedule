@@ -1,5 +1,4 @@
 import { Box, Stack, Typography } from '@mui/material';
-import { CalendarToday } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
@@ -16,6 +15,9 @@ const pulse = keyframes`
 function getStatusLabel({ short, elapsed, extra }) {
   if (short === 'HT') return 'HT';
   if (short === 'BT') return 'BT';
+  if (short === 'FT')  return 'FULL TIME';
+  if (short === 'AET') return 'AFTER ET';
+  if (short === 'PEN') return 'PENALTIES';
   if (LIVE_STATUSES.has(short) && elapsed != null) {
     return extra > 0 ? `${elapsed}+${extra}'` : `${elapsed}'`;
   }
@@ -24,9 +26,9 @@ function getStatusLabel({ short, elapsed, extra }) {
 
 function TeamColumn({ team, textPrimary, dividerColor }) {
   return (
-    <Stack alignItems="center" sx={{ gap: '12px', flex: 1, minWidth: 0 }}>
+    <Stack alignItems="center" sx={{ gap: '6px', flex: 1, minWidth: 0 }}>
       <Box sx={{
-        width: { xs: 60, sm: 76 }, height: { xs: 60, sm: 76 }, borderRadius: '50%',
+        width: { xs: 44, sm: 56 }, height: { xs: 44, sm: 56 }, borderRadius: '50%',
         bgcolor: 'rgba(255,255,255,0.10)',
         border: '2px solid', borderColor: dividerColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -42,7 +44,7 @@ function TeamColumn({ team, textPrimary, dividerColor }) {
         )}
       </Box>
       <Typography sx={{
-        fontSize: { xs: 13, sm: 16 }, fontWeight: 700, color: textPrimary,
+        fontSize: 13, fontWeight: 700, color: textPrimary,
         letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT,
         textAlign: 'center', width: '100%', px: '4px',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -120,7 +122,8 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
   return (
     <Box sx={{
       position: 'relative', overflow: 'hidden', bgcolor: 'background.paper',
-      px: { xs: 3, sm: '28px' }, pt: { xs: 3, sm: '28px' }, pb: { xs: '20px', sm: '24px' },
+      maxHeight: 140,
+      px: { xs: 2, sm: '20px' }, pt: { xs: '12px', sm: '14px' }, pb: { xs: '10px', sm: '12px' },
       borderBottom: '1px solid', borderColor: 'divider',
     }}>
 
@@ -151,14 +154,14 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
                 <Box sx={{
                   bgcolor: surfaceBg, border: '1px solid', borderColor: dividerColor,
                   borderRadius: '12px',
-                  px: { xs: '12px', sm: '16px' }, py: { xs: '6px', sm: '8px' },
+                  px: '12px', py: '5px',
                   display: 'flex', alignItems: 'center', gap: { xs: '8px', sm: '10px' },
                 }}>
-                  <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: { xs: 24, sm: 30 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.home ?? 0}
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: 13, sm: 15 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
-                  <Typography sx={{ fontSize: { xs: 18, sm: 22 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: { xs: 15, sm: 17 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
+                  <Typography sx={{ fontSize: { xs: 24, sm: 30 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.away ?? 0}
                   </Typography>
                 </Box>
@@ -192,19 +195,13 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
                   </Typography>
                 </Box>
 
-                {/* Kickoff date + time */}
+                {/* Kickoff date + time — single compact line */}
                 {kickoffDate && (
-                  <Stack alignItems="center" sx={{ gap: '2px' }}>
-                    <Stack direction="row" alignItems="center" sx={{ gap: '4px' }}>
-                      <CalendarToday sx={{ fontSize: 10, color: textDisabled }} />
-                      <Typography sx={{ fontSize: 11, color: textSecondary, fontFamily: FONT }}>
-                        {new Date(kickoffDate).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short' })}
-                      </Typography>
-                    </Stack>
-                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: textPrimary, fontFamily: FONT }}>
-                      {new Date(kickoffDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Typography>
-                  </Stack>
+                  <Typography sx={{ fontSize: 12, color: textSecondary, fontFamily: FONT, letterSpacing: '-0.2px', textAlign: 'center' }}>
+                    {new Date(kickoffDate).toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short' })}
+                    {' · '}
+                    {new Date(kickoffDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Typography>
                 )}
               </>
             )}
@@ -215,7 +212,7 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
 
         {/* ── Match events (live or finished) ── */}
         {hasEvents && (
-          <Box sx={{ display: 'flex', mt: '16px', gap: '12px' }}>
+          <Box sx={{ display: 'flex', mt: '10px', gap: '12px' }}>
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
               {homeEvents.map((event, i) => (
                 <EventRow key={i} event={event} isRight={false} textPrimary={textPrimary} textDisabled={textDisabled} />
