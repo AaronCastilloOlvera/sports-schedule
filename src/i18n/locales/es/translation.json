@@ -18,7 +18,7 @@
       "stadium": "Estadio",
       "actions": "Acciones"
     },
-    "headToHead": "Head to Head",
+    "headToHead": "Estadísticas del Partido",
     "selectDate": "Seleccionar Fecha",
     "refreshLeagues": "Refrescar Ligas",
     "noMatches": "No hay partidos disponibles para esta fecha.",
@@ -37,6 +37,7 @@
     "draws": "Empates",
     "losses": "Derrotas",
     "results": "resultados",
+    "recentForm": "Forma Reciente",
     "tabs": {
       "h2h": "H2H",
       "recent": "Últimos Partidos"

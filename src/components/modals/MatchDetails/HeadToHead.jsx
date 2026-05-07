@@ -104,10 +104,9 @@ function MiniLogo({ logo, name }) {
 
 MiniLogo.propTypes = { logo: PropTypes.string, name: PropTypes.string };
 
-function FormDot({ result, opponent, homeScore, awayScore, isHome }) {
+function FormDot({ result, opponent}) {
   const style = FORM_STYLES[result] ?? FORM_STYLES.D;
-  const venue = isHome ? 'H' : 'A';
-  const title = `vs ${opponent}  ${homeScore}-${awayScore} (${venue})`;
+  const title = `${opponent} `;
 
   return (
     <Tooltip title={title} placement="top" arrow>
@@ -127,10 +126,7 @@ function FormDot({ result, opponent, homeScore, awayScore, isHome }) {
 
 FormDot.propTypes = {
   result:    PropTypes.string,
-  opponent:  PropTypes.string,
-  homeScore: PropTypes.number,
-  awayScore: PropTypes.number,
-  isHome:    PropTypes.bool,
+  opponent:  PropTypes.string
 };
 
 function FormGuide({ form, team, align }) {
@@ -146,7 +142,7 @@ function FormGuide({ form, team, align }) {
         }}>
           <Box component="img" src={team.logo} alt={team.name}
             sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-        </Box>
+          </Box>
       )}
       <Stack direction={isRight ? 'row-reverse' : 'row'} sx={{ gap: '3px' }}>
         {form.map((item, i) => <FormDot key={i} {...item} />)}
@@ -219,6 +215,7 @@ WinDistributionBar.propTypes = {
 };
 
 function RecentFormSection({ homeForm, awayForm, teamHome, teamAway, isLoadingForm }) {
+  const { t } = useTranslation();
   if (isLoadingForm) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: '10px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
@@ -231,7 +228,7 @@ function RecentFormSection({ homeForm, awayForm, teamHome, teamAway, isLoadingFo
   return (
     <Box sx={{ px: { xs: 2, sm: '20px' }, py: '10px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
       <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.8px', mb: '8px', fontFamily: FONT }}>
-        Recent Form
+        {t('h2h.recentForm')}
       </Typography>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <FormGuide form={homeForm} team={teamHome} align="left" />

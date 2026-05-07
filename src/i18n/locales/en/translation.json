@@ -18,7 +18,7 @@
       "stadium": "Stadium",
       "actions": "Actions"
     },
-    "headToHead": "Head to Head",
+    "headToHead": "Match Statistics",
     "selectDate": "Select Date",
     "refreshLeagues": "Refresh Leagues",
     "noMatches": "No matches available for this date.",
@@ -37,6 +37,7 @@
     "draws": "Draws",
     "losses": "Losses",
     "results": "results",
+    "recentForm": "Recent Form",
     "tabs": {
       "h2h": "H2H",
       "recent": "Recent Matches"
