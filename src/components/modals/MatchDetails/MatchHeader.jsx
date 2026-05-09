@@ -26,9 +26,9 @@ function getStatusLabel({ short, elapsed, extra }) {
 
 function TeamColumn({ team, textPrimary, dividerColor }) {
   return (
-    <Stack alignItems="center" sx={{ gap: '6px', flex: 1, minWidth: 0 }}>
+    <Stack alignItems="center" sx={{ gap: '8px', flex: 1, minWidth: 0 }}>
       <Box sx={{
-        width: { xs: 44, sm: 56 }, height: { xs: 44, sm: 56 }, borderRadius: '50%',
+        width: { xs: 52, sm: 64 }, height: { xs: 52, sm: 64 }, borderRadius: '50%',
         bgcolor: 'rgba(255,255,255,0.10)',
         border: '2px solid', borderColor: dividerColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -44,7 +44,7 @@ function TeamColumn({ team, textPrimary, dividerColor }) {
         )}
       </Box>
       <Typography sx={{
-        fontSize: 13, fontWeight: 700, color: textPrimary,
+        fontSize: { xs: 13, sm: 15 }, fontWeight: 700, color: textPrimary,
         letterSpacing: '-0.4px', lineHeight: 1.2, fontFamily: FONT,
         textAlign: 'center', width: '100%', px: '4px',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -66,6 +66,9 @@ function EventRow({ event, isRight, textPrimary, textDisabled }) {
   const isRedCard = event.type === 'Card'  && event.detail === 'Red Card';
   if (!isGoal && !isRedCard) return null;
 
+  const isPenalty = isGoal && event.detail === 'Penalty';
+  const isOwnGoal = isGoal && event.detail === 'Own Goal';
+
   const time = event.time.extra
     ? `${event.time.elapsed}+${event.time.extra}'`
     : `${event.time.elapsed}'`;
@@ -76,8 +79,10 @@ function EventRow({ event, isRight, textPrimary, textDisabled }) {
       {isRedCard && (
         <Box component="span" sx={{ display: 'inline-block', width: 8, height: 11, bgcolor: 'error.main', borderRadius: '1.5px', flexShrink: 0 }} />
       )}
-      <Typography sx={{ fontSize: 11, color: textPrimary,  fontFamily: FONT, lineHeight: 1.3 }}>
+      <Typography sx={{ fontSize: 11, color: textPrimary, fontFamily: FONT, lineHeight: 1.3 }}>
         {event.player.name}
+        {isPenalty && <Typography component="span" sx={{ fontSize: 10, color: textDisabled, fontFamily: FONT }}>{' (P)'}</Typography>}
+        {isOwnGoal && <Typography component="span" sx={{ fontSize: 10, color: textDisabled, fontFamily: FONT }}>{' (OG)'}</Typography>}
       </Typography>
       <Typography sx={{ fontSize: 10, color: textDisabled, fontFamily: FONT, lineHeight: 1.3, flexShrink: 0 }}>
         {time}
@@ -122,8 +127,7 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
   return (
     <Box sx={{
       position: 'relative', overflow: 'hidden', bgcolor: 'background.paper',
-      maxHeight: 140,
-      px: { xs: 2, sm: '20px' }, pt: { xs: '12px', sm: '14px' }, pb: { xs: '10px', sm: '12px' },
+      px: { xs: 2, sm: '20px' }, pt: { xs: '14px', sm: '18px' }, pb: { xs: '18px', sm: '24px' },
       borderBottom: '1px solid', borderColor: 'divider',
     }}>
 
@@ -133,13 +137,16 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
         onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/img/generic-stadium.jpg'; }}
         sx={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'cover', objectPosition: 'center 30%',
-          filter: 'blur(3px)', transform: 'scale(1.05)', zIndex: 0,
+          objectFit: 'cover', objectPosition: 'center 60%',
+          filter: 'blur(5px)', transform: 'scale(1.08)', zIndex: 0,
         }}
       />
 
-      {/* ── Layer 2: dark overlay ── */}
-      <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.62)', zIndex: 1 }} />
+      {/* ── Layer 2: gradient overlay — darker at bottom for event readability ── */}
+      <Box sx={{
+        position: 'absolute', inset: 0, zIndex: 1,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.62) 60%, rgba(0,0,0,0.80) 100%)',
+      }} />
 
       {/* ── Layer 3: content ── */}
       <Box sx={{ position: 'relative', zIndex: 2 }}>
@@ -154,17 +161,24 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
                 <Box sx={{
                   bgcolor: surfaceBg, border: '1px solid', borderColor: dividerColor,
                   borderRadius: '12px',
-                  px: '12px', py: '5px',
-                  display: 'flex', alignItems: 'center', gap: { xs: '8px', sm: '10px' },
+                  px: '16px', py: '7px',
+                  display: 'flex', alignItems: 'center', gap: { xs: '10px', sm: '14px' },
                 }}>
-                  <Typography sx={{ fontSize: { xs: 24, sm: 30 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.home ?? 0}
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: 15, sm: 17 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
-                  <Typography sx={{ fontSize: { xs: 24, sm: 30 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: { xs: 16, sm: 19 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
+                  <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.away ?? 0}
                   </Typography>
                 </Box>
+
+                {/* Penalty shootout result */}
+                {status?.short === 'PEN' && currentMatch?.score?.penalty?.home != null && (
+                  <Typography sx={{ fontSize: 11, color: textSecondary, fontFamily: FONT, letterSpacing: '-0.2px' }}>
+                    ({currentMatch.score.penalty.home} – {currentMatch.score.penalty.away} pen.)
+                  </Typography>
+                )}
 
                 {/* Live minute / HT / FT */}
                 <Stack direction="row" alignItems="center" sx={{ gap: '5px' }}>
@@ -212,7 +226,7 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
 
         {/* ── Match events (live or finished) ── */}
         {hasEvents && (
-          <Box sx={{ display: 'flex', mt: '10px', gap: '12px' }}>
+          <Box sx={{ display: 'flex', mt: '14px', gap: '12px' }}>
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
               {homeEvents.map((event, i) => (
                 <EventRow key={i} event={event} isRight={false} textPrimary={textPrimary} textDisabled={textDisabled} />
