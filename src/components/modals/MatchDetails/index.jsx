@@ -39,7 +39,11 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
       setIsLoadingRecent(true);
 
       apiClient.fetchHeadToHeadMatches(team1Id, team2Id)
-        .then(response => setH2hData(response?.data?.slice(0, 10) ?? []))
+        .then(response => {
+          const sorted = (response?.data ?? [])
+            .sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date));
+          setH2hData(sorted.slice(0, 10));
+        })
         .catch(() => setH2hData([]))
         .finally(() => setLoading(false));
 
