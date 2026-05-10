@@ -63,6 +63,11 @@ class ApiClient {
     return response.data;
   }
 
+  async fetchOdds(fixtureId) {
+    const response = await this.client.get(`/odds/fixture/${fixtureId}`);
+    return response.data;
+  }
+
   async fetchRefreshFixtures(date='2025-12-14') {
     const response = await this.client.post(`/redis/refresh-fixtures-cache?date=${date}`);
     return response.data;
