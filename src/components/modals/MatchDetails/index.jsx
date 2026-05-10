@@ -7,6 +7,7 @@ import PropTypes from 'prop-types';
 import MatchHeader from './MatchHeader';
 import HeadToHead from './HeadToHead';
 import RecentForm from './RecentForm';
+import MatchOdds from './MatchOdds';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
@@ -27,7 +28,11 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
   const [recentError, setRecentError]         = useState(false);
   const [recentTeamView, setRecentTeamView]   = useState('home');
 
-  // ── Fetch H2H + recent matches together on open ────────────────────────────
+  // ── Odds state ─────────────────────────────────────────────────────────────
+  const [oddsData, setOddsData]           = useState(null);
+  const [isLoadingOdds, setIsLoadingOdds] = useState(false);
+
+  // ── Fetch H2H + recent matches + odds together on open ────────────────────
   useEffect(() => {
     if (open && team1Id && team2Id) {
       setFilter('all');
@@ -35,6 +40,7 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
       setRecentData({ home: [], away: [] });
       setRecentError(false);
       setRecentTeamView('home');
+      setOddsData(null);
       setLoading(true);
       setIsLoadingRecent(true);
 
@@ -59,8 +65,17 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
         })
         .catch(() => setRecentError(true))
         .finally(() => setIsLoadingRecent(false));
+
+      const fixtureId = currentMatch?.fixture?.id;
+      if (fixtureId) {
+        setIsLoadingOdds(true);
+        apiClient.fetchOdds(fixtureId)
+          .then(res => setOddsData(res?.data ?? null))
+          .catch(() => setOddsData(null))
+          .finally(() => setIsLoadingOdds(false));
+      }
     }
-  }, [open, team1Id, team2Id]);
+  }, [open, team1Id, team2Id, currentMatch]);
 
   // ── Derived H2H values ─────────────────────────────────────────────────────
   const { nextMatch, teamHome, teamAway } = useMemo(() => {
@@ -85,6 +100,7 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
   const TABS = [
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
     { value: 'recent', label: t('h2h.tabs.recent') },
+    { value: 'odds',   label: t('h2h.tabs.odds') },
   ];
 
   // ── Recent tab content ─────────────────────────────────────────────────────
@@ -206,6 +222,13 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                   filter={filter}
                   onFilterChange={setFilter}
                   team1Id={team1Id}
+                  teamHome={teamHome}
+                  teamAway={teamAway}
+                />
+              ) : activeTab === 'odds' ? (
+                <MatchOdds
+                  oddsData={oddsData}
+                  loading={isLoadingOdds}
                   teamHome={teamHome}
                   teamAway={teamAway}
                 />

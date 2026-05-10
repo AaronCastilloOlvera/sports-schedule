@@ -45,7 +45,8 @@
     },
     "tabs": {
       "h2h": "H2H",
-      "recent": "Recent Matches"
+      "recent": "Recent Matches",
+      "odds": "Odds"
     },
     "filters": {
       "all": "All",
@@ -64,6 +65,10 @@
     "win":        "Win",
     "draw":       "Draw",
     "loss":       "Loss"
+  },
+  "odds": {
+    "bookmaker":  "Bookmaker",
+    "noData":     "No odds available for this match."
   },
   "recent": {
     "results": "results",

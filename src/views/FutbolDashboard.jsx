@@ -16,10 +16,9 @@ function FutbolTab({ children, value, index }) {
     <Box
       component="div"
       role="tabpanel"
-      hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
-      sx={{ width: '100%', transition: 'all 0.3s ease', boxSizing: 'border-box' }}
+      sx={{ display: value === index ? 'block' : 'none', width: '100%', boxSizing: 'border-box' }}
     >
       <Box sx={{ p: { xs: 1, md: 3 }, width: '100%', boxSizing: 'border-box', overflowX: 'auto' }}>
         {children}

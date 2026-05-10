@@ -45,7 +45,8 @@
     },
     "tabs": {
       "h2h": "H2H",
-      "recent": "Últimos Partidos"
+      "recent": "Últimos Partidos",
+      "odds": "Cuotas"
     },
     "filters": {
       "all": "Todos",
@@ -64,6 +65,10 @@
     "win":        "Victoria",
     "draw":       "Empate",
     "loss":       "Derrota"
+  },
+  "odds": {
+    "bookmaker":  "Casa de Apuestas",
+    "noData":     "No hay cuotas disponibles para este partido."
   },
   "recent": {
     "results": "resultados",
