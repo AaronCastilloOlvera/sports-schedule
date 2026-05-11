@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, Box, IconButton, CircularProgress, Typography } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../../api/api';
 import PropTypes from 'prop-types';
+import ErrorBoundary from '../../common/ErrorBoundary';
 import MatchHeader from './MatchHeader';
 import HeadToHead from './HeadToHead';
 import RecentForm from './RecentForm';
@@ -14,68 +16,51 @@ const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text"
 const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
   const { t } = useTranslation();
 
-  // ── H2H state ──────────────────────────────────────────────────────────────
-  const [h2hData, setH2hData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter]   = useState('all');
+  const [filter, setFilter]           = useState('all');
+  const [activeTab, setActiveTab]     = useState('h2h');
+  const [recentTeamView, setRecentTeamView] = useState('home');
 
-  // ── Tab state ──────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('h2h');
-
-  // ── Recent matches state ───────────────────────────────────────────────────
-  const [recentData, setRecentData]           = useState({ home: [], away: [] });
-  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
-  const [recentError, setRecentError]         = useState(false);
-  const [recentTeamView, setRecentTeamView]   = useState('home');
-
-  // ── Odds state ─────────────────────────────────────────────────────────────
-  const [oddsData, setOddsData]           = useState(null);
-  const [isLoadingOdds, setIsLoadingOdds] = useState(false);
-
-  // ── Fetch H2H + recent matches + odds together on open ────────────────────
+  // Reset UI state when the match changes
   useEffect(() => {
-    if (open && team1Id && team2Id) {
-      setFilter('all');
-      setActiveTab('h2h');
-      setRecentData({ home: [], away: [] });
-      setRecentError(false);
-      setRecentTeamView('home');
-      setOddsData(null);
-      setLoading(true);
-      setIsLoadingRecent(true);
+    setFilter('all');
+    setActiveTab('h2h');
+    setRecentTeamView('home');
+  }, [team1Id, team2Id]);
 
-      apiClient.fetchHeadToHeadMatches(team1Id, team2Id)
-        .then(response => {
-          const sorted = (response?.data ?? [])
-            .sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date));
-          setH2hData(sorted.slice(0, 10));
-        })
-        .catch(() => setH2hData([]))
-        .finally(() => setLoading(false));
+  const fixtureId = currentMatch?.fixture?.id;
 
-      Promise.all([
-        apiClient.fetchRecentMatches(team1Id),
-        apiClient.fetchRecentMatches(team2Id),
-      ])
-        .then(([homeRes, awayRes]) => {
-          setRecentData({
-            home: homeRes?.data ?? homeRes ?? [],
-            away: awayRes?.data ?? awayRes ?? [],
-          });
-        })
-        .catch(() => setRecentError(true))
-        .finally(() => setIsLoadingRecent(false));
+  const { data: h2hData = [], isLoading } = useQuery({
+    queryKey: ['h2h', team1Id, team2Id],
+    queryFn: () => apiClient.fetchHeadToHeadMatches(team1Id, team2Id),
+    enabled: open && !!team1Id && !!team2Id,
+    select: (res) => [...(res?.data ?? res ?? [])]
+      .sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date))
+      .slice(0, 10),
+  });
 
-      const fixtureId = currentMatch?.fixture?.id;
-      if (fixtureId) {
-        setIsLoadingOdds(true);
-        apiClient.fetchOdds(fixtureId)
-          .then(res => setOddsData(res?.data ?? null))
-          .catch(() => setOddsData(null))
-          .finally(() => setIsLoadingOdds(false));
-      }
-    }
-  }, [open, team1Id, team2Id, currentMatch]);
+  const { data: homeRecent = [], isLoading: isLoadingHomeRecent, isError: isHomeRecentError } = useQuery({
+    queryKey: ['recent', team1Id],
+    queryFn: () => apiClient.fetchRecentMatches(team1Id),
+    enabled: open && !!team1Id,
+    select: (res) => res?.data ?? res ?? [],
+  });
+
+  const { data: awayRecent = [], isLoading: isLoadingAwayRecent, isError: isAwayRecentError } = useQuery({
+    queryKey: ['recent', team2Id],
+    queryFn: () => apiClient.fetchRecentMatches(team2Id),
+    enabled: open && !!team2Id,
+    select: (res) => res?.data ?? res ?? [],
+  });
+
+  const { data: oddsData = null, isLoading: isLoadingOdds } = useQuery({
+    queryKey: ['odds', fixtureId],
+    queryFn: () => apiClient.fetchOdds(fixtureId),
+    enabled: open && !!fixtureId,
+    select: (res) => res?.data ?? res ?? null,
+  });
+
+  const isLoadingRecent = isLoadingHomeRecent || isLoadingAwayRecent;
+  const recentError     = isHomeRecentError || isAwayRecentError;
 
   // ── Derived H2H values ─────────────────────────────────────────────────────
   const { nextMatch, teamHome, teamAway } = useMemo(() => {
@@ -96,14 +81,12 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
     return past;
   }, [h2hData, filter, team1Id]);
 
-  // ── Tab definitions (inside component so t() is available) ─────────────────
   const TABS = [
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
     { value: 'recent', label: t('h2h.tabs.recent') },
     { value: 'odds',   label: t('h2h.tabs.odds') },
   ];
 
-  // ── Recent tab content ─────────────────────────────────────────────────────
   const recentContent = (() => {
     if (isLoadingRecent) {
       return (
@@ -124,8 +107,8 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
         </Box>
       );
     }
-    const activeMatches = recentTeamView === 'home' ? recentData.home : recentData.away;
-    if (!activeMatches.length && !isLoadingRecent) {
+    const activeMatches = recentTeamView === 'home' ? homeRecent : awayRecent;
+    if (!activeMatches.length) {
       return (
         <Box sx={{ py: 8, textAlign: 'center' }}>
           <Typography sx={{ color: 'text.secondary', fontSize: 14, fontFamily: FONT }}>
@@ -136,8 +119,8 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
     }
     return (
       <RecentForm
-        homeMatches={recentData.home}
-        awayMatches={recentData.away}
+        homeMatches={homeRecent}
+        awayMatches={awayRecent}
         teamHome={teamHome}
         teamAway={teamAway}
         team1Id={team1Id}
@@ -177,18 +160,20 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
           <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
 
-        {loading ? (
+        {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: 'background.default' }}>
             <CircularProgress color="primary" />
           </Box>
         ) : h2hData.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            <MatchHeader
-              teamHome={teamHome}
-              teamAway={teamAway}
-              nextMatch={nextMatch}
-              currentMatch={currentMatch}
-            />
+            <ErrorBoundary>
+              <MatchHeader
+                teamHome={teamHome}
+                teamAway={teamAway}
+                nextMatch={nextMatch}
+                currentMatch={currentMatch}
+              />
+            </ErrorBoundary>
 
             {/* ── Tab bar ── */}
             <Box sx={{ display: 'flex', bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -216,23 +201,25 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
 
             {/* ── Tab content ── */}
             <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {activeTab === 'h2h' ? (
-                <HeadToHead
-                  filteredMatches={filteredMatches}
-                  filter={filter}
-                  onFilterChange={setFilter}
-                  team1Id={team1Id}
-                  teamHome={teamHome}
-                  teamAway={teamAway}
-                />
-              ) : activeTab === 'odds' ? (
-                <MatchOdds
-                  oddsData={oddsData}
-                  loading={isLoadingOdds}
-                  teamHome={teamHome}
-                  teamAway={teamAway}
-                />
-              ) : recentContent}
+              <ErrorBoundary>
+                {activeTab === 'h2h' ? (
+                  <HeadToHead
+                    filteredMatches={filteredMatches}
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    team1Id={team1Id}
+                    teamHome={teamHome}
+                    teamAway={teamAway}
+                  />
+                ) : activeTab === 'odds' ? (
+                  <MatchOdds
+                    oddsData={oddsData}
+                    loading={isLoadingOdds}
+                    teamHome={teamHome}
+                    teamAway={teamAway}
+                  />
+                ) : recentContent}
+              </ErrorBoundary>
             </Box>
           </Box>
         ) : (

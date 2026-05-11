@@ -44,9 +44,10 @@ App
         │   ├── FixtureMobileView     (card layout; responsive split at 600px)
         │   │   └── MatchMobileCard   (React.memo'd with areRowsEqual for perf)
         │   └── MatchDetailsModal    (H2H + recent matches; opened by Insights button)
-        │       ├── MatchHeader      (hero banner with stadium bg, score, live status, events)
+        │       ├── MatchHeader      (hero banner: stadium bg, league context, score, live status, events flanking score)
         │       ├── HeadToHead       (H2H tab: win-distribution bar, form guide, match list)
-        │       └── RecentForm       (Recent tab: per-team recent matches with expandable stats)
+        │       ├── RecentForm       (Recent tab: per-team recent matches with expandable stats)
+        │       └── MatchOdds        (Odds tab: bet365/1xBet/Betano markets for the fixture)
         ├── Leagues              (favorite-league management: search, star toggle)
         └── Bets                 (betting ticket CRUD + profit chart)
             ├── TicketModal      (create/edit ticket dialog; supports clipboard image paste)
@@ -77,6 +78,7 @@ All methods live on the `ApiClient` class. Key endpoints:
 | `fetchRefreshFixtures(date)` | POST | `/redis/refresh-fixtures-cache` |
 | `fetchHeadToHeadMatches(id1, id2)` | GET | `/matches/headtohead` |
 | `fetchRecentMatches(teamId)` | GET | `/teams/{id}/recent-matches` |
+| `fetchOdds(fixtureId)` | GET | `/odds/fixture/{id}` |
 | `fetchMLExportH2H(homeId, awayId)` | GET | `/ml/export-h2h-json` (blob) |
 | `fetchTickets()` | GET | `/bets/get-tickets` |
 | `createTicket(formData)` | POST | `/bets/create-ticket` |
@@ -94,10 +96,27 @@ All methods live on the `ApiClient` class. Key endpoints:
 - **Render optimization**: `MatchRow` and `MatchMobileCard` are wrapped in `React.memo` with a custom `areRowsEqual` comparator (`src/utils/matchComparisons.js`) that only re-renders when score or status changes.
 - **Live dot**: `FutbolDashboard` tracks `hasLiveMatches` state (set by `Fixtures` via `onLiveChange` prop) and renders a pulsing red dot on the "Live" tab label.
 
-### Orphaned / unused files
+## Possible improvements
 
-These files exist in the repo but are not imported anywhere:
+| # | Area | Issue | Fix |
+|---|---|---|---|
+| 1 | ~~**Error boundaries**~~ | ✅ Done — `ErrorBoundary` wraps `MatchHeader` and tab content in `MatchDetailsModal` | |
+| 2 | ~~**Orphaned files**~~ | ✅ Done — `Sidebar.jsx` and `LiveMatchCard.jsx` deleted | |
+| 3 | ~~**State management**~~ | ✅ Done — React Query (`@tanstack/react-query`) wired in `main.jsx`; H2H, recent matches, and odds use `useQuery` in `MatchDetailsModal` | |
+| 4 | **Loading states** | `CircularProgress` spinner with no skeleton — layout shifts on load | Replace with MUI `Skeleton` matching the real layout shape |
+| 5 | **No tests** | Zero test coverage | Component tests for `MatchHeader`, `HeadToHead` with fixture mock data |
+| 6 | **apiClient singleton** | Imported directly everywhere — untestable and hard to mock | Pass via context or use React Query's `queryFn` pattern |
+| 7 | **i18n coverage** | New UI strings added without always updating both `en`/`es` files | Enforce with a lint rule or CI check that compares key sets |
 
-- `src/Sidebar.jsx` — also has a broken import path (`"./api"` instead of `"./api/api"`)
-- `src/components/modals/FixtureDetailsModal/index.jsx` — superseded by `src/components/modals/MatchDetails/index.jsx`
-- `src/components/Futbol/Fixtures/LiveMatchCard.jsx` — not used in the current `Fixtures` component
+---
+
+### State management
+
+`@tanstack/react-query` is installed and wired via `QueryClientProvider` in `main.jsx`. Use `useQuery` for all API calls in components — it handles caching, loading, and error states. The `queryKey` is the cache identity: same key = instant result from cache without a new network request.
+
+Current queries and their keys:
+| queryKey | Data |
+|---|---|
+| `['h2h', team1Id, team2Id]` | Head-to-head matches |
+| `['recent', teamId]` | Recent matches per team |
+| `['odds', fixtureId]` | Fixture odds |
