@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Box, IconButton, Skeleton, Typography } from '@mui/material';
+import { Modal, Box, IconButton, Skeleton, Typography, useMediaQuery } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import { apiClient } from '../../../api/api';
 import PropTypes from 'prop-types';
 import ErrorBoundary from '../../common/ErrorBoundary';
 import MatchHeader from './MatchHeader';
+import MatchHeaderMobile from './MatchHeaderMobile';
 import HeadToHead from './HeadToHead';
 import RecentForm from './RecentForm';
 import MatchOdds from './MatchOdds';
@@ -115,6 +116,7 @@ function MatchDetailsSkeleton() {
 
 const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
   const { t } = useTranslation();
+  const isMobile = useMediaQuery('(max-width: 480px)');
 
   const [filter, setFilter]           = useState('all');
   const [activeTab, setActiveTab]     = useState('h2h');
@@ -270,12 +272,21 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
         ) : h2hData.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             <ErrorBoundary>
-              <MatchHeader
-                teamHome={teamHome}
-                teamAway={teamAway}
-                nextMatch={nextMatch}
-                currentMatch={currentMatch}
-              />
+              {isMobile ? (
+                <MatchHeaderMobile
+                  teamHome={teamHome}
+                  teamAway={teamAway}
+                  nextMatch={nextMatch}
+                  currentMatch={currentMatch}
+                />
+              ) : (
+                <MatchHeader
+                  teamHome={teamHome}
+                  teamAway={teamAway}
+                  nextMatch={nextMatch}
+                  currentMatch={currentMatch}
+                />
+              )}
             </ErrorBoundary>
 
             {/* ── Tab bar ── */}
