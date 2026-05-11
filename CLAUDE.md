@@ -103,7 +103,7 @@ All methods live on the `ApiClient` class. Key endpoints:
 | 1 | ~~**Error boundaries**~~ | ✅ Done — `ErrorBoundary` wraps `MatchHeader` and tab content in `MatchDetailsModal` | |
 | 2 | ~~**Orphaned files**~~ | ✅ Done — `Sidebar.jsx` and `LiveMatchCard.jsx` deleted | |
 | 3 | ~~**State management**~~ | ✅ Done — React Query (`@tanstack/react-query`) wired in `main.jsx`; H2H, recent matches, and odds use `useQuery` in `MatchDetailsModal` | |
-| 4 | **Loading states** | `CircularProgress` spinner with no skeleton — layout shifts on load | Replace with MUI `Skeleton` matching the real layout shape |
+| 4 | ~~**Loading states**~~ | ✅ Done — `FixturesSkeleton` en carga inicial, `MatchDetailsSkeleton` en modal (header + WinBar + AggregateStats + filas H2H) | |
 | 5 | **No tests** | Zero test coverage | Component tests for `MatchHeader`, `HeadToHead` with fixture mock data |
 | 6 | **apiClient singleton** | Imported directly everywhere — untestable and hard to mock | Pass via context or use React Query's `queryFn` pattern |
 | 7 | **i18n coverage** | New UI strings added without always updating both `en`/`es` files | Enforce with a lint rule or CI check that compares key sets |
