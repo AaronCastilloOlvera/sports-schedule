@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Box, IconButton, CircularProgress, Typography } from '@mui/material';
+import { Modal, Box, IconButton, Skeleton, Typography } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,106 @@ import RecentForm from './RecentForm';
 import MatchOdds from './MatchOdds';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
+
+function MatchDetailsSkeleton() {
+  const skeletonBg = 'rgba(255,255,255,0.08)';
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {/* Header skeleton — same dark background as MatchHeader */}
+      <Box sx={{
+        bgcolor: 'rgb(10,12,18)',
+        px: { xs: 2, sm: '20px' },
+        pt: { xs: '14px', sm: '18px' },
+        pb: { xs: '18px', sm: '24px' },
+        borderBottom: '1px solid rgba(255,255,255,0.10)',
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: '10px' }}>
+          <Skeleton variant="text" width={180} sx={{ bgcolor: skeletonBg }} />
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
+            <Skeleton variant="circular" width={64} height={64} sx={{ bgcolor: skeletonBg }} />
+            <Skeleton variant="text" width={72} sx={{ bgcolor: skeletonBg }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 2, px: { xs: '6px', sm: '12px' } }}>
+            <Skeleton variant="rounded" width={100} height={50} sx={{ borderRadius: '12px', bgcolor: skeletonBg }} />
+            <Skeleton variant="text" width={40} sx={{ bgcolor: skeletonBg }} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
+            <Skeleton variant="circular" width={64} height={64} sx={{ bgcolor: skeletonBg }} />
+            <Skeleton variant="text" width={72} sx={{ bgcolor: skeletonBg }} />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Tab bar skeleton */}
+      <Box sx={{ display: 'flex', bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Box key={i} sx={{ flex: 1, py: '11px', display: 'flex', justifyContent: 'center' }}>
+            <Skeleton width={44} height={18} />
+          </Box>
+        ))}
+      </Box>
+
+      {/* WinDistributionBar skeleton */}
+      <Box sx={{ px: { xs: 2, sm: '20px' }, pt: '14px', pb: '12px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '8px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <Skeleton width={24} height={20} />
+            <Skeleton width={72} height={13} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <Skeleton width={24} height={20} />
+            <Skeleton width={40} height={13} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            <Skeleton width={24} height={20} />
+            <Skeleton width={72} height={13} />
+          </Box>
+        </Box>
+        <Skeleton variant="rounded" height={6} sx={{ borderRadius: 3 }} />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: '4px' }}>
+          <Skeleton width={28} height={12} />
+          <Skeleton width={28} height={12} />
+          <Skeleton width={28} height={12} />
+        </Box>
+      </Box>
+
+      {/* AggregateStats skeleton */}
+      <Box sx={{ display: 'flex', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Box key={i} sx={{
+            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: '4px', py: '12px',
+            borderRight: i < 2 ? '0.5px solid' : 'none', borderColor: 'divider',
+          }}>
+            <Skeleton width={36} height={24} />
+            <Skeleton width={60} height={12} />
+          </Box>
+        ))}
+      </Box>
+
+      {/* H2H rows skeleton */}
+      <Box sx={{ px: { xs: '12px', sm: '16px' }, pt: '14px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Box key={i} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Skeleton width={48} height={14} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Skeleton variant="rounded" width={18} height={18} />
+              <Skeleton width={70} height={14} />
+            </Box>
+            <Skeleton variant="rounded" width={58} height={28} sx={{ borderRadius: 1 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Skeleton width={70} height={14} />
+              <Skeleton variant="rounded" width={18} height={18} />
+            </Box>
+            <Skeleton width={48} height={14} />
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
 
 const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) => {
   const { t } = useTranslation();
@@ -90,11 +190,16 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
   const recentContent = (() => {
     if (isLoadingRecent) {
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 8 }}>
-          <CircularProgress size={22} color="primary" />
-          <Typography sx={{ color: 'text.secondary', fontSize: 14, fontFamily: FONT }}>
-            {t('loading')}
-          </Typography>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Skeleton variant="rounded" width={18} height={18} />
+              <Skeleton width={90} />
+              <Box sx={{ flex: 1 }} />
+              <Skeleton variant="rounded" width={48} height={22} sx={{ borderRadius: 1 }} />
+              <Skeleton width={32} />
+            </Box>
+          ))}
         </Box>
       );
     }
@@ -161,9 +266,7 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
         </IconButton>
 
         {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 10, flex: 1, bgcolor: 'background.default' }}>
-            <CircularProgress color="primary" />
-          </Box>
+          <MatchDetailsSkeleton />
         ) : h2hData.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             <ErrorBoundary>

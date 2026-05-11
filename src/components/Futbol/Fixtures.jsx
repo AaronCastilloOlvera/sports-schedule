@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Avatar, Box, Chip, LinearProgress, Typography, Stack, useMediaQuery } from '@mui/material';
+import { Avatar, Box, Chip, Typography, Stack, useMediaQuery } from '@mui/material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import MatchDetailsModal from '../modals/MatchDetails';
 import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
+import FixturesSkeleton from './Fixtures/FixturesSkeleton';
 import { statusPriority } from './Fixtures/consts';
 
 const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
@@ -150,87 +151,83 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
 
   const summaryArray = leaguesSummary ? Object.values(leaguesSummary) : [];
 
-  if (loading) {
-    return (
-      <Box sx={{ width: '100%' }}>
-        <LinearProgress />
-      </Box>
-    );
-  }
-
   return (
     <Box>
-      <Stack
-        direction="row"
-        sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
-      >
-        <Chip
-          label="All"
-          onClick={() => setSelectedLeagues([])}
-          color={selectedLeagues.length === 0 ? 'primary' : 'default'}
-          variant={selectedLeagues.length === 0 ? 'filled' : 'outlined'}
-          clickable
-        />
-        {summaryArray.map((league) => {
-          const isSelected = selectedLeagues.includes(league.id);
-          return (
+      {loading ? (
+        <FixturesSkeleton isMobile={isMobile} />
+      ) : (
+        <>
+          <Stack
+            direction="row"
+            sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
+          >
             <Chip
-              key={league.id}
-              label={`${league.name} (${league.count})`}
-              onClick={() => handleLeagueClick(league.id)}
-              color={isSelected ? 'primary' : 'default'}
-              variant={isSelected ? 'filled' : 'outlined'}
+              label="All"
+              onClick={() => setSelectedLeagues([])}
+              color={selectedLeagues.length === 0 ? 'primary' : 'default'}
+              variant={selectedLeagues.length === 0 ? 'filled' : 'outlined'}
               clickable
-              sx={{
-                transition: 'all 0.2s ease',
-                backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.12)' : 'transparent',
-                color: isSelected ? 'primary.main' : 'text.secondary',
-                borderColor: isSelected ? 'primary.main' : 'divider',
-                borderWidth: 1,
-                borderStyle: 'solid',
-                fontWeight: isSelected ? 600 : 400,
-                '&:hover': {
-                  backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.20)' : 'rgba(0, 0, 0, 0.04)',
-                },
-                '& .MuiChip-avatar': {
-                  margin: 0,
-                  marginLeft: '4px'
-                }
-              }}
-              avatar={
-                <Avatar
-                  src={league.logo}
-                  alt={league.name}
-                  variant="rounded"
+            />
+            {summaryArray.map((league) => {
+              const isSelected = selectedLeagues.includes(league.id);
+              return (
+                <Chip
+                  key={league.id}
+                  label={`${league.name} (${league.count})`}
+                  onClick={() => handleLeagueClick(league.id)}
+                  color={isSelected ? 'primary' : 'default'}
+                  variant={isSelected ? 'filled' : 'outlined'}
+                  clickable
                   sx={{
-                    width: 20,
-                    height: 20,
-                    backgroundColor: 'transparent !important',
-                    '& .MuiAvatar-img': {
-                      objectFit: 'contain',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.12)' : 'transparent',
+                    color: isSelected ? 'primary.main' : 'text.secondary',
+                    borderColor: isSelected ? 'primary.main' : 'divider',
+                    borderWidth: 1,
+                    borderStyle: 'solid',
+                    fontWeight: isSelected ? 600 : 400,
+                    '&:hover': {
+                      backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.20)' : 'rgba(0, 0, 0, 0.04)',
+                    },
+                    '& .MuiChip-avatar': {
+                      margin: 0,
+                      marginLeft: '4px'
                     }
                   }}
+                  avatar={
+                    <Avatar
+                      src={league.logo}
+                      alt={league.name}
+                      variant="rounded"
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        backgroundColor: 'transparent !important',
+                        '& .MuiAvatar-img': {
+                          objectFit: 'contain',
+                        }
+                      }}
+                    />
+                  }
                 />
-              }
-            />
-          );
-        })}
-      </Stack>
+              );
+            })}
+          </Stack>
 
-      {loading ? (
-        <LinearProgress />
-      ) : processedFixtures.length === 0 ? (
-        <Typography>No hay partidos disponibles para esta fecha.</Typography>
-      ) : isMobile ? (
-        <FixtureMobileView
-          processedFixtures={processedFixtures}
-          handleOpenH2HModal={handleOpenH2HModal}
-        />
-      ) : (
-        <FixturesDesktopView
-          processedFixtures={processedFixtures}
-          handleOpenH2HModal={handleOpenH2HModal}
-        />
+          {processedFixtures.length === 0 ? (
+            <Typography>No hay partidos disponibles para esta fecha.</Typography>
+          ) : isMobile ? (
+            <FixtureMobileView
+              processedFixtures={processedFixtures}
+              handleOpenH2HModal={handleOpenH2HModal}
+            />
+          ) : (
+            <FixturesDesktopView
+              processedFixtures={processedFixtures}
+              handleOpenH2HModal={handleOpenH2HModal}
+            />
+          )}
+        </>
       )}
 
       <MatchDetailsModal
