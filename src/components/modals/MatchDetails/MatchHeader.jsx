@@ -28,7 +28,8 @@ function TeamColumn({ team, textPrimary, dividerColor }) {
   return (
     <Stack alignItems="center" sx={{ gap: '4px', flex: 1, minWidth: { xs: 72, sm: 90 }, maxWidth: 140 }}>
       <Box sx={{
-        width: { xs: 52, sm: 64 }, height: { xs: 52, sm: 64 }, borderRadius: '50%',
+        width: { xs: 62, sm: 84 },
+        height: { xs: 62, sm: 84 }, borderRadius: '50%',
         bgcolor: 'rgba(255,255,255,0.10)',
         border: '2px solid', borderColor: dividerColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -199,11 +200,11 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
                       px: '16px', py: '7px',
                       display: 'flex', alignItems: 'center', gap: { xs: '10px', sm: '14px' },
                     }}>
-                      <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                      <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 600, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                         {currentMatch.goals.home ?? 0}
                       </Typography>
-                      <Typography sx={{ fontSize: { xs: 16, sm: 19 }, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
-                      <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 700, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                      <Typography sx={{ fontSize: { xs: 16, sm: 19 }, fontWeight: 400, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
+                      <Typography sx={{ fontSize: { xs: 28, sm: 36 }, fontWeight: 600, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                         {currentMatch.goals.away ?? 0}
                       </Typography>
                     </Box>

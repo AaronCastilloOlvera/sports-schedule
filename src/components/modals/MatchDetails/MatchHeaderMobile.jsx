@@ -111,7 +111,7 @@ export default function MatchHeaderMobile({ teamHome, teamAway, nextMatch, curre
           {/* Home team */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 0 }}>
             <Box sx={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 72 , height: 72, borderRadius: '50%',
               bgcolor: surfaceBg,
               border: '2px solid', borderColor: dividerColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -142,11 +142,11 @@ export default function MatchHeaderMobile({ teamHome, teamAway, nextMatch, curre
                   borderRadius: '10px', px: '10px', py: '5px',
                   display: 'flex', alignItems: 'center', gap: '6px',
                 }}>
-                  <Typography sx={{ fontSize: 28, fontWeight: 800, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: 28, fontWeight: 600, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.home ?? 0}
                   </Typography>
-                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
-                  <Typography sx={{ fontSize: 28, fontWeight: 800, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
+                  <Typography sx={{ fontSize: 16, fontWeight: 400, color: textDisabled, fontFamily: FONT, lineHeight: 1 }}>–</Typography>
+                  <Typography sx={{ fontSize: 28, fontWeight: 600, color: textPrimary, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, lineHeight: 1 }}>
                     {currentMatch.goals.away ?? 0}
                   </Typography>
                 </Box>
@@ -182,7 +182,7 @@ export default function MatchHeaderMobile({ teamHome, teamAway, nextMatch, curre
           {/* Away team */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: 0 }}>
             <Box sx={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 72, height: 72, borderRadius: '50%',
               bgcolor: surfaceBg,
               border: '2px solid', borderColor: dividerColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',

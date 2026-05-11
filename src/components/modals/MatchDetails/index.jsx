@@ -21,25 +21,25 @@ function MatchDetailsSkeleton() {
       {/* Header skeleton — same dark background as MatchHeader */}
       <Box sx={{
         bgcolor: 'rgb(10,12,18)',
-        px: { xs: 2, sm: '20px' },
-        pt: { xs: '14px', sm: '18px' },
-        pb: { xs: '18px', sm: '24px' },
+        px: { xs: '12px', sm: '24px' },
+        pt: { xs: '14px', sm: '22px' },
+        pb: { xs: '16px', sm: '22px' },
         borderBottom: '1px solid rgba(255,255,255,0.10)',
       }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: '10px' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: { xs: '10px', sm: '14px' } }}>
           <Skeleton variant="text" width={180} sx={{ bgcolor: skeletonBg }} />
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
-            <Skeleton variant="circular" width={64} height={64} sx={{ bgcolor: skeletonBg }} />
+        <Box sx={{ display: 'flex', alignItems: { xs: 'center', sm: 'flex-start' }, justifyContent: 'center', gap: { xs: '8px', sm: '20px' } }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: '4px', sm: '10px' }, flex: 1, minWidth: 0 }}>
+            <Skeleton variant="circular" width={72} height={72} sx={{ bgcolor: skeletonBg }} />
             <Skeleton variant="text" width={72} sx={{ bgcolor: skeletonBg }} />
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 2, px: { xs: '6px', sm: '12px' } }}>
-            <Skeleton variant="rounded" width={100} height={50} sx={{ borderRadius: '12px', bgcolor: skeletonBg }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexGrow: { xs: 0, sm: 2 }, flexShrink: 0 }}>
+            <Skeleton variant="rounded" width={{ xs: 80, sm: 140 }} height={{ xs: 40, sm: 66 }} sx={{ borderRadius: { xs: '10px', sm: '16px' }, bgcolor: skeletonBg }} />
             <Skeleton variant="text" width={40} sx={{ bgcolor: skeletonBg }} />
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
-            <Skeleton variant="circular" width={64} height={64} sx={{ bgcolor: skeletonBg }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: '4px', sm: '10px' }, flex: 1, minWidth: 0 }}>
+            <Skeleton variant="circular" width={72} height={72} sx={{ bgcolor: skeletonBg }} />
             <Skeleton variant="text" width={72} sx={{ bgcolor: skeletonBg }} />
           </Box>
         </Box>
