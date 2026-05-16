@@ -1,10 +1,18 @@
+import { useState } from 'react';
 import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
-const GRID_COLS        = '110px minmax(0, 1fr) 80px minmax(0, 1fr) 116px';
-const GRID_COLS_MOBILE = '80px minmax(0, 1fr) 64px minmax(0, 1fr)';
+const GRID_COLS        = '110px minmax(0, 1fr) 80px minmax(0, 1fr) 116px 24px';
+const GRID_COLS_MOBILE = '80px minmax(0, 1fr) 64px minmax(0, 1fr) 24px';
+
+const KEY_STATS = ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards'];
+
+const CARD_ICON_COLOR = {
+  'Yellow Cards': { bg: '#F5C518', shadow: 'rgba(245,197,24,0.45)' },
+  'Red Cards':    { bg: '#FF3B30', shadow: 'rgba(255,59,48,0.45)'  },
+};
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -194,6 +202,90 @@ function AggregateStats({ matches }) {
 
 AggregateStats.propTypes = { matches: PropTypes.array.isRequired };
 
+function StatRow({ type, homeValue, awayValue }) {
+  const { t } = useTranslation();
+  const isPossession = type === 'Ball Possession';
+  const homeNum      = isPossession ? parseInt(homeValue) || 50 : null;
+
+  return (
+    <Box sx={{ mb: '10px', '&:last-child': { mb: 0 } }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: isPossession ? '5px' : 0 }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, minWidth: 32 }}>
+          {homeValue ?? '—'}
+        </Typography>
+        {CARD_ICON_COLOR[type] ? (
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', px: '6px' }}>
+            <Box sx={{
+              width: 11, height: 15, bgcolor: CARD_ICON_COLOR[type].bg,
+              borderRadius: '2px', boxShadow: `0 2px 6px ${CARD_ICON_COLOR[type].shadow}`,
+            }} />
+          </Box>
+        ) : (
+          <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', flex: 1, px: '6px' }}>
+            {t(`recent.stats.types.${type}`, type)}
+          </Typography>
+        )}
+        <Typography sx={{ fontSize: 12, fontWeight: 600, color: 'text.primary', fontFamily: FONT, minWidth: 32, textAlign: 'right' }}>
+          {awayValue ?? '—'}
+        </Typography>
+      </Stack>
+      {isPossession && (
+        <Box sx={{ height: 4, borderRadius: 2, display: 'flex', overflow: 'hidden', bgcolor: 'error.main' }}>
+          <Box sx={{ width: `${homeNum}%`, bgcolor: 'primary.main', flexShrink: 0 }} />
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+StatRow.propTypes = { type: PropTypes.string, homeValue: PropTypes.any, awayValue: PropTypes.any };
+
+function MatchStats({ statistics, homeTeamId, awayTeamId }) {
+  const { t } = useTranslation();
+
+  if (!statistics?.length) {
+    return (
+      <Typography sx={{ fontSize: 12, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', py: 1 }}>
+        {t('recent.stats.noData')}
+      </Typography>
+    );
+  }
+
+  const homeStats = statistics.find(s => s.team?.id === homeTeamId)?.statistics ?? [];
+  const awayStats = statistics.find(s => s.team?.id === awayTeamId)?.statistics ?? [];
+
+  const pairs = KEY_STATS
+    .map(type => ({
+      type,
+      homeValue: homeStats.find(s => s.type === type)?.value ?? (CARD_ICON_COLOR[type] ? 0 : null),
+      awayValue: awayStats.find(s => s.type === type)?.value ?? (CARD_ICON_COLOR[type] ? 0 : null),
+    }))
+    .filter(p => p.homeValue != null || p.awayValue != null);
+
+  if (!pairs.length) {
+    return (
+      <Typography sx={{ fontSize: 12, color: 'text.disabled', fontFamily: FONT, textAlign: 'center', py: 1 }}>
+        {t('recent.stats.noData')}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography sx={{ fontSize: 10, fontWeight: 700, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.8px', mb: '10px', fontFamily: FONT }}>
+        {t('recent.stats.title')}
+      </Typography>
+      {pairs.map(p => <StatRow key={p.type} {...p} />)}
+    </Box>
+  );
+}
+
+MatchStats.propTypes = {
+  statistics:  PropTypes.array,
+  homeTeamId:  PropTypes.number,
+  awayTeamId:  PropTypes.number,
+};
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function HeadToHead({
@@ -201,6 +293,8 @@ export default function HeadToHead({
   teamHome, teamAway,
 }) {
   const { t, i18n } = useTranslation();
+  const [expandedId, setExpandedId] = useState(null);
+  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
 
   const filterOptions = [
     { value: 'all',  label: t('h2h.filters.all') },
@@ -260,9 +354,10 @@ export default function HeadToHead({
           { label: t('h2h.table.result'), align: 'center', hideXs: false },
           { label: t('h2h.table.away'),   align: 'left',   hideXs: false },
           { label: t('h2h.table.league'), align: 'center', hideXs: true  },
-        ].map(col => (
+          { label: '',                    align: 'center', hideXs: false },
+        ].map((col, idx) => (
           <Typography
-            key={col.label}
+            key={idx}
             sx={{
               display: col.hideXs ? { xs: 'none', sm: 'block' } : 'block',
               fontSize: 11, fontWeight: 600, color: 'text.disabled',
@@ -284,17 +379,26 @@ export default function HeadToHead({
             </Typography>
           </Box>
         ) : filteredMatches.map((match, i) => {
-          const homeWon = match.teams.home.winner;
-          const awayWon = match.teams.away.winner;
+          const homeWon    = match.teams.home.winner;
+          const awayWon    = match.teams.away.winner;
+          const isExpanded = expandedId === match.fixture.id;
 
           return (
             <Box key={match.fixture.id}>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
-                alignItems: 'center', gap: '8px',
-                px: { xs: '12px', sm: '16px' }, py: '8px',
-              }}>
+              {/* Clickable row */}
+              <Box
+                onClick={() => toggleExpand(match.fixture.id)}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: GRID_COLS_MOBILE, sm: GRID_COLS },
+                  alignItems: 'center', gap: '8px',
+                  px: { xs: '12px', sm: '16px' }, py: '8px',
+                  cursor: 'pointer',
+                  bgcolor: isExpanded ? 'action.hover' : 'transparent',
+                  transition: 'background-color 0.15s ease',
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
                 {/* Date */}
                 <Box>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary', letterSpacing: '-0.2px', lineHeight: 1.2, fontFamily: FONT }}>
@@ -336,6 +440,38 @@ export default function HeadToHead({
                   }}>
                     {match.league.name}
                   </Typography>
+                </Box>
+
+                {/* Expand toggle */}
+                <Box sx={{
+                  display: 'flex', justifyContent: 'center', alignItems: 'center',
+                  width: 20, height: 20, borderRadius: '50%',
+                  border: '1px solid', borderColor: 'divider',
+                  color: 'text.secondary', fontSize: 14, fontWeight: 400,
+                  flexShrink: 0, userSelect: 'none', fontFamily: FONT,
+                }}>
+                  {isExpanded ? '−' : '+'}
+                </Box>
+              </Box>
+
+              {/* Expandable stats */}
+              <Box sx={{
+                maxHeight: isExpanded ? '400px' : 0,
+                overflow: 'hidden',
+                transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>
+                <Box sx={{
+                  mx: { xs: '12px', sm: '16px' }, mb: '8px',
+                  borderRadius: '12px',
+                  bgcolor: 'action.selected',
+                  border: '1px solid', borderColor: 'divider',
+                  p: '14px',
+                }}>
+                  <MatchStats
+                    statistics={match.statistics}
+                    homeTeamId={match.teams.home.id}
+                    awayTeamId={match.teams.away.id}
+                  />
                 </Box>
               </Box>
 
