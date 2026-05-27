@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback }  from 'react';
 import { Typography, IconButton, Tooltip } from "@mui/material";
-import RefreshIcon from '@mui/icons-material/Refresh';
 import { apiClient } from '../../api/api';
 
 const Status = () => {
@@ -25,7 +24,6 @@ const Status = () => {
       </Typography>
       <Tooltip title="Refresh usage">
         <IconButton size="small" onClick={loadUsage}>
-          <RefreshIcon fontSize="inherit" />
         </IconButton>
       </Tooltip>
     </span>
