@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, Chip, Fab, IconButton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Chip, Fab, IconButton, Snackbar, Stack, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
@@ -25,11 +26,17 @@ const initialStatedata = {
 }
 
 function Bets() {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
   const [currentTicket, setCurrentTicket] = useState(initialStatedata);
   const [editId, setEditId] = useState(null);
+  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+
+  const showToast = (message, severity = 'success') => {
+    setToast({ open: true, message, severity });
+  };
 
   const fetchTickets = () => {
     apiClient.fetchTickets()
@@ -66,21 +73,21 @@ function Bets() {
 
   const handleSubmit = async () => {
     try {
-
       if (editId) {
         await apiClient.updateTicket(editId, currentTicket);
         handleUploadImage(editId, file);
-        alert("Ticket actualizado correctamente");
+        showToast(t('bets.ticket_updated'));
       } else {
         await apiClient.createTicket(currentTicket);
         handleUploadImage(editId, file);
-        alert("Ticket creado correctamente");
+        showToast(t('bets.ticket_created'));
       }
 
       handleCloseModal();
       fetchTickets();
     } catch (error) {
-      alert("Error al crear el ticket" + error);
+      const key = editId ? 'bets.error_update' : 'bets.error_create';
+      showToast(t(key), 'error');
     }
   };
 
@@ -95,14 +102,13 @@ function Bets() {
     
       try {
         await apiClient.deleteTicket(ticket_id);
-        alert("Ticket eliminado correctamente" + ticket_id);
+        showToast(t('bets.ticket_deleted'));
         fetchTickets();
         setFile(null);
         setCurrentTicket(initialStatedata);
         setOpenModal(false);
-      }
-      catch (error) {
-        alert("Error al eliminar el ticket" + error);
+      } catch (error) {
+        showToast(t('bets.error_delete'), 'error');
       }
     }
   }
@@ -264,6 +270,17 @@ function Bets() {
         file={file}
       />
       <FutbolCharts />
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={3000}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toast.severity} variant="filled" onClose={() => setToast(prev => ({ ...prev, open: false }))}>
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

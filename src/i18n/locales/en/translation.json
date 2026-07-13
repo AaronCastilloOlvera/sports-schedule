@@ -70,6 +70,14 @@
     "bookmaker":  "Bookmaker",
     "noData":     "No odds available for this match."
   },
+  "bets": {
+    "ticket_created": "Ticket saved successfully.",
+    "ticket_updated": "Ticket updated successfully.",
+    "ticket_deleted": "Ticket deleted successfully.",
+    "error_create":   "Failed to save the ticket. Please try again.",
+    "error_update":   "Failed to update the ticket. Please try again.",
+    "error_delete":   "Failed to delete the ticket. Please try again."
+  },
   "recent": {
     "results": "results",
     "table": {

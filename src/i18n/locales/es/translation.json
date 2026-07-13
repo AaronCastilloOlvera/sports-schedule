@@ -70,6 +70,14 @@
     "bookmaker":  "Casa de Apuestas",
     "noData":     "No hay cuotas disponibles para este partido."
   },
+  "bets": {
+    "ticket_created": "Ticket guardado correctamente.",
+    "ticket_updated": "Ticket actualizado correctamente.",
+    "ticket_deleted": "Ticket eliminado correctamente.",
+    "error_create":   "Error al guardar el ticket. Intenta de nuevo.",
+    "error_update":   "Error al actualizar el ticket. Intenta de nuevo.",
+    "error_delete":   "Error al eliminar el ticket. Intenta de nuevo."
+  },
   "recent": {
     "results": "resultados",
     "table": {
