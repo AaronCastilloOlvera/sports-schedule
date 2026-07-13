@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Alert, Box, Chip, Fab, IconButton, Snackbar, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
 import TicketModal from "./../modals/TicketModal";
-import FutbolCharts from "./FutbolCharts";
+import BetsAnalytics from "./BetsAnalytics";
 
 const initialStatedata = {
     ticket_id: '',
@@ -33,6 +33,8 @@ function Bets() {
   const [currentTicket, setCurrentTicket] = useState(initialStatedata);
   const [editId, setEditId] = useState(null);
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, ticketId: null });
+  const [mainTab, setMainTab] = useState(0);
 
   const showToast = (message, severity = 'success') => {
     setToast({ open: true, message, severity });
@@ -97,21 +99,24 @@ function Bets() {
     setOpenModal(true);
   }
 
-  const handleDelete = async (ticket_id) => {
-    if (window.confirm("Are you sure?")) {
-    
-      try {
-        await apiClient.deleteTicket(ticket_id);
-        showToast(t('bets.ticket_deleted'));
-        fetchTickets();
-        setFile(null);
-        setCurrentTicket(initialStatedata);
-        setOpenModal(false);
-      } catch (error) {
-        showToast(t('bets.error_delete'), 'error');
-      }
+  const handleDelete = (ticket_id) => {
+    setConfirmDelete({ open: true, ticketId: ticket_id });
+  };
+
+  const handleConfirmDelete = async () => {
+    const ticket_id = confirmDelete.ticketId;
+    setConfirmDelete({ open: false, ticketId: null });
+    try {
+      await apiClient.deleteTicket(ticket_id);
+      showToast(t('bets.ticket_deleted'));
+      fetchTickets();
+      setFile(null);
+      setCurrentTicket(initialStatedata);
+      setOpenModal(false);
+    } catch (error) {
+      showToast(t('bets.error_delete'), 'error');
     }
-  }
+  };
 
   const handleEdit = async (ticket_id) => {
     const ticketToEdit = tickets.find(ticket => ticket.ticket_id === ticket_id);
@@ -210,7 +215,7 @@ function Bets() {
       width: 100,
       align: 'center',
       headerAlign: 'center',
-      valueGetter: (value) => new Date(value).toLocaleDateString()
+      valueGetter: (value) => new Date(value).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
     },
     {
       field: 'actions',
@@ -245,44 +250,62 @@ function Bets() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
-        <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
-          <Add />
-        </Fab>
+        {mainTab === 0 && (
+          <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
+            <Add />
+          </Fab>
+        )}
       </Stack>
 
-      <Box sx={{ height: '100%', width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
-        <DataGrid
-          rows={tickets}
-          columns={columns}
-          getRowId={(row) => row.ticket_id}
-          pageSizeOptions={[5, 10, 25]}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
-          disableRowSelectionOnClick
-          rowHeight={42}
-          sx={{
-            '& .MuiDataGrid-cell': {
-              alignItems: 'center',
-              display: 'flex'
-            },
-            '& .MuiDataGrid-columnHeader': {
-              alignItems: 'center',
-              display: 'flex'
-            }
-          }}
-        />
-      </Box>
-      <TicketModal 
-        openModal={openModal} 
-        setOpenModal={setOpenModal} 
-        currentTicket={currentTicket} 
-        handleChange={handleChange} 
-        handleSubmit={handleSubmit} 
+      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 3 }}>
+        <Tab label="Log" />
+        <Tab label="Analytics" />
+      </Tabs>
+
+      {mainTab === 0 && (
+        <Box sx={{ height: '100%', width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
+          <DataGrid
+            rows={tickets}
+            columns={columns}
+            getRowId={(row) => row.ticket_id}
+            pageSizeOptions={[5, 10, 25]}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            disableRowSelectionOnClick
+            rowHeight={42}
+            sx={{
+              '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
+              '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
+            }}
+          />
+        </Box>
+      )}
+
+      {mainTab === 1 && <BetsAnalytics tickets={tickets} />}
+
+      <TicketModal
+        openModal={openModal}
+        setOpenModal={setOpenModal}
+        currentTicket={currentTicket}
+        handleChange={handleChange}
+        handleSubmit={handleSubmit}
         setFile={setFile}
         file={file}
       />
-      <FutbolCharts />
+
+      <Dialog open={confirmDelete.open} onClose={() => setConfirmDelete({ open: false, ticketId: null })}>
+        <DialogTitle>{t('bets.confirm_delete_title')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('bets.confirm_delete_body', { id: confirmDelete.ticketId })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDelete({ open: false, ticketId: null })}>{t('bets.confirm_cancel')}</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">{t('bets.confirm_delete')}</Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={toast.open}

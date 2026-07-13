@@ -76,7 +76,11 @@
     "ticket_deleted": "Ticket eliminado correctamente.",
     "error_create":   "Error al guardar el ticket. Intenta de nuevo.",
     "error_update":   "Error al actualizar el ticket. Intenta de nuevo.",
-    "error_delete":   "Error al eliminar el ticket. Intenta de nuevo."
+    "error_delete":   "Error al eliminar el ticket. Intenta de nuevo.",
+    "confirm_delete_title": "Eliminar ticket",
+    "confirm_delete_body":  "¿Estás seguro de que quieres eliminar el ticket {{id}}? Esta acción no se puede deshacer.",
+    "confirm_cancel": "Cancelar",
+    "confirm_delete": "Eliminar"
   },
   "recent": {
     "results": "resultados",
