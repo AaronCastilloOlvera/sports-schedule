@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { Add, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
+import { Add, ContentCopy, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
 import TicketModal from "./../modals/TicketModal";
 import BetsAnalytics from "./BetsAnalytics";
 
@@ -11,10 +11,10 @@ const initialStatedata = {
     ticket_id: '',
     bet_type: '',
     pick: '',
-    sport: 'Soccer',
+    sport: 'futbol',
     league: '',
     match_name: '',
-    match_datetime: new Date().toISOString(),
+    match_datetime: new Date().toISOString().substring(0, 16),
     odds: 0,
     stake: 0,
     payout: 0,
@@ -23,6 +23,28 @@ const initialStatedata = {
     device_type: '',
     studied: false,
     comments: ''
+}
+
+function TicketIdCell({ id }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <Tooltip title={copied ? '✓ Copied!' : id} placement="top">
+      <Box
+        onClick={handleCopy}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', color: 'text.secondary', fontSize: '0.8rem' }}
+      >
+        <ContentCopy sx={{ fontSize: 13, opacity: 0.5 }} />
+        ...{String(id).slice(-6)}
+      </Box>
+    </Tooltip>
+  );
 }
 
 function Bets() {
@@ -42,8 +64,11 @@ function Bets() {
 
   const fetchTickets = () => {
     apiClient.fetchTickets()
-      .then((tickets) => { setTickets(tickets) }) 
-      .catch((error) => console.error(error));
+      .then((tickets) => { setTickets(tickets) })
+      .catch((error) => {
+        console.error(error);
+        showToast(t('bets.error_load'), 'error');
+      });
   }
 
   useEffect(() => {
@@ -77,11 +102,11 @@ function Bets() {
     try {
       if (editId) {
         await apiClient.updateTicket(editId, currentTicket);
-        handleUploadImage(editId, file);
+        await handleUploadImage(editId, file);
         showToast(t('bets.ticket_updated'));
       } else {
-        await apiClient.createTicket(currentTicket);
-        handleUploadImage(editId, file);
+        const created = await apiClient.createTicket(currentTicket);
+        await handleUploadImage(created.ticket_id, file);
         showToast(t('bets.ticket_created'));
       }
 
@@ -118,7 +143,7 @@ function Bets() {
     }
   };
 
-  const handleEdit = async (ticket_id) => {
+  const handleEdit = (ticket_id) => {
     const ticketToEdit = tickets.find(ticket => ticket.ticket_id === ticket_id);
     if (ticketToEdit) {
       setCurrentTicket({
@@ -144,8 +169,24 @@ function Bets() {
   }
 
   const columns = [
-    { field: 'ticket_id', headerName: 'ID', width: 120, align: 'center', headerAlign: 'center' },
-    { field: 'pick', headerName: 'Pick', width: 250 },
+    {
+      field: 'ticket_id',
+      headerName: 'ID',
+      width: 110,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) => <TicketIdCell id={params.value} />,
+    },
+    {
+      field: 'pick',
+      headerName: 'Pick',
+      width: 250,
+      renderCell: (params) => (
+        <Box title={params.value} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {params.value}
+        </Box>
+      ),
+    },
     { 
       field: 'odds', 
       headerName: 'Odds', 
@@ -153,14 +194,7 @@ function Bets() {
       width: 90,
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params) => <strong>{params.formattedValue}</strong>,
-      valueFormatter: (value) => 
-        new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(value || 0)
+      renderCell: (params) => <strong>{params.value ? `${Number(params.value).toFixed(2)}x` : '—'}</strong>
     },
     { 
       field: 'stake', 
@@ -191,8 +225,10 @@ function Bets() {
           maximumFractionDigits: 2,
         }).format(Math.abs(value));
 
+        const isPush = params.row.status === 'push';
+        const color = isPush ? '#757575' : value >= 0 ? '#2e7d32' : '#d32f2f';
         return (
-          <span style={{ color: value >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }}>
+          <span style={{ color, fontWeight: 'bold' }}>
             {value >= 0 ? `+$${formatted}` : `-$${formatted}`}
           </span>
         )
@@ -205,14 +241,14 @@ function Bets() {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => {
-        const color = params.value === 'won' ? 'success' : params.value === 'lost' ? 'error' : 'warning';
+        const color = params.value === 'won' ? 'success' : params.value === 'lost' ? 'error' : params.value === 'push' ? 'default' : 'warning';
         return <Chip label={params.value.toUpperCase()} color={color} size="small" />;
       }
     },
     { 
       field: 'match_datetime', 
-      headerName: 'Date Event', 
-      width: 100,
+      headerName: 'Date Event',
+      width: 130,
       align: 'center',
       headerAlign: 'center',
       valueGetter: (value) => new Date(value).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -220,7 +256,7 @@ function Bets() {
     {
       field: 'actions',
       width: 150,
-      headerName: 'Accions',
+      headerName: 'Actions',
       sortable: false,
       disableColumnMenu: true,
       align: 'center',
@@ -228,8 +264,8 @@ function Bets() {
       renderCell: (params) => {
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton color="info" onClick={() => handleDelete(params.row.ticket_id)} size="small">
-              <Delete /> 
+            <IconButton color="error" onClick={() => handleDelete(params.row.ticket_id)} size="small">
+              <Delete />
             </IconButton>
             <IconButton color="info" onClick={() => handleEdit(params.row.ticket_id)} size="small">
               <Edit /> 
@@ -271,8 +307,12 @@ function Bets() {
             columns={columns}
             getRowId={(row) => row.ticket_id}
             pageSizeOptions={[5, 10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            initialState={{
+            pagination: { paginationModel: { pageSize: 10 } },
+            sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
+          }}
             disableRowSelectionOnClick
+            disableColumnMenu
             rowHeight={42}
             sx={{
               '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
