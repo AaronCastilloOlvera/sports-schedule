@@ -117,9 +117,22 @@ function Bets() {
     const ticketToEdit = tickets.find(ticket => ticket.ticket_id === ticket_id);
     if (ticketToEdit) {
       setCurrentTicket({
-      ...ticketToEdit,
-        match_datetime: ticketToEdit.match_datetime ? ticketToEdit.match_datetime.substring(0, 16) : ''
-      })
+        ticket_id: ticketToEdit.ticket_id ?? '',
+        bet_type: ticketToEdit.bet_type ?? '',
+        pick: ticketToEdit.pick ?? '',
+        sport: ticketToEdit.sport ?? 'futbol',
+        league: ticketToEdit.league ?? '',
+        match_name: ticketToEdit.match_name ?? '',
+        match_datetime: ticketToEdit.match_datetime ? ticketToEdit.match_datetime.substring(0, 16) : '',
+        odds: ticketToEdit.odds ?? 0,
+        stake: ticketToEdit.stake ?? 0,
+        payout: ticketToEdit.payout ?? 0,
+        net_profit: ticketToEdit.net_profit ?? 0,
+        status: ticketToEdit.status ?? 'pending',
+        device_type: ticketToEdit.device_type ?? '',
+        studied: ticketToEdit.studied ?? false,
+        comments: ticketToEdit.comments ?? '',
+      });
       setEditId(ticket_id);
       setOpenModal(true);
     }
