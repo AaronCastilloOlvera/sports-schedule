@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { Add, ContentCopy, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
+import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
 import BetsAnalytics from "./BetsAnalytics";
+import BankrollView from "./BankrollView";
 
 const initialStatedata = {
     ticket_id: '',
@@ -25,7 +27,7 @@ const initialStatedata = {
     comments: ''
 }
 
-function TicketIdCell({ id }) {
+function TicketIdCell({ id = '' }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -47,6 +49,8 @@ function TicketIdCell({ id }) {
   );
 }
 
+TicketIdCell.propTypes = { id: PropTypes.string.isRequired };
+
 function Bets() {
   const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
@@ -57,6 +61,16 @@ function Bets() {
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, ticketId: null });
   const [mainTab, setMainTab] = useState(0);
+
+  const logStats = useMemo(() => {
+    const resolved = tickets.filter(t => t.status === 'won' || t.status === 'lost');
+    const winRate = resolved.length ? (resolved.filter(t => t.status === 'won').length / resolved.length * 100).toFixed(1) : 0;
+    const netProfit = tickets.filter(t => t.status !== 'pending').reduce((s, t) => s + (t.net_profit || 0), 0);
+    const totalStaked = tickets.reduce((s, t) => s + (t.stake || 0), 0);
+    const withOdds = tickets.filter(t => t.odds > 0);
+    const avgOdds = withOdds.length ? (withOdds.reduce((s, t) => s + t.odds, 0) / withOdds.length).toFixed(2) : 0;
+    return { total: tickets.length, winRate, netProfit, totalStaked, avgOdds };
+  }, [tickets]);
 
   const showToast = (message, severity = 'success') => {
     setToast({ open: true, message, severity });
@@ -73,7 +87,7 @@ function Bets() {
 
   useEffect(() => {
     fetchTickets();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -112,7 +126,7 @@ function Bets() {
 
       handleCloseModal();
       fetchTickets();
-    } catch (error) {
+    } catch {
       const key = editId ? 'bets.error_update' : 'bets.error_create';
       showToast(t(key), 'error');
     }
@@ -138,7 +152,7 @@ function Bets() {
       setFile(null);
       setCurrentTicket(initialStatedata);
       setOpenModal(false);
-    } catch (error) {
+    } catch {
       showToast(t('bets.error_delete'), 'error');
     }
   };
@@ -298,31 +312,49 @@ function Bets() {
       <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 3 }}>
         <Tab label="Log" />
         <Tab label="Analytics" />
+        <Tab label="Bankroll" />
       </Tabs>
 
       {mainTab === 0 && (
-        <Box sx={{ height: '100%', width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
-          <DataGrid
-            rows={tickets}
-            columns={columns}
-            getRowId={(row) => row.ticket_id}
-            pageSizeOptions={[5, 10, 25]}
-            initialState={{
-            pagination: { paginationModel: { pageSize: 10 } },
-            sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
-          }}
-            disableRowSelectionOnClick
-            disableColumnMenu
-            rowHeight={42}
-            sx={{
-              '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
-              '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
-            }}
-          />
+        <Box>
+          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+            {[
+              { label: 'Total Tickets', display: logStats.total, color: '#1976d2' },
+              { label: 'Avg Odds', display: logStats.avgOdds ? `${logStats.avgOdds}x` : '—', color: '#1976d2' },
+              { label: 'Win Rate', display: `${logStats.winRate}%`, color: '#2e7d32' },
+              { label: 'Net Profit', display: `$${Number(logStats.netProfit).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: logStats.netProfit >= 0 ? '#2e7d32' : '#d32f2f' },
+              { label: 'Total Staked', display: `$${Number(logStats.totalStaked).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#757575' },
+            ].map(({ label, display, color }) => (
+              <Box key={label} sx={{ flex: 1, bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+                <Typography variant="body2" color="text.secondary">{label}</Typography>
+                <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>{display}</Typography>
+              </Box>
+            ))}
+          </Stack>
+          <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
+            <DataGrid
+              rows={tickets}
+              columns={columns}
+              getRowId={(row) => row.ticket_id}
+              pageSizeOptions={[5, 10, 25]}
+              initialState={{
+                pagination: { paginationModel: { pageSize: 10 } },
+                sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
+              }}
+              disableRowSelectionOnClick
+              disableColumnMenu
+              rowHeight={42}
+              sx={{
+                '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
+                '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
+              }}
+            />
+          </Box>
         </Box>
       )}
 
       {mainTab === 1 && <BetsAnalytics tickets={tickets} />}
+      {mainTab === 2 && <BankrollView tickets={tickets} />}
 
       <TicketModal
         openModal={openModal}

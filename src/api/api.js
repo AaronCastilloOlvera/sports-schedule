@@ -109,6 +109,27 @@ class ApiClient {
     const response = await this.client.post(`/bets/upload-ticket-image?ticket_id=${ticketId}`, formData);
     return response.data;
   }
+
+  // Bankroll
+  async fetchTransactions() {
+    const response = await this.client.get('/bankroll/transactions');
+    return response.data;
+  }
+
+  async createTransaction(data) {
+    const response = await this.client.post('/bankroll/transactions', data);
+    return response.data;
+  }
+
+  async updateTransaction(id, data) {
+    const response = await this.client.put(`/bankroll/transactions/${id}`, data);
+    return response.data;
+  }
+
+  async deleteTransaction(id) {
+    const response = await this.client.delete(`/bankroll/transactions/${id}`);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
