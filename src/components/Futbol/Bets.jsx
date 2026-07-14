@@ -8,6 +8,7 @@ import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
 import BetsAnalytics from "./BetsAnalytics";
 import BankrollView from "./BankrollView";
+import BettingRules from "./BettingRules";
 
 const initialStatedata = {
     ticket_id: '',
@@ -313,6 +314,7 @@ function Bets() {
         <Tab label="Log" />
         <Tab label="Analytics" />
         <Tab label="Bankroll" />
+        <Tab label="Rules" />
       </Tabs>
 
       {mainTab === 0 && (
@@ -355,6 +357,7 @@ function Bets() {
 
       {mainTab === 1 && <BetsAnalytics tickets={tickets} />}
       {mainTab === 2 && <BankrollView tickets={tickets} />}
+      {mainTab === 3 && <BettingRules />}
 
       <TicketModal
         openModal={openModal}
