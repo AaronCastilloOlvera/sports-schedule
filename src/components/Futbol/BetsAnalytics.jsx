@@ -147,21 +147,21 @@ export default function BetsAnalytics({ tickets }) {
   return (
     <Box>
       {/* Summary cards */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
         {[
           { label: 'Best Day', display: bestDay ? `${usd(bestDay[1])} (${bestDay[0]})` : '—', color: GREEN },
           { label: 'Best Bet', display: bestBet ? usd(bestBet.net_profit) : '—', color: GREEN },
           { label: 'Current Streak', display: streak ? `${streak} ${streakType === 'won' ? 'W' : 'L'}` : '—', color: streakType === 'won' ? GREEN : RED },
           { label: 'Avg Odds', display: avgOdds ? `${avgOdds}x` : '—', color: BLUE },
         ].map(({ label, display, color }) => (
-          <Box key={label} sx={{ flex: 1, bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+          <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
             <Typography variant="body2" color="text.secondary">{label}</Typography>
             <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>{display}</Typography>
           </Box>
         ))}
-      </Stack>
+      </Box>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
         <Tab label="General" />
         <Tab label="By Sport" />
         <Tab label="By League" />
@@ -169,7 +169,7 @@ export default function BetsAnalytics({ tickets }) {
 
       {tab === 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Stack direction="row" spacing={3}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Accumulated Profit" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={accumulatedData}>
@@ -213,7 +213,7 @@ export default function BetsAnalytics({ tickets }) {
 
       {tab === 1 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Stack direction="row" spacing={3}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Sport" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={sportData}>
@@ -256,7 +256,7 @@ export default function BetsAnalytics({ tickets }) {
       )}
 
       {tab === 2 && (
-        <Stack direction="row" spacing={3}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
           <ChartCard title="Top Leagues by Profit" sx={{ flex: 2 }}>
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={leagueData} layout="vertical" margin={{ left: 10 }}>

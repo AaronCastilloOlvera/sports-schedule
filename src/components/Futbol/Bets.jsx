@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
@@ -52,6 +52,61 @@ function TicketIdCell({ id = '' }) {
 
 TicketIdCell.propTypes = { id: PropTypes.string.isRequired };
 
+function TicketCard({ ticket, onEdit, onDelete }) {
+  const STATUS = {
+    won:     { chip: 'success', border: '#2e7d32' },
+    lost:    { chip: 'error',   border: '#d32f2f' },
+    push:    { chip: 'default', border: '#757575' },
+    pending: { chip: 'warning', border: '#ed6c02' },
+  };
+  const { chip: chipColor, border: borderColor } = STATUS[ticket.status] || STATUS.pending;
+  const profit = ticket.net_profit || 0;
+  const isPush = ticket.status === 'push';
+  const profitColor = isPush ? '#757575' : profit >= 0 ? '#2e7d32' : '#d32f2f';
+  const absProfit = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(profit));
+  const stakeFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(ticket.stake || 0);
+  const dateFormatted = new Date(ticket.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+
+  return (
+    <Card sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Chip label={ticket.status.toUpperCase()} color={chipColor} size="small" />
+          <Typography variant="caption" color="text.secondary">{dateFormatted}</Typography>
+        </Stack>
+        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500, lineHeight: 1.4 }}>
+          {ticket.pick || '—'}
+        </Typography>
+        <Stack direction="row" spacing={3} sx={{ mb: 1 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">Odds</Typography>
+            <Typography variant="body2" fontWeight="bold">{ticket.odds ? `${Number(ticket.odds).toFixed(2)}x` : '—'}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">Stake</Typography>
+            <Typography variant="body2" fontWeight="bold">{stakeFormatted}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary" display="block">Net P&L</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: profitColor }}>
+              {profit >= 0 ? `+$${absProfit}` : `-$${absProfit}`}
+            </Typography>
+          </Box>
+        </Stack>
+        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+          <IconButton size="small" color="info" onClick={() => onEdit(ticket.ticket_id)}><Edit /></IconButton>
+          <IconButton size="small" color="error" onClick={() => onDelete(ticket.ticket_id)}><Delete /></IconButton>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+TicketCard.propTypes = {
+  ticket: PropTypes.object.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
 function Bets() {
   const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
@@ -62,6 +117,8 @@ function Bets() {
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, ticketId: null });
   const [mainTab, setMainTab] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const logStats = useMemo(() => {
     const resolved = tickets.filter(t => t.status === 'won' || t.status === 'lost');
@@ -300,7 +357,7 @@ function Bets() {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
         {mainTab === 0 && (
@@ -310,7 +367,7 @@ function Bets() {
         )}
       </Stack>
 
-      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 3 }}>
+      <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
         <Tab label="Log" />
         <Tab label="Analytics" />
         <Tab label="Bankroll" />
@@ -319,7 +376,7 @@ function Bets() {
 
       {mainTab === 0 && (
         <Box>
-          <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(5, 1fr)' }, gap: 2, mb: 3 }}>
             {[
               { label: 'Total Tickets', display: logStats.total, color: '#1976d2' },
               { label: 'Avg Odds', display: logStats.avgOdds ? `${logStats.avgOdds}x` : '—', color: '#1976d2' },
@@ -327,31 +384,47 @@ function Bets() {
               { label: 'Net Profit', display: `$${Number(logStats.netProfit).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: logStats.netProfit >= 0 ? '#2e7d32' : '#d32f2f' },
               { label: 'Total Staked', display: `$${Number(logStats.totalStaked).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#757575' },
             ].map(({ label, display, color }) => (
-              <Box key={label} sx={{ flex: 1, bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+              <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2, ...(label === 'Total Staked' && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
                 <Typography variant="body2" color="text.secondary">{label}</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>{display}</Typography>
               </Box>
             ))}
-          </Stack>
-          <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
-            <DataGrid
-              rows={tickets}
-              columns={columns}
-              getRowId={(row) => row.ticket_id}
-              pageSizeOptions={[5, 10, 25]}
-              initialState={{
-                pagination: { paginationModel: { pageSize: 10 } },
-                sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
-              }}
-              disableRowSelectionOnClick
-              disableColumnMenu
-              rowHeight={42}
-              sx={{
-                '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
-                '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
-              }}
-            />
           </Box>
+          {isMobile ? (
+            <Box>
+              {tickets.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                  <Typography>No tickets yet. Tap + to add your first bet.</Typography>
+                </Box>
+              ) : (
+                [...tickets]
+                  .sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))
+                  .map(ticket => (
+                    <TicketCard key={ticket.ticket_id} ticket={ticket} onEdit={handleEdit} onDelete={handleDelete} />
+                  ))
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
+              <DataGrid
+                rows={tickets}
+                columns={columns}
+                getRowId={(row) => row.ticket_id}
+                pageSizeOptions={[5, 10, 25]}
+                initialState={{
+                  pagination: { paginationModel: { pageSize: 10 } },
+                  sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
+                }}
+                disableRowSelectionOnClick
+                disableColumnMenu
+                rowHeight={42}
+                sx={{
+                  '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
+                  '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
+                }}
+              />
+            </Box>
+          )}
         </Box>
       )}
 

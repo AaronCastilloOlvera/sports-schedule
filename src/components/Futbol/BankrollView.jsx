@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem,
-  Snackbar, Stack, TextField, Tooltip, Typography,
+  Snackbar, Stack, TextField, Tooltip, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -14,6 +14,35 @@ const initialTx = {
   date: new Date().toISOString().substring(0, 10),
   notes: '',
 };
+
+function TransactionCard({ row, onEdit, onDelete }) {
+  const isDeposit = row.type === 'deposit';
+  const borderColor = isDeposit ? '#2e7d32' : '#d32f2f';
+  const amountColor = isDeposit ? '#2e7d32' : '#d32f2f';
+  const amountFormatted = `${isDeposit ? '+' : '-'}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  const dateFormatted = new Date(row.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return (
+    <Card sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
+          <Chip label={isDeposit ? 'Deposit' : 'Withdrawal'} color={isDeposit ? 'success' : 'error'} size="small" />
+          <Typography variant="caption" color="text.secondary">{dateFormatted}</Typography>
+        </Stack>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', color: amountColor, my: 0.5 }}>
+          {amountFormatted}
+        </Typography>
+        {row.notes && (
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>{row.notes}</Typography>
+        )}
+        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+          <IconButton size="small" onClick={() => onEdit(row)}><Edit fontSize="small" /></IconButton>
+          <IconButton size="small" color="error" onClick={() => onDelete(row.id)}><Delete fontSize="small" /></IconButton>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
 
 function SummaryCard({ label, value, color }) {
   return (
@@ -27,6 +56,8 @@ function SummaryCard({ label, value, color }) {
 }
 
 export default function BankrollView({ tickets }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [transactions, setTransactions] = useState([]);
   const [openModal, setOpenModal] = useState(false);
   const [current, setCurrent] = useState(initialTx);
@@ -131,12 +162,12 @@ export default function BankrollView({ tickets }) {
   return (
     <Box>
       {/* Summary cards */}
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
         <SummaryCard label="Total Deposited" value={totalDeposits} color="#2e7d32" />
         <SummaryCard label="Total Withdrawn" value={totalWithdrawals} color="#d32f2f" />
         <SummaryCard label="Bets P&L" value={betsNetProfit} color={betsNetProfit >= 0 ? '#2e7d32' : '#d32f2f'} />
         <SummaryCard label="Real Balance (Playdo.it)" value={realBalance} color={realBalance >= 0 ? '#1976d2' : '#d32f2f'} />
-      </Stack>
+      </Box>
 
       {/* Goal */}
       {(() => {
@@ -187,22 +218,38 @@ export default function BankrollView({ tickets }) {
         </Button>
       </Stack>
 
-      <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2 }}>
-        <DataGrid
-          rows={transactions}
-          columns={columns}
-          getRowId={(row) => row.id}
-          pageSizeOptions={[10, 25]}
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'date', sort: 'desc' }] } }}
-          disableRowSelectionOnClick
-          disableColumnMenu
-          rowHeight={42}
-          sx={{
-            '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
-            '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' },
-          }}
-        />
-      </Box>
+      {isMobile ? (
+        <Box>
+          {transactions.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+              <Typography>No transactions yet.</Typography>
+            </Box>
+          ) : (
+            [...transactions]
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map(row => (
+                <TransactionCard key={row.id} row={row} onEdit={handleEdit} onDelete={handleDelete} />
+              ))
+          )}
+        </Box>
+      ) : (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2 }}>
+          <DataGrid
+            rows={transactions}
+            columns={columns}
+            getRowId={(row) => row.id}
+            pageSizeOptions={[10, 25]}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'date', sort: 'desc' }] } }}
+            disableRowSelectionOnClick
+            disableColumnMenu
+            rowHeight={42}
+            sx={{
+              '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
+              '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' },
+            }}
+          />
+        </Box>
+      )}
 
       {/* Modal */}
       <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="xs">
