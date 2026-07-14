@@ -11,6 +11,7 @@ import MatchHeaderMobile from './MatchHeaderMobile';
 import HeadToHead from './HeadToHead';
 import RecentForm from './RecentForm';
 import MatchOdds from './MatchOdds';
+import BettingStats from './BettingStats';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
@@ -187,6 +188,7 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
     { value: 'recent', label: t('h2h.tabs.recent') },
     { value: 'odds',   label: t('h2h.tabs.odds') },
+    { value: 'stats',  label: t('h2h.tabs.stats') },
   ];
 
   const recentContent = (() => {
@@ -329,6 +331,14 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                   <MatchOdds
                     oddsData={oddsData}
                     loading={isLoadingOdds}
+                    teamHome={teamHome}
+                    teamAway={teamAway}
+                  />
+                ) : activeTab === 'stats' ? (
+                  <BettingStats
+                    h2hData={h2hData}
+                    homeRecent={homeRecent}
+                    awayRecent={awayRecent}
                     teamHome={teamHome}
                     teamAway={teamAway}
                   />

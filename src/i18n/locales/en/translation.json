@@ -46,7 +46,8 @@
     "tabs": {
       "h2h": "H2H",
       "recent": "Recent Matches",
-      "odds": "Odds"
+      "odds": "Odds",
+      "stats": "Stats"
     },
     "filters": {
       "all": "All",
