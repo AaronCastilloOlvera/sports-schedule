@@ -49,9 +49,11 @@ App
         │       ├── RecentForm       (Recent tab: per-team recent matches with expandable stats)
         │       └── MatchOdds        (Odds tab: bet365/1xBet/Betano markets for the fixture)
         ├── Leagues              (favorite-league management: search, star toggle)
-        └── Bets                 (betting ticket CRUD + profit chart)
+        └── Bets                 (betting ticket CRUD — 4 tabs: Log, Analytics, Bankroll, Rules)
             ├── TicketModal      (create/edit ticket dialog; supports clipboard image paste)
-            └── FutbolCharts     (Recharts line chart of accumulated profit over time)
+            ├── BetsAnalytics    (Recharts charts — receives tickets[] as prop, no separate fetch)
+            ├── BankrollView     (deposit/withdrawal CRUD + $200K goal progress bar — receives tickets[] for P&L)
+            └── BettingRules     (static motivational rules — edit the RULES array in the file directly)
 ```
 
 ### Header
@@ -81,16 +83,23 @@ All methods live on the `ApiClient` class. Key endpoints:
 | `fetchOdds(fixtureId)` | GET | `/odds/fixture/{id}` |
 | `fetchMLExportH2H(homeId, awayId)` | GET | `/ml/export-h2h-json` (blob) |
 | `fetchTickets()` | GET | `/bets/get-tickets` |
-| `createTicket(formData)` | POST | `/bets/create-ticket` |
+| `createTicket(formData)` | POST | `/bets/create-ticket` — returns full ticket object incl. `ticket_id` |
 | `updateTicket(id, formData)` | PUT | `/bets/update-ticket` |
 | `deleteTicket(id)` | DELETE | `/bets/delete-ticket` |
 | `uploadTicketImage(id, formData)` | POST | `/bets/upload-ticket-image` |
 | `fetchAnalyzeTicket(imageData)` | POST | `/bets/analyze-ticket` |
+| `fetchTransactions()` | GET | `/bankroll/transactions` |
+| `createTransaction(data)` | POST | `/bankroll/transactions` |
+| `updateTransaction(id, data)` | PUT | `/bankroll/transactions/{id}` |
+| `deleteTransaction(id)` | DELETE | `/bankroll/transactions/{id}` |
 
 ### Key patterns
 
 - **Theme**: `ThemeModeContext` (`src/context/ThemeContext.jsx`) stores `light`/`dark` in `localStorage`. `App` must split `ThemeModeProvider` and `AppContent` because the ThemeProvider consumer must be mounted inside the provider.
-- **i18n**: `i18next` with `es` as fallback language. Translation files live in `src/i18n/locales/{en,es}/translation.json`. Always add keys to both files when adding new UI strings.
+- **i18n**: `i18next` with `es` as fallback language. Translation files live in `src/i18n/locales/{en,es}/translation.json`. Always add keys to both files when adding new UI strings. The `bets` namespace covers ticket CRUD toasts and the confirm-delete dialog.
+- **Sport values**: The `sport` field uses lowercase snake_case (`futbol`, `basketball`, `american_football`, `baseball`) matching the backend enum. Never use display labels (`Soccer`, `Basketball`) as values.
+- **Bets withdrawal goal**: The $200,000 target is hardcoded as `GOAL = 200000` in `BankrollView.jsx`. Change it there if needed.
+- **BetsAnalytics / BankrollView**: Both receive `tickets[]` as a prop from `Bets.jsx` — they do not fetch independently. All chart data is derived via `useMemo` from this prop.
 - **Fixture status codes**: Match statuses (`1H`, `HT`, `2H`, `FT`, etc.) come from the API-Football API. Priority ordering for display is defined in `src/components/Futbol/Fixtures/consts.js` (`statusPriority` map: 1 = live, 2 = not started, 3 = finished).
 - **Responsive layout**: MUI `useMediaQuery('(max-width:600px)')` drives the mobile/desktop fixture view split. Prefer MUI `sx` breakpoint props (`{ xs: ..., md: ... }`) for other responsive styling.
 - **Render optimization**: `MatchRow` and `MatchMobileCard` are wrapped in `React.memo` with a custom `areRowsEqual` comparator (`src/utils/matchComparisons.js`) that only re-renders when score or status changes.
@@ -107,6 +116,25 @@ All methods live on the `ApiClient` class. Key endpoints:
 | 5 | **No tests** | Zero test coverage | Component tests for `MatchHeader`, `HeadToHead` with fixture mock data |
 | 6 | **apiClient singleton** | Imported directly everywhere — untestable and hard to mock | Pass via context or use React Query's `queryFn` pattern |
 | 7 | **i18n coverage** | New UI strings added without always updating both `en`/`es` files | Enforce with a lint rule or CI check that compares key sets |
+
+---
+
+## Future plans
+
+### Feature: US sports leagues
+The sport tabs (Basketball / Baseball / Football) are already stubbed in the UI — wire them up. NBA is the natural starting point: two teams, live score, recent form — closest to the existing soccer UX. Each sport will need its own fixture layout, status codes, and potentially different league management logic.
+
+### Feature: Bet of the Day
+A daily highlighted pick on the Bets tab — one match the model is most confident about, with the suggested market and the key reasons behind it (H2H edge, recent form, odds value). The pick is generated server-side so it's the same across sessions and resets at midnight.
+
+### Feature: Self-evaluating predictions
+After a match reaches `FT`, compare the pre-match prediction against the actual result and log the outcome. Over time this builds a real-world accuracy record (last 30 days, per league, per bet type) so model performance is measurable beyond training metrics — the model knows when it was right.
+
+### Improvement: Audit React Query vs. Redis overlap
+React Query already caches responses client-side with configurable `staleTime`. Some server-side Redis keys may be redundant if they're only consumed by this client and don't need cross-user sharing. Audit which keys could be dropped in favor of RQ's stale-while-revalidate strategy to reduce backend cache complexity.
+
+### Improvement: Redis cache health indicator
+Surface which Redis keys are currently warm for the selected date — either in the existing dev-tools panel or as an extension of `/status/usage`. Useful for diagnosing pipeline issues (e.g. "0 fixtures prewarmed") without needing to inspect Redis directly.
 
 ---
 
