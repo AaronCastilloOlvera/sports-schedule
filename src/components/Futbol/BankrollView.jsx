@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
-  DialogContent, DialogTitle, IconButton, MenuItem, Snackbar,
-  Alert, Stack, TextField, Typography,
+  Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
+  DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem,
+  Snackbar, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -137,6 +137,47 @@ export default function BankrollView({ tickets }) {
         <SummaryCard label="Bets P&L" value={betsNetProfit} color={betsNetProfit >= 0 ? '#2e7d32' : '#d32f2f'} />
         <SummaryCard label="Real Balance (Playdo.it)" value={realBalance} color={realBalance >= 0 ? '#1976d2' : '#d32f2f'} />
       </Stack>
+
+      {/* Goal */}
+      {(() => {
+        const GOAL = 200000;
+        const progress = Math.min((totalWithdrawals / GOAL) * 100, 100);
+        const remaining = GOAL - totalWithdrawals;
+        const mxn = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        return (
+          <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1 }}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Withdrawal Goal 🏆</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  {mxn(totalWithdrawals)} <Typography component="span" variant="body2" color="text.secondary">of {mxn(GOAL)}</Typography>
+                </Typography>
+              </Box>
+              <Tooltip title={`${mxn(remaining)} remaining`} placement="top">
+                <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                  {progress.toFixed(2)}%
+                </Typography>
+              </Tooltip>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                height: 14,
+                borderRadius: 7,
+                bgcolor: '#e0e0e0',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 7,
+                  background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                },
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              {mxn(remaining)} left to reach the goal
+            </Typography>
+          </Box>
+        );
+      })()}
 
       {/* Table */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
