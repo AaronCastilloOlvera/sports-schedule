@@ -167,13 +167,23 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
 
   // ── Derived H2H values ─────────────────────────────────────────────────────
   const { nextMatch, teamHome, teamAway } = useMemo(() => {
-    if (!h2hData.length) return {};
-    const next   = h2hData.find(m => m.fixture.status.short === 'NS');
-    const sample = h2hData[0];
-    const tHome  = sample.teams.home.id === team1Id ? sample.teams.home : sample.teams.away;
-    const tAway  = sample.teams.away.id === team2Id ? sample.teams.away : sample.teams.home;
-    return { nextMatch: next, teamHome: tHome, teamAway: tAway };
-  }, [h2hData, team1Id, team2Id]);
+    if (h2hData.length) {
+      const next   = h2hData.find(m => m.fixture.status.short === 'NS');
+      const sample = h2hData[0];
+      const tHome  = sample.teams.home.id === team1Id ? sample.teams.home : sample.teams.away;
+      const tAway  = sample.teams.away.id === team2Id ? sample.teams.away : sample.teams.home;
+      return { nextMatch: next, teamHome: tHome, teamAway: tAway };
+    }
+    // H2H empty — fall back to currentMatch so the modal still renders
+    if (currentMatch?.teams) {
+      return {
+        nextMatch: currentMatch,
+        teamHome: currentMatch.teams.home,
+        teamAway: currentMatch.teams.away,
+      };
+    }
+    return {};
+  }, [h2hData, team1Id, team2Id, currentMatch]);
 
   const filteredMatches = useMemo(() => {
     const past = h2hData
@@ -271,7 +281,7 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
 
         {isLoading ? (
           <MatchDetailsSkeleton />
-        ) : h2hData.length > 0 ? (
+        ) : (teamHome && teamAway) ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             <ErrorBoundary>
               {isMobile ? (
