@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PropTypes from 'prop-types';
 
 // ── data helpers ────────────────────────────────────────────────────────────
@@ -25,6 +26,10 @@ const teamGoals = (match, teamId) => {
   return null;
 };
 
+// only keep matches where teamId played on the given side (home/away)
+const byVenue = (matches, teamId, venue) =>
+  (matches ?? []).filter(m => m.teams?.[venue]?.id === teamId);
+
 const avg = (arr) => {
   const valid = arr.filter(v => v !== null && !isNaN(v));
   return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
@@ -34,11 +39,18 @@ const fmt = (v) => (v !== null && !isNaN(v) ? Number(v).toFixed(1) : '—');
 
 // ── StatCard ────────────────────────────────────────────────────────────────
 
-function StatCard({ icon, title, homeLabel, homeVal, awayLabel, awayVal, h2hVal, children }) {
+function StatCard({ icon, title, tooltip, homeLabel, homeVal, homeCount, awayLabel, awayVal, awayCount, h2hVal, children }) {
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 2, overflow: 'hidden' }}>
       <Box sx={{ px: 2, py: 1, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{icon} {title}</Typography>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {icon} {title}
+          {tooltip && (
+            <Tooltip title={tooltip} arrow placement="top" enterTouchDelay={0}>
+              <InfoOutlinedIcon sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
+            </Tooltip>
+          )}
+        </Typography>
       </Box>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr' }}>
@@ -53,7 +65,7 @@ function StatCard({ icon, title, homeLabel, homeVal, awayLabel, awayVal, h2hVal,
           <Typography sx={{ fontSize: 28, fontWeight: 800, color: '#1976d2', lineHeight: 1 }}>
             {fmt(homeVal)}
           </Typography>
-          <Typography sx={{ fontSize: 10, color: 'text.disabled', mt: 0.5 }}>last 5 avg</Typography>
+          <Typography sx={{ fontSize: 10, color: 'text.disabled', mt: 0.5 }}>as local ({homeCount ?? 0})</Typography>
         </Box>
 
         {/* H2H */}
@@ -76,7 +88,7 @@ function StatCard({ icon, title, homeLabel, homeVal, awayLabel, awayVal, h2hVal,
           <Typography sx={{ fontSize: 28, fontWeight: 800, color: '#ed6c02', lineHeight: 1 }}>
             {fmt(awayVal)}
           </Typography>
-          <Typography sx={{ fontSize: 10, color: 'text.disabled', mt: 0.5 }}>last 5 avg</Typography>
+          <Typography sx={{ fontSize: 10, color: 'text.disabled', mt: 0.5 }}>as visita ({awayCount ?? 0})</Typography>
         </Box>
       </Box>
 
@@ -92,10 +104,13 @@ function StatCard({ icon, title, homeLabel, homeVal, awayLabel, awayVal, h2hVal,
 StatCard.propTypes = {
   icon: PropTypes.string.isRequired,
   title: PropTypes.string.isRequired,
+  tooltip: PropTypes.string,
   homeLabel: PropTypes.string,
   homeVal: PropTypes.number,
+  homeCount: PropTypes.number,
   awayLabel: PropTypes.string,
   awayVal: PropTypes.number,
+  awayCount: PropTypes.number,
   h2hVal: PropTypes.number,
   children: PropTypes.node,
 };
@@ -125,10 +140,14 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
 
     const h2hFT = (h2hData ?? []).filter(m => m.fixture?.status?.short === 'FT');
 
+    // only the home team's matches as local, only the away team's matches as visitante
+    const homeAsLocal   = byVenue(homeRecent, teamHome.id, 'home');
+    const awayAsVisitor  = byVenue(awayRecent, teamAway.id, 'away');
+
     // Goals
     const h2hGoalArr   = h2hFT.map(m => (m.goals?.home ?? 0) + (m.goals?.away ?? 0));
-    const homeGoalArr  = (homeRecent ?? []).map(m => teamGoals(m, teamHome.id));
-    const awayGoalArr  = (awayRecent ?? []).map(m => teamGoals(m, teamAway.id));
+    const homeGoalArr  = homeAsLocal.map(m => teamGoals(m, teamHome.id));
+    const awayGoalArr  = awayAsVisitor.map(m => teamGoals(m, teamAway.id));
     const over25Count  = h2hGoalArr.filter(g => g > 2.5).length;
     const bothScoreCount = h2hFT.filter(m => (m.goals?.home ?? 0) > 0 && (m.goals?.away ?? 0) > 0).length;
     const homeGoalAvg  = avg(homeGoalArr);
@@ -136,15 +155,15 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
 
     // Corners
     const h2hCornerArr  = h2hFT.map(m => getTotalStat(m, 'Corner Kicks'));
-    const homeCornerArr = (homeRecent ?? []).map(m => getStat(m, teamHome.id, 'Corner Kicks'));
-    const awayCornerArr = (awayRecent ?? []).map(m => getStat(m, teamAway.id, 'Corner Kicks'));
+    const homeCornerArr = homeAsLocal.map(m => getStat(m, teamHome.id, 'Corner Kicks'));
+    const awayCornerArr = awayAsVisitor.map(m => getStat(m, teamAway.id, 'Corner Kicks'));
     const homeCornerAvg = avg(homeCornerArr);
     const awayCornerAvg = avg(awayCornerArr);
 
     // Yellow cards
     const h2hYellowArr  = h2hFT.map(m => getTotalStat(m, 'Yellow Cards'));
-    const homeYellowArr = (homeRecent ?? []).map(m => getStat(m, teamHome.id, 'Yellow Cards'));
-    const awayYellowArr = (awayRecent ?? []).map(m => getStat(m, teamAway.id, 'Yellow Cards'));
+    const homeYellowArr = homeAsLocal.map(m => getStat(m, teamHome.id, 'Yellow Cards'));
+    const awayYellowArr = awayAsVisitor.map(m => getStat(m, teamAway.id, 'Yellow Cards'));
     const homeYellowAvg = avg(homeYellowArr);
     const awayYellowAvg = avg(awayYellowArr);
 
@@ -153,6 +172,8 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
     return {
       h2hCount: h2hFT.length,
       statsWithData,
+      homeVenueCount: homeAsLocal.length,
+      awayVenueCount: awayAsVisitor.length,
       // goals
       h2hGoals:         avg(h2hGoalArr),
       homeGoals:        homeGoalAvg,
@@ -189,8 +210,9 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
       {/* Goals */}
       <StatCard
         icon="⚽" title="Goals"
-        homeLabel={homeName} homeVal={stats.homeGoals}
-        awayLabel={awayName} awayVal={stats.awayGoals}
+        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante from recent form (goals scored + conceded per game). H2H avg = average total goals in the last ${stats.h2hCount} completed matches between these two teams. Over 2.5 / Both score = % of those H2H matches. Projected = home local avg + away visitante avg.`}
+        homeLabel={homeName} homeVal={stats.homeGoals} homeCount={stats.homeVenueCount}
+        awayLabel={awayName} awayVal={stats.awayGoals} awayCount={stats.awayVenueCount}
         h2hVal={stats.h2hGoals}
       >
         <Pill
@@ -205,8 +227,9 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
       {/* Corners */}
       <StatCard
         icon="🚩" title="Corners"
-        homeLabel={homeName} homeVal={stats.homeCorners}
-        awayLabel={awayName} awayVal={stats.awayCorners}
+        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (corner kicks per game). H2H avg = average total corners in the last ${stats.h2hCount} completed matches between these two teams. Projected total = home local avg + away visitante avg.`}
+        homeLabel={homeName} homeVal={stats.homeCorners} homeCount={stats.homeVenueCount}
+        awayLabel={awayName} awayVal={stats.awayCorners} awayCount={stats.awayVenueCount}
         h2hVal={stats.h2hCorners}
       >
         <Pill label="Projected total:" value={fmt(stats.projCorners)} />
@@ -218,15 +241,16 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
       {/* Yellow Cards */}
       <StatCard
         icon="🟨" title="Yellow Cards"
-        homeLabel={homeName} homeVal={stats.homeYellows}
-        awayLabel={awayName} awayVal={stats.awayYellows}
+        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (yellow cards per game). H2H avg = average total yellow cards in the last ${stats.h2hCount} completed matches between these two teams. Projected total = home local avg + away visitante avg.`}
+        homeLabel={homeName} homeVal={stats.homeYellows} homeCount={stats.homeVenueCount}
+        awayLabel={awayName} awayVal={stats.awayYellows} awayCount={stats.awayVenueCount}
         h2hVal={stats.h2hYellows}
       >
         <Pill label="Projected total:" value={fmt(stats.projYellows)} />
       </StatCard>
 
       <Typography sx={{ fontSize: 10, color: 'text.disabled', textAlign: 'center', mt: 1, pb: 1 }}>
-        H2H based on {stats.h2hCount} completed matches · Recent = last 5 games per team
+        H2H based on {stats.h2hCount} completed matches · Recent = home team matches as local, away team matches as visitante
       </Typography>
     </Box>
   );
