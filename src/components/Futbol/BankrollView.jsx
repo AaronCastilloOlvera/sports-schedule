@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem,
@@ -6,7 +6,17 @@ import {
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { apiClient } from '../../api/api.js';
+
+const getWeekStart = (dateStr) => {
+  const d = new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().substring(0, 10);
+};
+const fmtWeekLabel = (dateStr) =>
+  new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
 
 const initialTx = {
   type: 'deposit',
@@ -80,6 +90,17 @@ export default function BankrollView({ tickets }) {
     .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
     .reduce((s, t) => s + (t.net_profit || 0), 0);
   const realBalance = totalDeposits - totalWithdrawals + betsNetProfit;
+
+  const weeklyWithdrawals = useMemo(() => {
+    const byWeek = {};
+    transactions.filter(t => t.type === 'withdrawal').forEach(t => {
+      const week = getWeekStart(t.date);
+      byWeek[week] = (byWeek[week] ?? 0) + t.amount;
+    });
+    return Object.entries(byWeek)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, total]) => ({ week: fmtWeekLabel(week), total: parseFloat(total.toFixed(2)) }));
+  }, [transactions]);
 
   const handleSubmit = async () => {
     try {
@@ -209,6 +230,28 @@ export default function BankrollView({ tickets }) {
           </Box>
         );
       })()}
+
+      {/* Weekly withdrawals chart */}
+      {weeklyWithdrawals.length > 0 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Withdrawals per Week
+          </Typography>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={weeklyWithdrawals} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="week" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+              <RechartsTooltip formatter={(v) => [`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Withdrawn']} />
+              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                {weeklyWithdrawals.map((_, i) => (
+                  <Cell key={i} fill="#d32f2f" fillOpacity={0.75 + (i % 2) * 0.15} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
 
       {/* Table */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
