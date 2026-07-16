@@ -34,7 +34,7 @@ export default function BetsAnalytics({ tickets }) {
   // General — accumulated profit
   const accumulatedData = useMemo(() => {
     let acc = 0;
-    return [...resolved]
+    const points = [...resolved]
       .sort((a, b) => new Date(a.match_datetime) - new Date(b.match_datetime))
       .map(t => {
         acc += t.net_profit || 0;
@@ -43,6 +43,7 @@ export default function BetsAnalytics({ tickets }) {
           profit: parseFloat(acc.toFixed(2)),
         };
       });
+    return [{ date: '', profit: 0 }, ...points];
   }, [resolved]);
 
   // General — daily P&L
