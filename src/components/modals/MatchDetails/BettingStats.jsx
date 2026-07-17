@@ -1,41 +1,72 @@
-import { useMemo } from 'react';
-import { Box, Typography, Tooltip } from '@mui/material';
+import { Box, Stack, Typography, Tooltip } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
+import { useBettingStats, fmt } from './useBettingStats';
 
-// ── data helpers ────────────────────────────────────────────────────────────
+// ── WinDistributionBar ───────────────────────────────────────────────────────
+// (moved here from HeadToHead.jsx so the H2H tab stays focused on the match list)
 
-const getStat = (match, teamId, type) => {
-  const ts = match.statistics?.find(s => s.team?.id === teamId);
-  return ts?.statistics?.find(s => s.type === type)?.value ?? null;
+function WinDistributionBar({ homeWins, draws, awayWins, teamHome, teamAway }) {
+  const { t } = useTranslation();
+  const total = homeWins + draws + awayWins;
+  if (total === 0) return null;
+
+  const pHome = Math.round((homeWins / total) * 100);
+  const pDraw = Math.round((draws    / total) * 100);
+  const pAway = 100 - pHome - pDraw;
+
+  return (
+    <Box sx={{ px: { xs: 2, sm: '20px' }, pt: '14px', pb: '12px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: '8px' }}>
+        <Box>
+          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'primary.main', lineHeight: 1 }}>
+            {homeWins}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'primary.main', mt: '2px', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {teamHome?.name}
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'text.disabled', lineHeight: 1 }}>
+            {draws}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'text.disabled', mt: '2px' }}>
+            {t('h2h.draws')}
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: 'right' }}>
+          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'warning.main', lineHeight: 1 }}>
+            {awayWins}
+          </Typography>
+          <Typography sx={{ fontSize: 11, color: 'warning.main', mt: '2px', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {teamAway?.name}
+          </Typography>
+        </Box>
+      </Stack>
+
+      <Box sx={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', gap: '1px' }}>
+        {pHome > 0 && <Box sx={{ flex: pHome, bgcolor: 'primary.main', borderRadius: '3px 0 0 3px' }} />}
+        {pDraw > 0 && <Box sx={{ flex: pDraw, bgcolor: 'action.disabled' }} />}
+        {pAway > 0 && <Box sx={{ flex: pAway, bgcolor: 'warning.main', borderRadius: '0 3px 3px 0' }} />}
+      </Box>
+
+      <Stack direction="row" justifyContent="space-between" sx={{ mt: '4px' }}>
+        <Typography sx={{ fontSize: 10, color: 'primary.main' }}>{pHome}%</Typography>
+        <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>{pDraw}%</Typography>
+        <Typography sx={{ fontSize: 10, color: 'warning.main' }}>{pAway}%</Typography>
+      </Stack>
+    </Box>
+  );
+}
+
+WinDistributionBar.propTypes = {
+  homeWins: PropTypes.number.isRequired,
+  draws:    PropTypes.number.isRequired,
+  awayWins: PropTypes.number.isRequired,
+  teamHome: PropTypes.object,
+  teamAway: PropTypes.object,
 };
-
-const getTotalStat = (match, type) => {
-  if (!match.statistics?.length) return null;
-  let total = 0, found = false;
-  for (const ts of match.statistics) {
-    const v = ts.statistics?.find(s => s.type === type)?.value;
-    if (typeof v === 'number') { total += v; found = true; }
-  }
-  return found ? total : null;
-};
-
-const teamGoals = (match, teamId) => {
-  if (match.teams?.home?.id === teamId) return match.goals?.home ?? null;
-  if (match.teams?.away?.id === teamId) return match.goals?.away ?? null;
-  return null;
-};
-
-// only keep matches where teamId played on the given side (home/away)
-const byVenue = (matches, teamId, venue) =>
-  (matches ?? []).filter(m => m.teams?.[venue]?.id === teamId);
-
-const avg = (arr) => {
-  const valid = arr.filter(v => v !== null && !isNaN(v));
-  return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
-};
-
-const fmt = (v) => (v !== null && !isNaN(v) ? Number(v).toFixed(1) : '—');
 
 // ── StatCard ────────────────────────────────────────────────────────────────
 
@@ -134,65 +165,8 @@ Pill.propTypes = {
 
 // ── BettingStats ─────────────────────────────────────────────────────────────
 
-export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome, teamAway }) {
-  const stats = useMemo(() => {
-    if (!teamHome?.id || !teamAway?.id) return null;
-
-    const h2hFT = (h2hData ?? []).filter(m => m.fixture?.status?.short === 'FT');
-
-    // only the home team's matches as local, only the away team's matches as visitante
-    const homeAsLocal   = byVenue(homeRecent, teamHome.id, 'home');
-    const awayAsVisitor  = byVenue(awayRecent, teamAway.id, 'away');
-
-    // Goals
-    const h2hGoalArr   = h2hFT.map(m => (m.goals?.home ?? 0) + (m.goals?.away ?? 0));
-    const homeGoalArr  = homeAsLocal.map(m => teamGoals(m, teamHome.id));
-    const awayGoalArr  = awayAsVisitor.map(m => teamGoals(m, teamAway.id));
-    const over25Count  = h2hGoalArr.filter(g => g > 2.5).length;
-    const bothScoreCount = h2hFT.filter(m => (m.goals?.home ?? 0) > 0 && (m.goals?.away ?? 0) > 0).length;
-    const homeGoalAvg  = avg(homeGoalArr);
-    const awayGoalAvg  = avg(awayGoalArr);
-
-    // Corners
-    const h2hCornerArr  = h2hFT.map(m => getTotalStat(m, 'Corner Kicks'));
-    const homeCornerArr = homeAsLocal.map(m => getStat(m, teamHome.id, 'Corner Kicks'));
-    const awayCornerArr = awayAsVisitor.map(m => getStat(m, teamAway.id, 'Corner Kicks'));
-    const homeCornerAvg = avg(homeCornerArr);
-    const awayCornerAvg = avg(awayCornerArr);
-
-    // Yellow cards
-    const h2hYellowArr  = h2hFT.map(m => getTotalStat(m, 'Yellow Cards'));
-    const homeYellowArr = homeAsLocal.map(m => getStat(m, teamHome.id, 'Yellow Cards'));
-    const awayYellowArr = awayAsVisitor.map(m => getStat(m, teamAway.id, 'Yellow Cards'));
-    const homeYellowAvg = avg(homeYellowArr);
-    const awayYellowAvg = avg(awayYellowArr);
-
-    const statsWithData = h2hFT.filter(m => m.statistics?.length > 0).length;
-
-    return {
-      h2hCount: h2hFT.length,
-      statsWithData,
-      homeVenueCount: homeAsLocal.length,
-      awayVenueCount: awayAsVisitor.length,
-      // goals
-      h2hGoals:         avg(h2hGoalArr),
-      homeGoals:        homeGoalAvg,
-      awayGoals:        awayGoalAvg,
-      projGoals:        homeGoalAvg !== null && awayGoalAvg !== null ? homeGoalAvg + awayGoalAvg : null,
-      over25Rate:       h2hGoalArr.length ? Math.round(over25Count / h2hGoalArr.length * 100) : null,
-      bothScoreRate:    h2hFT.length ? Math.round(bothScoreCount / h2hFT.length * 100) : null,
-      // corners
-      h2hCorners:       avg(h2hCornerArr),
-      homeCorners:      homeCornerAvg,
-      awayCorners:      awayCornerAvg,
-      projCorners:      homeCornerAvg !== null && awayCornerAvg !== null ? homeCornerAvg + awayCornerAvg : null,
-      // yellows
-      h2hYellows:       avg(h2hYellowArr),
-      homeYellows:      homeYellowAvg,
-      awayYellows:      awayYellowAvg,
-      projYellows:      homeYellowAvg !== null && awayYellowAvg !== null ? homeYellowAvg + awayYellowAvg : null,
-    };
-  }, [h2hData, homeRecent, awayRecent, teamHome, teamAway]);
+export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome, teamAway, oddsData }) {
+  const stats = useBettingStats({ h2hData, homeRecent, awayRecent, teamHome, teamAway, oddsData });
 
   if (!stats || !teamHome || !teamAway) {
     return (
@@ -207,6 +181,14 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
 
   return (
     <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }}>
+      {/* H2H overview: win distribution */}
+      <Box sx={{ mx: -2, mt: -2, mb: 2 }}>
+        <WinDistributionBar
+          homeWins={stats.h2hHomeWins} draws={stats.h2hDraws} awayWins={stats.h2hAwayWins}
+          teamHome={teamHome} teamAway={teamAway}
+        />
+      </Box>
+
       {/* Goals */}
       <StatCard
         icon="⚽" title="Goals"
@@ -227,11 +209,18 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
       {/* Corners */}
       <StatCard
         icon="🚩" title="Corners"
-        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (corner kicks per game). H2H avg = average total corners in the last ${stats.h2hCount} completed matches between these two teams. Projected total = home local avg + away visitante avg.`}
+        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (corner kicks per game). H2H avg = average total corners in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
         homeLabel={homeName} homeVal={stats.homeCorners} homeCount={stats.homeVenueCount}
         awayLabel={awayName} awayVal={stats.awayCorners} awayCount={stats.awayVenueCount}
         h2hVal={stats.h2hCorners}
       >
+        {stats.cornerLine !== null && (
+          <Pill
+            label={`Over ${fmt(stats.cornerLine)}:`}
+            value={stats.overCornersRate !== null ? `${stats.overCornersRate}%` : '—'}
+            highlight={stats.overCornersRate !== null ? (stats.overCornersRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
+          />
+        )}
         <Pill label="Projected total:" value={fmt(stats.projCorners)} />
         {stats.statsWithData === 0 && (
           <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>No stats in H2H</Typography>
@@ -241,11 +230,18 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
       {/* Yellow Cards */}
       <StatCard
         icon="🟨" title="Yellow Cards"
-        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (yellow cards per game). H2H avg = average total yellow cards in the last ${stats.h2hCount} completed matches between these two teams. Projected total = home local avg + away visitante avg.`}
+        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (yellow cards per game). H2H avg = average total yellow cards in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
         homeLabel={homeName} homeVal={stats.homeYellows} homeCount={stats.homeVenueCount}
         awayLabel={awayName} awayVal={stats.awayYellows} awayCount={stats.awayVenueCount}
         h2hVal={stats.h2hYellows}
       >
+        {stats.yellowLine !== null && (
+          <Pill
+            label={`Over ${fmt(stats.yellowLine)}:`}
+            value={stats.overYellowsRate !== null ? `${stats.overYellowsRate}%` : '—'}
+            highlight={stats.overYellowsRate !== null ? (stats.overYellowsRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
+          />
+        )}
         <Pill label="Projected total:" value={fmt(stats.projYellows)} />
       </StatCard>
 
@@ -262,4 +258,5 @@ BettingStats.propTypes = {
   awayRecent: PropTypes.array,
   teamHome: PropTypes.object,
   teamAway: PropTypes.object,
+  oddsData: PropTypes.array,
 };

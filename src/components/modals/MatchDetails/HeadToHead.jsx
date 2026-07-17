@@ -100,108 +100,6 @@ function MiniLogo({ logo, name }) {
 
 MiniLogo.propTypes = { logo: PropTypes.string, name: PropTypes.string };
 
-function WinDistributionBar({ team1Wins, draws, team2Wins, teamHome, teamAway }) {
-  const { t } = useTranslation();
-  const total = team1Wins + draws + team2Wins;
-  if (total === 0) return null;
-
-  const pHome = Math.round((team1Wins / total) * 100);
-  const pDraw = Math.round((draws     / total) * 100);
-  const pAway = 100 - pHome - pDraw;
-
-  return (
-    <Box sx={{ px: { xs: 2, sm: '20px' }, pt: '14px', pb: '12px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ mb: '8px' }}>
-        <Box>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'primary.main', fontFamily: FONT, lineHeight: 1 }}>
-            {team1Wins}
-          </Typography>
-          <Typography sx={{ fontSize: 11, color: 'primary.main', fontFamily: FONT, mt: '2px', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {teamHome?.name}
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'text.disabled', fontFamily: FONT, lineHeight: 1 }}>
-            {draws}
-          </Typography>
-          <Typography sx={{ fontSize: 11, color: 'text.disabled', fontFamily: FONT, mt: '2px' }}>
-            {t('h2h.draws')}
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'right' }}>
-          <Typography sx={{ fontSize: 15, fontWeight: 700, color: 'warning.main', fontFamily: FONT, lineHeight: 1 }}>
-            {team2Wins}
-          </Typography>
-          <Typography sx={{ fontSize: 11, color: 'warning.main', fontFamily: FONT, mt: '2px', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {teamAway?.name}
-          </Typography>
-        </Box>
-      </Stack>
-
-      <Box sx={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', gap: '1px' }}>
-        {pHome > 0 && <Box sx={{ flex: pHome, bgcolor: 'primary.main', borderRadius: '3px 0 0 3px' }} />}
-        {pDraw > 0 && <Box sx={{ flex: pDraw, bgcolor: 'action.disabled' }} />}
-        {pAway > 0 && <Box sx={{ flex: pAway, bgcolor: 'warning.main', borderRadius: '0 3px 3px 0' }} />}
-      </Box>
-
-      <Stack direction="row" justifyContent="space-between" sx={{ mt: '4px' }}>
-        <Typography sx={{ fontSize: 10, color: 'primary.main', fontFamily: FONT }}>{pHome}%</Typography>
-        <Typography sx={{ fontSize: 10, color: 'text.disabled', fontFamily: FONT }}>{pDraw}%</Typography>
-        <Typography sx={{ fontSize: 10, color: 'warning.main', fontFamily: FONT }}>{pAway}%</Typography>
-      </Stack>
-    </Box>
-  );
-}
-
-WinDistributionBar.propTypes = {
-  team1Wins: PropTypes.number.isRequired,
-  draws:     PropTypes.number.isRequired,
-  team2Wins: PropTypes.number.isRequired,
-  teamHome:  PropTypes.object,
-  teamAway:  PropTypes.object,
-};
-
-function AggregateStats({ matches }) {
-  const { t } = useTranslation();
-  if (!matches.length) return null;
-
-  const total      = matches.length;
-  const totalGoals = matches.reduce((sum, m) => sum + (m.goals.home ?? 0) + (m.goals.away ?? 0), 0);
-  const avgGoals   = (totalGoals / total).toFixed(1);
-  const bothScored = matches.filter(m => (m.goals.home ?? 0) > 0 && (m.goals.away ?? 0) > 0).length;
-  const bothPct    = Math.round((bothScored / total) * 100);
-
-  const stats = [
-    { label: t('h2h.aggregate.avgGoals'),   value: avgGoals },
-    { label: t('h2h.aggregate.bothScored'), value: `${bothPct}%` },
-    { label: t('h2h.aggregate.matches'),    value: total },
-  ];
-
-  return (
-    <Box sx={{ display: 'flex', borderBottom: '0.5px solid', borderColor: 'divider' }}>
-      {stats.map((stat, i) => (
-        <Box
-          key={stat.label}
-          sx={{
-            flex: 1, textAlign: 'center', py: '12px',
-            borderRight: i < stats.length - 1 ? '0.5px solid' : 'none',
-            borderColor: 'divider',
-          }}
-        >
-          <Typography sx={{ fontSize: 18, fontWeight: 700, color: 'text.primary', fontFamily: FONT, lineHeight: 1 }}>
-            {stat.value}
-          </Typography>
-          <Typography sx={{ fontSize: 10, color: 'text.disabled', fontFamily: FONT, mt: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {stat.label}
-          </Typography>
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
-AggregateStats.propTypes = { matches: PropTypes.array.isRequired };
-
 function StatRow({ type, homeValue, awayValue }) {
   const { t } = useTranslation();
   const isPossession = type === 'Ball Possession';
@@ -289,8 +187,7 @@ MatchStats.propTypes = {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function HeadToHead({
-  filteredMatches, filter, onFilterChange, team1Id,
-  teamHome, teamAway,
+  filteredMatches, filter, onFilterChange,
 }) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
@@ -302,22 +199,8 @@ export default function HeadToHead({
     { value: 'away', label: t('h2h.filters.away') },
   ];
 
-  const team1Wins = filteredMatches.filter(m =>
-    (m.teams.home.id === team1Id && m.teams.home.winner) ||
-    (m.teams.away.id === team1Id && m.teams.away.winner)
-  ).length;
-  const draws     = filteredMatches.filter(m => !m.teams.home.winner && !m.teams.away.winner).length;
-  const team2Wins = filteredMatches.length - team1Wins - draws;
-
   return (
     <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT, display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-      <WinDistributionBar
-        team1Wins={team1Wins} draws={draws} team2Wins={team2Wins}
-        teamHome={teamHome} teamAway={teamAway}
-      />
-
-      <AggregateStats matches={filteredMatches} />
 
       {/* Title + filter row */}
       <Box sx={{
@@ -490,7 +373,4 @@ HeadToHead.propTypes = {
   filteredMatches: PropTypes.array.isRequired,
   filter:          PropTypes.string.isRequired,
   onFilterChange:  PropTypes.func.isRequired,
-  team1Id:         PropTypes.number.isRequired,
-  teamHome:        PropTypes.object,
-  teamAway:        PropTypes.object,
 };

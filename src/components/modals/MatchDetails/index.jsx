@@ -12,6 +12,7 @@ import HeadToHead from './HeadToHead';
 import RecentForm from './RecentForm';
 import MatchOdds from './MatchOdds';
 import BettingStats from './BettingStats';
+import ValuePicksTab from './ValuePicksTab';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
@@ -51,44 +52,6 @@ function MatchDetailsSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <Box key={i} sx={{ flex: 1, py: '11px', display: 'flex', justifyContent: 'center' }}>
             <Skeleton width={44} height={18} />
-          </Box>
-        ))}
-      </Box>
-
-      {/* WinDistributionBar skeleton */}
-      <Box sx={{ px: { xs: 2, sm: '20px' }, pt: '14px', pb: '12px', borderBottom: '0.5px solid', borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '8px' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <Skeleton width={24} height={20} />
-            <Skeleton width={72} height={13} />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <Skeleton width={24} height={20} />
-            <Skeleton width={40} height={13} />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-            <Skeleton width={24} height={20} />
-            <Skeleton width={72} height={13} />
-          </Box>
-        </Box>
-        <Skeleton variant="rounded" height={6} sx={{ borderRadius: 3 }} />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: '4px' }}>
-          <Skeleton width={28} height={12} />
-          <Skeleton width={28} height={12} />
-          <Skeleton width={28} height={12} />
-        </Box>
-      </Box>
-
-      {/* AggregateStats skeleton */}
-      <Box sx={{ display: 'flex', borderBottom: '0.5px solid', borderColor: 'divider' }}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Box key={i} sx={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '4px', py: '12px',
-            borderRight: i < 2 ? '0.5px solid' : 'none', borderColor: 'divider',
-          }}>
-            <Skeleton width={36} height={24} />
-            <Skeleton width={60} height={12} />
           </Box>
         ))}
       </Box>
@@ -196,9 +159,10 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
 
   const TABS = [
     { value: 'h2h',    label: t('h2h.tabs.h2h') },
+    { value: 'stats',  label: t('h2h.tabs.stats') },
+    { value: 'value',  label: t('h2h.tabs.value') },
     { value: 'recent', label: t('h2h.tabs.recent') },
     { value: 'odds',   label: t('h2h.tabs.odds') },
-    { value: 'stats',  label: t('h2h.tabs.stats') },
   ];
 
   const recentContent = (() => {
@@ -333,9 +297,6 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                     filteredMatches={filteredMatches}
                     filter={filter}
                     onFilterChange={setFilter}
-                    team1Id={team1Id}
-                    teamHome={teamHome}
-                    teamAway={teamAway}
                   />
                 ) : activeTab === 'odds' ? (
                   <MatchOdds
@@ -351,6 +312,16 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                     awayRecent={awayRecent}
                     teamHome={teamHome}
                     teamAway={teamAway}
+                    oddsData={oddsData}
+                  />
+                ) : activeTab === 'value' ? (
+                  <ValuePicksTab
+                    h2hData={h2hData}
+                    homeRecent={homeRecent}
+                    awayRecent={awayRecent}
+                    teamHome={teamHome}
+                    teamAway={teamAway}
+                    oddsData={oddsData}
                   />
                 ) : recentContent}
               </ErrorBoundary>
