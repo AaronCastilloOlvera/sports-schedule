@@ -13,6 +13,14 @@ const RULES = [
     text: "Bet as though someone is watching every move you make — because you are. Have some respect for the process.",
     author: "The Analyst",
   },
+  {
+    text: "This isn't a 100-meter dash, it's a marathon. Consistency beats intensity every single time.",
+    author: "The Analyst",
+  },
+  {
+    text: "Slow, steady bankroll growth beats one lucky night — every time.",
+    author: "Compound Interest",
+  },
 ];
 
 function QuoteCard({ text, author }) {

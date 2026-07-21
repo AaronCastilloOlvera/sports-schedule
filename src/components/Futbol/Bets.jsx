@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, Snackbar, Stack, Tab, Tabs, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { Add, ContentCopy, Delete, Edit, RemoveRedEye } from '@mui/icons-material';
+import { Add, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
 import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
 import BetsAnalytics from "./BetsAnalytics";
@@ -117,8 +117,14 @@ function Bets() {
   const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
   const [confirmDelete, setConfirmDelete] = useState({ open: false, ticketId: null });
   const [mainTab, setMainTab] = useState(0);
+  const [searchId, setSearchId] = useState('');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const filteredTickets = useMemo(() => {
+    const term = searchId.trim().toLowerCase();
+    return term ? tickets.filter(t => (t.ticket_id || '').toLowerCase().includes(term)) : tickets;
+  }, [tickets, searchId]);
 
   const logStats = useMemo(() => {
     const resolved = tickets.filter(t => t.status === 'won' || t.status === 'lost');
@@ -358,12 +364,30 @@ function Bets() {
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
         {mainTab === 0 && (
-          <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
-            <Add />
-          </Fab>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Buscar por ID..."
+              value={searchId}
+              onChange={(e) => setSearchId(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              sx={{ width: { xs: 140, sm: 200 } }}
+            />
+            <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
+              <Add />
+            </Fab>
+          </Stack>
         )}
       </Stack>
 
@@ -392,12 +416,12 @@ function Bets() {
           </Box>
           {isMobile ? (
             <Box>
-              {tickets.length === 0 ? (
+              {filteredTickets.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-                  <Typography>No tickets yet. Tap + to add your first bet.</Typography>
+                  <Typography>{tickets.length === 0 ? 'No tickets yet. Tap + to add your first bet.' : 'No tickets match that ID.'}</Typography>
                 </Box>
               ) : (
-                [...tickets]
+                [...filteredTickets]
                   .sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))
                   .map(ticket => (
                     <TicketCard key={ticket.ticket_id} ticket={ticket} onEdit={handleEdit} onDelete={handleDelete} />
@@ -407,7 +431,7 @@ function Bets() {
           ) : (
             <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
               <DataGrid
-                rows={tickets}
+                rows={filteredTickets}
                 columns={columns}
                 getRowId={(row) => row.ticket_id}
                 pageSizeOptions={[5, 10, 25]}

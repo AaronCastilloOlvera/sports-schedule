@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Box, Stack, Tab, Tabs, Typography } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
-  Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Pie, PieChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { BET_TYPES } from '../../utils/consts.jsx';
 
@@ -18,9 +19,33 @@ const ODDS_BUCKETS = [
   { label: '2.00-3.00', min: 2.00, max: 3.00 },
   { label: '3.00+',     min: 3.00, max: Infinity },
 ];
+const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // Date#getDay(): 0 = Sunday
+const TIME_BUCKETS = [
+  { label: 'Night (0-6)',      min: 0,  max: 6  },
+  { label: 'Morning (6-12)',   min: 6,  max: 12 },
+  { label: 'Afternoon (12-18)', min: 12, max: 18 },
+  { label: 'Evening (18-24)',  min: 18, max: 24 },
+];
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (value, data) => `${((value / data.reduce((s, d) => s + d.value, 0)) * 100).toFixed(1)}%`;
+
+function ScatterTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <Box sx={{ bgcolor: 'white', p: '8px 10px', borderRadius: 1, boxShadow: 2, fontSize: 12 }}>
+      <div>{d.date}</div>
+      <div>{d.count} bet{d.count === 1 ? '' : 's'} · {usd(d.profit)}</div>
+    </Box>
+  );
+}
+
+ScatterTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.array,
+};
 
 function ChartCard({ title, children, sx = {} }) {
   return (
@@ -208,6 +233,70 @@ export default function BetsAnalytics({ tickets }) {
     [studiedData],
   );
 
+  // By day of week — profit + win rate
+  const dayOfWeekData = useMemo(() => {
+    const map = {};
+    resolved.forEach(t => {
+      const key = DAY_NAMES[new Date(t.match_datetime).getDay()];
+      if (!map[key]) map[key] = { profit: 0, won: 0, total: 0 };
+      map[key].profit += t.net_profit || 0;
+      map[key].total++;
+      if (t.status === 'won') map[key].won++;
+    });
+    return DAY_ORDER.filter(day => map[day]).map(day => ({
+      day,
+      profit: parseFloat(map[day].profit.toFixed(2)),
+      winRate: parseFloat((map[day].won / map[day].total * 100).toFixed(1)),
+      count: map[day].total,
+    }));
+  }, [resolved]);
+
+  const dayOfWeekPie = useMemo(() =>
+    dayOfWeekData.map((d, i) => ({ name: d.day, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
+    [dayOfWeekData],
+  );
+
+  // By time of day — profit + win rate
+  const timeOfDayData = useMemo(() => {
+    const map = {};
+    TIME_BUCKETS.forEach(b => { map[b.label] = { profit: 0, won: 0, total: 0 }; });
+    resolved.forEach(t => {
+      const hour = new Date(t.match_datetime).getHours();
+      const bucket = TIME_BUCKETS.find(b => hour >= b.min && hour < b.max);
+      if (!bucket) return;
+      map[bucket.label].profit += t.net_profit || 0;
+      map[bucket.label].total++;
+      if (t.status === 'won') map[bucket.label].won++;
+    });
+    return TIME_BUCKETS.map(b => ({
+      time: b.label,
+      profit: parseFloat(map[b.label].profit.toFixed(2)),
+      winRate: map[b.label].total ? parseFloat((map[b.label].won / map[b.label].total * 100).toFixed(1)) : 0,
+      count: map[b.label].total,
+    })).filter(d => d.count > 0);
+  }, [resolved]);
+
+  const timeOfDayPie = useMemo(() =>
+    timeOfDayData.map((d, i) => ({ name: d.time, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
+    [timeOfDayData],
+  );
+
+  // Bets placed that day vs. that day's profit — tests the "fewer bets, better results" hunch
+  const dailyCountProfit = useMemo(() => {
+    const byDay = {};
+    resolved.forEach(t => {
+      const date = new Date(t.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+      if (!byDay[date]) byDay[date] = { profit: 0, count: 0 };
+      byDay[date].profit += t.net_profit || 0;
+      byDay[date].count++;
+    });
+    return Object.entries(byDay).map(([date, d]) => ({
+      date,
+      count: d.count,
+      profit: parseFloat(d.profit.toFixed(2)),
+    }));
+  }, [resolved]);
+
   // Analytics summary stats
   const analyticsStats = useMemo(() => {
     const byDay = {};
@@ -259,6 +348,7 @@ export default function BetsAnalytics({ tickets }) {
         <Tab label="By Bet Type" />
         <Tab label="By Odds" />
         <Tab label="Studied" />
+        <Tab label="Timing" />
       </Tabs>
 
       {tab === 0 && (
@@ -550,6 +640,111 @@ export default function BetsAnalytics({ tickets }) {
                 <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Box>
+      )}
+
+      {tab === 6 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <ChartCard title="Profit by Day of Week" sx={{ flex: 2 }}>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={dayOfWeekData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                  <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                    {dayOfWeekData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Tickets by Day of Week" sx={{ flex: 1 }}>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={dayOfWeekPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                    {dayOfWeekPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </Stack>
+
+          <ChartCard title="Win Rate by Day of Week">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={dayOfWeekData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <ChartCard title="Profit by Time of Day" sx={{ flex: 2 }}>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={timeOfDayData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" tick={{ fontSize: 12 }} />
+                  <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                    {timeOfDayData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <ChartCard title="Tickets by Time of Day" sx={{ flex: 1 }}>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={timeOfDayPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                    {timeOfDayPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </Stack>
+
+          <ChartCard title="Win Rate by Time of Day">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={timeOfDayData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
+                <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard title="Bets per Day vs. Profit">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 1 }}>
+              Cada punto es un día — ¿los días con más apuestas te van peor?
+            </Typography>
+            <ResponsiveContainer width="100%" height={280}>
+              <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  type="number" dataKey="count" name="Bets" allowDecimals={false}
+                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Bets that day', position: 'insideBottom', offset: -5, fontSize: 12 }}
+                />
+                <YAxis type="number" dataKey="profit" name="Profit" tickFormatter={usd} tick={{ fontSize: 12 }} />
+                <Tooltip content={<ScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                <Scatter data={dailyCountProfit}>
+                  {dailyCountProfit.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                </Scatter>
+              </ScatterChart>
             </ResponsiveContainer>
           </ChartCard>
         </Box>
