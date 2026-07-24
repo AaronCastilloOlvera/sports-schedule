@@ -28,9 +28,12 @@ export default function LiveStatusChip({ fixture }) {
   // Case 2. Live matches show the elapsed time or status in a red chip with pulse animation
   if (isLive) {
     const { elapsed, extra } = status;
-    const displayLabel = elapsed && shortStatus !== 'HT'
+    // Soccer passes `elapsed` as a number of minutes (formatted with a trailing
+    // apostrophe below). Other sports (e.g. baseball's "Alta 4° · 2 outs") pass
+    // an already-formatted string label instead — show it as-is, no minute math.
+    const displayLabel = typeof elapsed === 'number' && shortStatus !== 'HT'
       ? (extra > 0 ? `${elapsed} + ${extra}'` : `${elapsed}'`)
-      : shortStatus;
+      : (elapsed || shortStatus);
     return (
       <Chip
         label={displayLabel}

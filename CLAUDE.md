@@ -21,13 +21,15 @@ The app requires a `VITE_API_HOST` env var pointing to the backend. Copy `.env.d
 
 ## Architecture
 
-Single-page React 19 app (Vite + SWC) with MUI v6. The header shows sport tabs (Soccer / Basketball / Baseball / Football) but only Soccer is implemented — the other tabs are decorative.
+Single-page React 19 app (Vite + SWC) with MUI v6. The top-level nav (in `Header`) is **Home / My Leagues / Control** — sport-agnostic. Sport selection lives one level down, as filter chips inside the unified schedule (`Fixtures`), not as separate pages. Soccer and Baseball both have real data sources merged into one table; Basketball/Football chips are present but decorative (no data source yet).
 
 ### Data flow
 
 `src/api/api.js` exports a singleton `apiClient` (class `ApiClient` wrapping axios). All components import this directly — there is no state management layer (no Redux/Zustand). API calls happen inside component `useEffect` / event handlers.
 
-Fixtures are polled on an interval. The `Fixtures` component fetches **two days** (selected date + next day) to handle UTC/local timezone edge cases, then filters down to matches whose local date matches the selected date.
+`Fixtures` is the unified schedule — it fetches soccer fixtures **and** baseball games (both LMB and MLB) unconditionally on every load/poll, regardless of which sport chips are active; the chips only filter what's *displayed*, so toggling a sport is instant instead of waiting on a request. Baseball games are reshaped by `src/utils/normalizeBaseball.js` into the exact same `{fixture, league, teams, goals}` shape soccer fixtures use, so both flow through the same `FixturesDesktopView`/`FixtureMobileView`/`MatchRow` — no sport-specific branching in those components. The one exception: baseball's "Insights" click opens `BoxscoreModal` instead of `MatchDetailsModal` (soccer's H2H/Stats/Odds modal doesn't apply — different data source, no backend support for it).
+
+Soccer fixtures fetch **two days** (selected date + next day) to handle UTC/local timezone edge cases, then filter down to matches whose local date matches the selected date. Baseball fixture ids are stored as **negative numbers** in the combined list so they can never collide with a real (always-positive) API-Football fixture id — soccer's id doubles as a live API param (odds lookup) elsewhere, so it can't be the one that gets reshaped.
 
 A custom DOM event `refresh-leagues` is dispatched by the Header's "Refresh Leagues" button (inside the settings popover) and listened to inside `Fixtures` to force-refresh fixture data via the cache endpoint (`fetchRefreshFixtures`).
 
@@ -37,29 +39,44 @@ A custom DOM event `refresh-leagues` is dispatched by the Header's "Refresh Leag
 App
 └── AppContent                   (wraps MUI ThemeProvider — separate component so it can
     ├── Header                   consume ThemeModeContext before ThemeProvider mounts)
-    └── FutbolDashboard          (tab + date/search state; tabs: Live | My Leagues | Control)
-        ├── Fixtures             (fetching, polling, league filter chips)
-        │   ├── FixturesDesktopView   (table layout; each row: Insights + ML-export buttons)
-        │   │   └── MatchRow          (React.memo'd with areRowsEqual for perf)
-        │   ├── FixtureMobileView     (card layout; responsive split at 600px)
-        │   │   └── MatchMobileCard   (React.memo'd with areRowsEqual for perf)
-        │   └── MatchDetailsModal    (H2H + recent matches; opened by Insights button)
-        │       ├── MatchHeader      (hero banner: stadium bg, league context, score, live status, events flanking score)
-        │       ├── HeadToHead       (H2H tab: win-distribution bar, form guide, match list)
-        │       ├── RecentForm       (Recent tab: per-team recent matches with expandable stats)
-        │       └── MatchOdds        (Odds tab: bet365/1xBet/Betano markets for the fixture)
-        ├── Leagues              (favorite-league management: search, star toggle)
-        └── Bets                 (betting ticket CRUD — 4 tabs: Log, Analytics, Bankroll, Rules)
-            ├── TicketModal      (create/edit ticket dialog; supports clipboard image paste)
-            ├── BetsAnalytics    (Recharts charts — receives tickets[] as prop, no separate fetch)
-            ├── BankrollView     (deposit/withdrawal CRUD + $200K goal progress bar — receives tickets[] for P&L)
-            └── BettingRules     (static motivational rules — edit the RULES array in the file directly)
+    │                            Top-level tabs: Home | My Leagues | Control — sport-agnostic,
+    │                            no longer nested under a sport selector.
+    ├── FutbolDashboard          ("Home" section — date/search filter bar + Fixtures. No
+    │   └── Fixtures                 internal tabs anymore; this IS the schedule.)
+    │       (sport filter chips: Soccer/Baseball toggle real data, Basketball/Football are
+    │        decorative; league filter chips reflect whichever sports are active; 🌊 button
+    │        opens SimultaneousChart — an hourly overlap "wave" of the currently filtered matches)
+    │       ├── FixturesDesktopView   (table layout; each row: single "Insights" action button)
+    │       │   └── MatchRow          (React.memo'd with areRowsEqual for perf; sport-agnostic)
+    │       ├── FixtureMobileView     (card layout; responsive split at 600px)
+    │       │   └── MatchMobileCard   (React.memo'd with areRowsEqual for perf; sport-agnostic)
+    │       ├── MatchDetailsModal    (soccer only; opened by Insights button on a soccer row)
+    │       │   ├── MatchHeader      (hero banner: stadium bg, league context, score, live status, events flanking score)
+    │       │   ├── HeadToHead       (H2H tab: win-distribution bar, form guide, match list)
+    │       │   ├── BettingStats     (Stats tab: H2H/local/visitante averages for Goals/Corners/Cards)
+    │       │   ├── ValuePicksTab    (Value Picks tab: scans Bet365 odds for +EV picks priced 1.50–2.00
+    │       │   │                     across Goals/Corners/Cards/BTTS/1X2/Double Chance/Handicap —
+    │       │   │                     see useBettingStats.js)
+    │       │   ├── RecentForm       (Recent tab: per-team recent matches with expandable stats)
+    │       │   └── MatchOdds        (Odds tab: bet365/1xBet/Betano markets for the fixture)
+    │       └── BoxscoreModal        (baseball only; opened by Insights button on a baseball row —
+    │                                 pitching/batting tables, shared with the now-orphaned
+    │                                 BaseballSchedule.jsx, see Possible improvements)
+    ├── Leagues                  ("My Leagues" section — favorite-league management: search, star toggle)
+    └── Bets                     ("Control" section — betting ticket CRUD — 4 tabs: Log, Analytics, Bankroll, Rules)
+        ├── TicketModal          (create/edit ticket dialog; supports clipboard image paste)
+        ├── BetsAnalytics        (Recharts charts — receives tickets[] as prop, no separate fetch;
+        │                         7 tabs: General, By Sport, By League, By Bet Type, By Odds,
+        │                         Studied, Timing — the last three are hit-rate/ROI/discipline
+        │                         breakdowns, not just P&L)
+        ├── BankrollView         (deposit/withdrawal CRUD + $200K goal progress bar — receives tickets[] for P&L)
+        └── BettingRules         (static motivational rules — edit the RULES array in the file directly)
 ```
 
 ### Header
 
 `src/components/layout/Header.jsx` — sticky AppBar with:
-- Sport tabs (decorative, only Soccer is wired)
+- Top-level tabs: **Home** (`activeSection`/`onSectionChange` props) | **My Leagues** | **Control**. No sport tabs here anymore — sport selection is inside `Fixtures` as filter chips.
 - Gear icon opens a settings **Popover** containing:
   - Language switcher (EN / ES)
   - API usage display (`Status` component — calls `fetchUsage`)
@@ -81,7 +98,8 @@ All methods live on the `ApiClient` class. Key endpoints:
 | `fetchHeadToHeadMatches(id1, id2)` | GET | `/matches/headtohead` |
 | `fetchRecentMatches(teamId)` | GET | `/teams/{id}/recent-matches` |
 | `fetchOdds(fixtureId)` | GET | `/odds/fixture/{id}` |
-| `fetchMLExportH2H(homeId, awayId)` | GET | `/ml/export-h2h-json` (blob) |
+| `fetchBaseballSchedule(date, league)` | GET | `/baseball/schedule` — `league` is `'lmb'` or `'mlb'`, fetched in parallel for the unified schedule |
+| `fetchBaseballBoxscore(gamePk)` | GET | `/baseball/boxscore/{gamePk}` |
 | `fetchTickets()` | GET | `/bets/get-tickets` |
 | `createTicket(formData)` | POST | `/bets/create-ticket` — returns full ticket object incl. `ticket_id` |
 | `updateTicket(id, formData)` | PUT | `/bets/update-ticket` |
@@ -100,10 +118,11 @@ All methods live on the `ApiClient` class. Key endpoints:
 - **Sport values**: The `sport` field uses lowercase snake_case (`futbol`, `basketball`, `american_football`, `baseball`) matching the backend enum. Never use display labels (`Soccer`, `Basketball`) as values.
 - **Bets withdrawal goal**: The $200,000 target is hardcoded as `GOAL = 200000` in `BankrollView.jsx`. Change it there if needed.
 - **BetsAnalytics / BankrollView**: Both receive `tickets[]` as a prop from `Bets.jsx` — they do not fetch independently. All chart data is derived via `useMemo` from this prop.
-- **Fixture status codes**: Match statuses (`1H`, `HT`, `2H`, `FT`, etc.) come from the API-Football API. Priority ordering for display is defined in `src/components/Futbol/Fixtures/consts.js` (`statusPriority` map: 1 = live, 2 = not started, 3 = finished).
+- **Fixture status codes**: Match statuses (`1H`, `HT`, `2H`, `FT`, etc.) come from the API-Football API. Priority ordering for display is defined in `src/components/Futbol/Fixtures/consts.js` (`statusPriority` map: 1 = live, 2 = not started, 3 = finished). Baseball games don't have these codes natively — `normalizeBaseball.js` maps MLB Stats API's `abstractGameState`/`detailedState` onto the closest soccer code (`'1H'` for live, `'NS'` for scheduled, `'FT'` for final, and a synthetic `'SUSP'` for suspended games, since MLB's API leaves a suspended game's `abstractGameState` as `"Live"` indefinitely — sometimes for weeks — until it's officially resumed or cancelled).
 - **Responsive layout**: MUI `useMediaQuery('(max-width:600px)')` drives the mobile/desktop fixture view split. Prefer MUI `sx` breakpoint props (`{ xs: ..., md: ... }`) for other responsive styling.
 - **Render optimization**: `MatchRow` and `MatchMobileCard` are wrapped in `React.memo` with a custom `areRowsEqual` comparator (`src/utils/matchComparisons.js`) that only re-renders when score or status changes.
-- **Live dot**: `FutbolDashboard` tracks `hasLiveMatches` state (set by `Fixtures` via `onLiveChange` prop) and renders a pulsing red dot on the "Live" tab label.
+- **Live dot**: `Fixtures` computes `liveBySport` per sport and renders a pulsing red dot directly on the relevant sport chip (Soccer/Baseball) when that sport has a live match — not a single global indicator, and not tied to a "Live" tab (that tab no longer exists).
+- **Baseball team/league logos**: fetched from `https://www.mlbstatic.com/team-logos/{id}.svg` — this CDN serves real logos for **both** MLB and LMB team ids (verified against all 20 LMB teams on a live schedule), not just the 30 MLB franchises. Don't reintroduce a league-based branch here. League badges (`/logos/mlb.webp`, `/logos/lmb.webp`) are local static files in `public/logos/` since there's no equivalent single-logo CDN endpoint for the leagues themselves. A team with no logo at all falls back to a generated colored-initials SVG (`data:image/svg+xml;base64,...` — must be base64, the `;utf8,`+`encodeURIComponent` variant renders inconsistently across browsers).
 
 ## Possible improvements
 
@@ -116,13 +135,14 @@ All methods live on the `ApiClient` class. Key endpoints:
 | 5 | **No tests** | Zero test coverage | Component tests for `MatchHeader`, `HeadToHead` with fixture mock data |
 | 6 | **apiClient singleton** | Imported directly everywhere — untestable and hard to mock | Pass via context or use React Query's `queryFn` pattern |
 | 7 | **i18n coverage** | New UI strings added without always updating both `en`/`es` files | Enforce with a lint rule or CI check that compares key sets |
+| 8 | **Orphaned file** | `src/components/Baseball/BaseballSchedule.jsx` (the old standalone per-sport baseball page) is no longer imported anywhere — superseded by baseball games being merged into the unified `Fixtures` schedule. Its reusable pieces (`BoxscoreModal.jsx`, `baseballHelpers.js`) were already extracted out and are still used. | Delete the file, or repurpose it if a dedicated baseball-only view is wanted later |
 
 ---
 
 ## Future plans
 
 ### Feature: US sports leagues
-The sport tabs (Basketball / Baseball / Football) are already stubbed in the UI — wire them up. NBA is the natural starting point: two teams, live score, recent form — closest to the existing soccer UX. Each sport will need its own fixture layout, status codes, and potentially different league management logic.
+Baseball is done — LMB + MLB schedules are merged into the unified `Fixtures` view via `normalizeBaseball.js`, with their own `BoxscoreModal` for detail (no H2H/Stats/Odds analysis yet, unlike soccer). Basketball and Football sport chips are still decorative (no data source). NBA is the natural next pick: two teams, live score, recent form — closest to the existing soccer/baseball UX. Each new sport needs its own normalizer into the shared fixture shape (see `normalizeBaseball.js` for the pattern) plus its own detail modal if the existing ones don't fit.
 
 ### Feature: Bet of the Day
 A daily highlighted pick on the Bets tab — one match the model is most confident about, with the suggested market and the key reasons behind it (H2H edge, recent form, odds value). The pick is generated server-side so it's the same across sessions and resets at midnight.

@@ -18,6 +18,8 @@ const getWeekStart = (dateStr) => {
 const fmtWeekLabel = (dateStr) =>
   new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
 
+const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
 const initialTx = {
   type: 'deposit',
   amount: '',
@@ -84,23 +86,26 @@ export default function BankrollView({ tickets }) {
 
   useEffect(() => { fetchTransactions(); }, []);
 
-  const totalDeposits = transactions.filter(t => t.type === 'deposit').reduce((s, t) => s + t.amount, 0);
+  const totalDeposits    = transactions.filter(t => t.type === 'deposit').reduce((s, t) => s + t.amount, 0);
   const totalWithdrawals = transactions.filter(t => t.type === 'withdrawal').reduce((s, t) => s + t.amount, 0);
-  const betsNetProfit = (tickets || [])
-    .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
-    .reduce((s, t) => s + (t.net_profit || 0), 0);
-  const realBalance = totalDeposits - totalWithdrawals + betsNetProfit;
 
   const weeklyWithdrawals = useMemo(() => {
     const byWeek = {};
-    transactions.filter(t => t.type === 'withdrawal').forEach(t => {
-      const week = getWeekStart(t.date);
-      byWeek[week] = (byWeek[week] ?? 0) + t.amount;
-    });
+    transactions
+      .filter(t => t.type === 'withdrawal')
+      .forEach(t => {
+        const week = getWeekStart(t.date);
+        byWeek[week] = (byWeek[week] ?? 0) + t.amount;
+      });
     return Object.entries(byWeek)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([week, total]) => ({ week: fmtWeekLabel(week), total: parseFloat(total.toFixed(2)) }));
   }, [transactions]);
+  
+  const betsNetProfit = (tickets || [])
+    .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
+    .reduce((s, t) => s + (t.net_profit || 0), 0);
+  const realBalance = totalDeposits - totalWithdrawals + betsNetProfit;
 
   const handleSubmit = async () => {
     try {

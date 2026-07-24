@@ -3,6 +3,7 @@
   "error_fetching_data": "Error fetching data.",
   "no_recent_matches": "No recent matches found.",
   "tabs": {
+    "home": "Home",
     "live": "Live",
     "myLeagues": "My Leagues",
     "control": "Control"

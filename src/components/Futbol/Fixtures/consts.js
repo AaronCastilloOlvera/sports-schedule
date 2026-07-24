@@ -5,5 +5,7 @@ export const statusPriority = {
     // Not Started (Priority 2)
     'NS': 2, 'TBD': 2,
     // Finished (Priority 3)
-    'FT': 3, 'AET': 3, 'PEN': 3, 'PST': 3, 'CANC': 3
+    'FT': 3, 'AET': 3, 'PEN': 3, 'PST': 3, 'CANC': 3,
+    // Baseball (unified schedule) — suspended games sit with "finished", not "live"
+    'SUSP': 3
 };

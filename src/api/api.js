@@ -130,6 +130,17 @@ class ApiClient {
     const response = await this.client.delete(`/bankroll/transactions/${id}`);
     return response.data;
   }
+
+  // Baseball
+  async fetchBaseballSchedule(date, league = 'lmb') {
+    const response = await this.client.get(`/baseball/schedule?date=${date}&league=${league}`);
+    return response.data;
+  }
+
+  async fetchBaseballBoxscore(gamePk) {
+    const response = await this.client.get(`/baseball/boxscore/${gamePk}`);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);

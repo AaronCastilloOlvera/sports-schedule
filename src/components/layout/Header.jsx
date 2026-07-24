@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from 'prop-types';
 import {
   AppBar, Box, Button, IconButton, Popover, Switch,
   Tab, Tabs, Toolbar, Tooltip, Typography,
@@ -8,7 +9,6 @@ import {
   LightMode as LightModeIcon,
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
-  SportsSoccer, SportsBasketball, SportsBaseball, SportsFootball,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useThemeMode } from "../../context/ThemeContext.jsx";
@@ -33,10 +33,9 @@ const LANG_OPTIONS = [
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-const Header = () => {
-  const [tab, setTab] = useState(0);
+const Header = ({ activeSection = 'home', onSectionChange }) => {
   const [anchor, setAnchor] = useState(null);
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { mode, toggleTheme } = useThemeMode();
 
   const open = Boolean(anchor);
@@ -55,15 +54,14 @@ const Header = () => {
 
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
+            value={activeSection}
+            onChange={(_, v) => onSectionChange?.(v)}
             textColor="inherit"
             indicatorColor="secondary"
           >
-            <Tab icon={<SportsSoccer />}     label="Soccer"     iconPosition="start" />
-            <Tab icon={<SportsBasketball />} label="Basketball" iconPosition="start" />
-            <Tab icon={<SportsBaseball />}   label="Baseball"   iconPosition="start" />
-            <Tab icon={<SportsFootball />}   label="Football"   iconPosition="start" />
+            <Tab value="home"      label={t('tabs.home')} />
+            <Tab value="myLeagues" label={t('tabs.myLeagues')} />
+            <Tab value="control"   label={t('tabs.control')} />
           </Tabs>
         </Box>
 
@@ -194,6 +192,11 @@ const Header = () => {
       </Toolbar>
     </AppBar>
   );
+};
+
+Header.propTypes = {
+  activeSection: PropTypes.string,
+  onSectionChange: PropTypes.func,
 };
 
 export default Header;

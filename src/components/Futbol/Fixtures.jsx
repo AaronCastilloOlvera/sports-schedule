@@ -1,31 +1,49 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Avatar, Box, Chip, Typography, Stack, useMediaQuery } from '@mui/material';
+import { Avatar, Box, Chip, IconButton, Tooltip, Typography, Stack, useMediaQuery } from '@mui/material';
+import { Waves } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import MatchDetailsModal from '../modals/MatchDetails';
+import BoxscoreModal from '../Baseball/BoxscoreModal';
 import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
 import FixturesSkeleton from './Fixtures/FixturesSkeleton';
+import SimultaneousChart from './Fixtures/SimultaneousChart';
 import { statusPriority } from './Fixtures/consts';
+import { normalizeBaseballGames } from '../../utils/normalizeBaseball';
 
 const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT']);
 
-const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
+// Basketball/Football have no data source yet — the chips still show so the
+// filter row communicates "more sports are coming", they just never add rows.
+const SPORTS = [
+  { id: 'futbol',     label: 'Soccer',     icon: '⚽', available: true },
+  { id: 'baseball',   label: 'Baseball',   icon: '⚾', available: true },
+  { id: 'basketball', label: 'Basketball', icon: '🏀', available: false },
+  { id: 'football',   label: 'Football',   icon: '🏈', available: false },
+];
+
+const Fixtures = ({ selectedDate, searchTerm }) => {
 
   const [fixtures, setFixtures] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingSoccer, setLoadingSoccer] = useState(true);
+  const [baseballGames, setBaseballGames] = useState([]);
+  const [loadingBaseball, setLoadingBaseball] = useState(true);
+  const [activeSports, setActiveSports] = useState(['futbol', 'baseball']);
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
   const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [boxscoreGame, setBoxscoreGame] = useState(null);
+  const [showWaveChart, setShowWaveChart] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const loadMatchesData = useCallback((forceRefresh = false, showLoading = true) => {
-    if (showLoading) setLoading(true);
+    if (showLoading) setLoadingSoccer(true);
 
     const localTargetDate = selectedDate.format('YYYY-MM-DD');
     const nextDay = selectedDate.add(1, 'day').format('YYYY-MM-DD');
@@ -45,33 +63,63 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
         });
 
         setFixtures(trueLocalFixtures);
-        setLoading(false);
+        setLoadingSoccer(false);
       })
       .catch((error) => {
         console.error('Error loading matches:', error);
-        setLoading(false);
+        setLoadingSoccer(false);
+      });
+  }, [selectedDate]);
+
+  const loadBaseballData = useCallback((showLoading = true) => {
+    if (showLoading) setLoadingBaseball(true);
+
+    const dateStr = selectedDate.format('YYYY-MM-DD');
+
+    Promise.all([
+      apiClient.fetchBaseballSchedule(dateStr, 'lmb'),
+      apiClient.fetchBaseballSchedule(dateStr, 'mlb'),
+    ])
+      .then(([lmbRes, mlbRes]) => {
+        setBaseballGames([
+          ...normalizeBaseballGames(lmbRes.data, 'lmb'),
+          ...normalizeBaseballGames(mlbRes.data, 'mlb'),
+        ]);
+        setLoadingBaseball(false);
+      })
+      .catch((error) => {
+        console.error('Error loading baseball games:', error);
+        setLoadingBaseball(false);
       });
   }, [selectedDate]);
 
   useEffect(() => {
     loadMatchesData(false, true);
+    loadBaseballData(true);
 
-    const interva = setInterval(() => {
+    const interval = setInterval(() => {
       loadMatchesData(false, false);
+      loadBaseballData(false);
     }, POLLING_TIME);
 
-    return () => clearInterval(interva);
+    return () => clearInterval(interval);
 
-  }, [selectedDate, loadMatchesData]);
+  }, [selectedDate, loadMatchesData, loadBaseballData]);
+
+  // Both sports are always fetched — chips only filter what's displayed, so
+  // toggling a sport on/off is instant instead of waiting on a new request.
+  const allMatches = useMemo(() => {
+    const soccer   = activeSports.includes('futbol')   ? (fixtures ?? []) : [];
+    const baseball = activeSports.includes('baseball') ? baseballGames    : [];
+    return [...soccer, ...baseball];
+  }, [fixtures, baseballGames, activeSports]);
 
   const processedFixtures = useMemo(() => {
 
-    if (!fixtures) return [];
-
     // Filter by favorite leagues
     const byLeague = selectedLeagues.length > 0
-      ? fixtures.filter((match) => selectedLeagues.includes(match.league.id))
-      : fixtures;
+      ? allMatches.filter((match) => selectedLeagues.includes(match.league.id))
+      : allMatches;
 
     // Filter by search term (home or away team name)
     const term = searchTerm.trim().toLowerCase();
@@ -95,19 +143,26 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
       return new Date(a.fixture.date) - new Date(b.fixture.date);
     });
 
-  }, [fixtures, selectedLeagues, searchTerm]);
+  }, [allMatches, selectedLeagues, searchTerm]);
 
-  useEffect(() => {
-    if (!onLiveChange) return;
-    const hasLive = (fixtures ?? []).some(m => LIVE_STATUSES.has(m.fixture.status.short));
-    onLiveChange(hasLive);
-  }, [fixtures, onLiveChange]);
+  // Per-sport, so each chip can show its own live-pulse dot rather than one
+  // global indicator that doesn't say which sport actually has something live.
+  const liveBySport = useMemo(() => ({
+    futbol:   fixtures      ? fixtures.some(m => LIVE_STATUSES.has(m.fixture.status.short))      : false,
+    baseball: baseballGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
+  }), [fixtures, baseballGames]);
 
   // Re-derived on every poll so the modal always receives the freshest fixture data.
   const activeMatch = useMemo(
     () => selectedMatchId ? (processedFixtures.find(m => m.fixture.id === selectedMatchId) ?? null) : null,
     [selectedMatchId, processedFixtures]
   );
+
+  const toggleSport = (sportId) => {
+    setActiveSports((prev) =>
+      prev.includes(sportId) ? prev.filter((id) => id !== sportId) : [...prev, sportId]
+    );
+  };
 
   const handleLeagueClick = (leagueId) => {
     setSelectedLeagues((prev) =>
@@ -123,7 +178,14 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
     return () => window.removeEventListener('refresh-leagues', handler);
   }, [loadMatchesData]);
 
+  // Soccer opens the rich H2H/Stats/Odds modal; baseball has no such data yet,
+  // so the same "Insights" action opens its boxscore instead.
   const handleOpenH2HModal = (team1Id, team2Id, fixtureId) => {
+    const match = allMatches.find(m => m.fixture.id === fixtureId);
+    if (match?.sport === 'baseball') {
+      setBoxscoreGame(match.raw);
+      return;
+    }
     setSelectedTeams({ team1: team1Id, team2: team2Id });
     setSelectedMatchId(fixtureId ?? null);
     setH2hModalOpen(true);
@@ -135,7 +197,7 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
     setSelectedMatchId(null);
   };
 
-  const leaguesSummary = fixtures?.reduce((summary, match) => {
+  const leaguesSummary = allMatches.reduce((summary, match) => {
     const leagueId = match.league.id;
     if (!summary[leagueId]) {
       summary[leagueId] = {
@@ -149,7 +211,9 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
     return summary;
   }, {});
 
-  const summaryArray = leaguesSummary ? Object.values(leaguesSummary) : [];
+  const summaryArray = Object.values(leaguesSummary);
+  const loading = loadingSoccer || loadingBaseball;
+  const onlyComingSoonSelected = activeSports.length > 0 && activeSports.every(id => !SPORTS.find(s => s.id === id)?.available);
 
   return (
     <Box>
@@ -157,6 +221,45 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
         <FixturesSkeleton isMobile={isMobile} />
       ) : (
         <>
+          {/* Sport filter chips */}
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ flexWrap: 'wrap', gap: 1, pb: 1.5 }}>
+            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+              {SPORTS.map((sport) => {
+                const isActive = activeSports.includes(sport.id);
+                const isLiveNow = Boolean(liveBySport[sport.id]);
+                return (
+                  <Chip
+                    key={sport.id}
+                    label={
+                      <Stack direction="row" alignItems="center" spacing={0.75}>
+                        {isLiveNow && (
+                          <Box sx={{
+                            width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
+                            animation: 'livePulse 1.5s ease-in-out infinite',
+                            '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+                          }} />
+                        )}
+                        <span>{sport.icon} {sport.label}</span>
+                      </Stack>
+                    }
+                    onClick={() => toggleSport(sport.id)}
+                    color={isActive ? 'primary' : 'default'}
+                    variant={isActive ? 'filled' : 'outlined'}
+                    clickable
+                    sx={{ opacity: sport.available ? 1 : 0.6, fontWeight: isActive ? 600 : 400 }}
+                  />
+                );
+              })}
+            </Stack>
+
+            <Tooltip title="Ver partidos simultáneos por hora">
+              <IconButton size="small" color="primary" onClick={() => setShowWaveChart(true)}>
+                <Waves />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+
+          {/* League filter chips — reflects whichever sports are currently active */}
           <Stack
             direction="row"
             sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
@@ -194,7 +297,7 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
                       marginLeft: '4px'
                     }
                   }}
-                  avatar={
+                  avatar={league.logo ? (
                     <Avatar
                       src={league.logo}
                       alt={league.name}
@@ -208,13 +311,18 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
                         }
                       }}
                     />
-                  }
+                  ) : undefined}
                 />
               );
             })}
           </Stack>
 
-          {processedFixtures.length === 0 ? (
+          {onlyComingSoonSelected ? (
+            <Box sx={{ py: 6, textAlign: 'center' }}>
+              <Typography sx={{ fontSize: 40 }}>🚧</Typography>
+              <Typography color="text.secondary" mt={1}>Próximamente.</Typography>
+            </Box>
+          ) : processedFixtures.length === 0 ? (
             <Typography>No hay partidos disponibles para esta fecha.</Typography>
           ) : isMobile ? (
             <FixtureMobileView
@@ -237,6 +345,14 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
         team2Id={selectedTeams.team2}
         currentMatch={activeMatch}
       />
+
+      {boxscoreGame && (
+        <BoxscoreModal game={boxscoreGame} onClose={() => setBoxscoreGame(null)} />
+      )}
+
+      {showWaveChart && (
+        <SimultaneousChart matches={processedFixtures} onClose={() => setShowWaveChart(false)} />
+      )}
     </Box>
   );
 };
@@ -244,7 +360,6 @@ const Fixtures = ({ selectedDate, searchTerm, onLiveChange }) => {
 Fixtures.propTypes = {
   selectedDate: PropTypes.object.isRequired,
   searchTerm: PropTypes.string.isRequired,
-  onLiveChange: PropTypes.func,
 };
 
 export default Fixtures;
