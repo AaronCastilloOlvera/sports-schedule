@@ -1,12 +1,13 @@
 import { useState } from "react";
 import PropTypes from 'prop-types';
 import {
-  AppBar, Box, Button, IconButton, Popover, Switch,
+  AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemText, Popover, Switch,
   Tab, Tabs, Toolbar, Tooltip, Typography,
 } from "@mui/material";
 import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
+  Menu as MenuIcon,
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
 } from "@mui/icons-material";
@@ -35,19 +36,41 @@ const LANG_OPTIONS = [
 
 const Header = ({ activeSection = 'home', onSectionChange }) => {
   const [anchor, setAnchor] = useState(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const { mode, toggleTheme } = useThemeMode();
 
   const open = Boolean(anchor);
+
+  const SECTIONS = [
+    { value: 'home',      label: t('tabs.home') },
+    { value: 'myLeagues', label: t('tabs.myLeagues') },
+    { value: 'control',   label: t('tabs.control') },
+  ];
 
   const handleRefreshLeagues = () => {
     window.dispatchEvent(new CustomEvent('refresh-leagues'));
     setAnchor(null);
   };
 
+  const handleMobileNavClick = (value) => {
+    onSectionChange?.(value);
+    setMobileNavOpen(false);
+  };
+
   return (
     <AppBar position="sticky" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
+        {/* ── hamburger — mobile only ── */}
+        <IconButton
+          color="inherit"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="open navigation menu"
+          sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }}
+        >
+          <MenuIcon />
+        </IconButton>
+
         <Typography variant="h6">🔥 HotPicks365</Typography>
 
         <Box sx={{ flexGrow: 1 }} />
@@ -59,9 +82,9 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
             textColor="inherit"
             indicatorColor="secondary"
           >
-            <Tab value="home"      label={t('tabs.home')} />
-            <Tab value="myLeagues" label={t('tabs.myLeagues')} />
-            <Tab value="control"   label={t('tabs.control')} />
+            {SECTIONS.map(section => (
+              <Tab key={section.value} value={section.value} label={section.label} />
+            ))}
           </Tabs>
         </Box>
 
@@ -189,6 +212,27 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
 
           </Box>
         </Popover>
+
+        {/* ── mobile nav drawer ── */}
+        <Drawer
+          anchor="left"
+          open={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+          PaperProps={{ sx: { width: 220 } }}
+        >
+          <Typography sx={{ p: '16px', fontWeight: 700 }}>🔥 HotPicks365</Typography>
+          <List sx={{ pt: 0 }}>
+            {SECTIONS.map(section => (
+              <ListItemButton
+                key={section.value}
+                selected={activeSection === section.value}
+                onClick={() => handleMobileNavClick(section.value)}
+              >
+                <ListItemText primary={section.label} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Drawer>
       </Toolbar>
     </AppBar>
   );

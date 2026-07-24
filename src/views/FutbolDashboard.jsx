@@ -42,6 +42,7 @@ export default function FutbolDashboard() {
             gap: 2,
             backgroundColor: 'background.paper',
             px: { xs: 1, sm: 2 },
+            pt: 1,
             mb: 1,
           }}
         >
