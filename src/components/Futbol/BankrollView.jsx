@@ -8,6 +8,7 @@ import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { apiClient } from '../../api/api.js';
+import BankrollSkeleton from './BankrollSkeleton';
 
 const getWeekStart = (dateStr) => {
   const d = new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00');
@@ -29,8 +30,8 @@ const initialTx = {
 
 function TransactionCard({ row, onEdit, onDelete }) {
   const isDeposit = row.type === 'deposit';
-  const borderColor = isDeposit ? '#2e7d32' : '#d32f2f';
-  const amountColor = isDeposit ? '#2e7d32' : '#d32f2f';
+  const borderColor = isDeposit ? '#d32f2f' : '#2e7d32';
+  const amountColor = isDeposit ? '#d32f2f' : '#2e7d32';
   const amountFormatted = `${isDeposit ? '+' : '-'}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   const dateFormatted = new Date(row.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -38,7 +39,7 @@ function TransactionCard({ row, onEdit, onDelete }) {
     <Card sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-          <Chip label={isDeposit ? 'Deposit' : 'Withdrawal'} color={isDeposit ? 'success' : 'error'} size="small" />
+          <Chip label={isDeposit ? 'Deposit' : 'Withdrawal'} color={isDeposit ? 'error' : 'success'} size="small" />
           <Typography variant="caption" color="text.secondary">{dateFormatted}</Typography>
         </Stack>
         <Typography variant="h6" sx={{ fontWeight: 'bold', color: amountColor, my: 0.5 }}>
@@ -71,6 +72,7 @@ export default function BankrollView({ tickets }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [transactions, setTransactions] = useState([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [current, setCurrent] = useState(initialTx);
   const [editId, setEditId] = useState(null);
@@ -81,7 +83,8 @@ export default function BankrollView({ tickets }) {
   const fetchTransactions = () => {
     apiClient.fetchTransactions()
       .then(setTransactions)
-      .catch(() => showToast('Error al cargar transacciones.', 'error'));
+      .catch(() => showToast('Error al cargar transacciones.', 'error'))
+      .finally(() => setLoadingTransactions(false));
   };
 
   useEffect(() => { fetchTransactions(); }, []);
@@ -152,7 +155,7 @@ export default function BankrollView({ tickets }) {
       renderCell: (params) => (
         <Chip
           label={params.value === 'deposit' ? 'Deposit' : 'Withdrawal'}
-          color={params.value === 'deposit' ? 'success' : 'error'}
+          color={params.value === 'deposit' ? 'error' : 'success'}
           size="small"
         />
       ),
@@ -162,7 +165,7 @@ export default function BankrollView({ tickets }) {
       renderCell: (params) => {
         const isDeposit = params.row.type === 'deposit';
         return (
-          <span style={{ fontWeight: 'bold', color: isDeposit ? '#2e7d32' : '#d32f2f' }}>
+          <span style={{ fontWeight: 'bold', color: isDeposit ? '#d32f2f' : '#2e7d32' }}>
             {isDeposit ? '+' : '-'}${Number(params.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         );
@@ -185,12 +188,16 @@ export default function BankrollView({ tickets }) {
     },
   ];
 
+  if (loadingTransactions) {
+    return <BankrollSkeleton isMobile={isMobile} />;
+  }
+
   return (
     <Box>
       {/* Summary cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
-        <SummaryCard label="Total Deposited" value={totalDeposits} color="#2e7d32" />
-        <SummaryCard label="Total Withdrawn" value={totalWithdrawals} color="#d32f2f" />
+        <SummaryCard label="Total Deposited" value={totalDeposits} color="#d32f2f" />
+        <SummaryCard label="Total Withdrawn" value={totalWithdrawals} color="#2e7d32" />
         <SummaryCard label="Bets P&L" value={betsNetProfit} color={betsNetProfit >= 0 ? '#2e7d32' : '#d32f2f'} />
         <SummaryCard label="Real Balance (Playdo.it)" value={realBalance} color={realBalance >= 0 ? '#1976d2' : '#d32f2f'} />
       </Box>
@@ -250,7 +257,7 @@ export default function BankrollView({ tickets }) {
               <RechartsTooltip formatter={(v) => [`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Withdrawn']} />
               <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                 {weeklyWithdrawals.map((_, i) => (
-                  <Cell key={i} fill="#d32f2f" fillOpacity={0.75 + (i % 2) * 0.15} />
+                  <Cell key={i} fill="#2e7d32" fillOpacity={0.75 + (i % 2) * 0.15} />
                 ))}
               </Bar>
             </BarChart>
