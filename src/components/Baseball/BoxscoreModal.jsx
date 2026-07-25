@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Alert, Avatar, Box, CircularProgress, Dialog, DialogContent, DialogTitle,
   Divider, IconButton, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs,
-  ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme,
+  ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import PropTypes from 'prop-types';
@@ -263,8 +263,6 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const [historicalFetched, setHistoricalFetched] = useState(false);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
   const [finalScores, setFinalScores] = useState({});
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const away = game.teams?.away;
   const home = game.teams?.home;
@@ -339,9 +337,38 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   }, [historicalGames]);
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
-      <DialogTitle sx={{ pb: 1.5, position: 'relative' }}>
-        <IconButton onClick={onClose} size="small" sx={{ position: 'absolute', top: 6, right: 6 }}><Close /></IconButton>
+    <Dialog
+      open
+      onClose={onClose}
+      slotProps={{
+        paper: {
+          sx: {
+            position: 'relative',
+            width: { xs: '95%', sm: '90%' },
+            maxWidth: 680,
+            height: '80vh',
+            maxHeight: '80vh',
+            borderRadius: { xs: '16px', sm: '20px' },
+            m: 0,
+          },
+        },
+      }}
+    >
+      <IconButton
+        onClick={onClose}
+        sx={{
+          position: 'absolute', right: 12, top: 12, zIndex: 10,
+          width: 36, height: 36,
+          bgcolor: 'rgba(0,0,0,0.40)',
+          backdropFilter: 'blur(8px)',
+          color: '#ffffff',
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.60)' },
+        }}
+      >
+        <Close sx={{ fontSize: 16 }} />
+      </IconButton>
+
+      <DialogTitle sx={{ pb: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ pr: 4 }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <TeamHeading team={away} />
