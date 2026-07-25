@@ -85,6 +85,8 @@ export default function BankrollSkeleton({ isMobile }) {
       <SummaryCardsSkeleton />
       <GoalSkeleton />
       <ChartSkeleton />
+      <ChartSkeleton />
+      <ChartSkeleton />
       <Skeleton width={140} height={32} sx={{ mb: 2 }} />
       {isMobile ? <MobileTransactionsSkeleton /> : <DesktopTransactionsSkeleton />}
     </Box>

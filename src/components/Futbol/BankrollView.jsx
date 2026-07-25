@@ -6,7 +6,10 @@ import {
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ReferenceLine,
+  ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis,
+} from 'recharts';
 import { apiClient } from '../../api/api.js';
 import BankrollSkeleton from './BankrollSkeleton';
 
@@ -20,6 +23,8 @@ const fmtWeekLabel = (dateStr) =>
   new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+const GOAL = 200000;
 
 const initialTx = {
   type: 'deposit',
@@ -104,7 +109,60 @@ export default function BankrollView({ tickets }) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([week, total]) => ({ week: fmtWeekLabel(week), total: parseFloat(total.toFixed(2)) }));
   }, [transactions]);
-  
+
+  // Running balance over time: every deposit/withdrawal and every resolved
+  // bet's net_profit, merged into one chronological timeline and accumulated —
+  // shows the actual trajectory toward the withdrawal goal, not just weekly withdrawals.
+  const balanceHistory = useMemo(() => {
+    const events = [
+      ...transactions.map(t => ({
+        date: (t.date ?? '').substring(0, 10),
+        delta: t.type === 'deposit' ? t.amount : -t.amount,
+      })),
+      ...(tickets || [])
+        .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
+        .map(t => ({
+          date: (t.match_datetime ?? '').substring(0, 10),
+          delta: t.net_profit || 0,
+        })),
+    ]
+      .filter(e => e.date)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    let running = 0;
+    const byDate = {};
+    events.forEach(({ date, delta }) => {
+      running += delta;
+      byDate[date] = running;
+    });
+
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, balance]) => ({ date: fmtWeekLabel(date), balance: parseFloat(balance.toFixed(2)) }));
+  }, [transactions, tickets]);
+
+  // Withdrawals only, accumulated day by day — isolates withdrawal pace
+  // toward the goal, without deposits or bet variance muddying the trend.
+  const cumulativeWithdrawals = useMemo(() => {
+    const byDate = {};
+    transactions
+      .filter(t => t.type === 'withdrawal')
+      .map(t => ({ date: (t.date ?? '').substring(0, 10), amount: t.amount }))
+      .filter(e => e.date)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach(({ date, amount }) => {
+        byDate[date] = (byDate[date] ?? 0) + amount;
+      });
+
+    let running = 0;
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, total]) => {
+        running += total;
+        return { date: fmtWeekLabel(date), total: parseFloat(running.toFixed(2)) };
+      });
+  }, [transactions]);
+
   const betsNetProfit = (tickets || [])
     .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
     .reduce((s, t) => s + (t.net_profit || 0), 0);
@@ -204,7 +262,6 @@ export default function BankrollView({ tickets }) {
 
       {/* Goal */}
       {(() => {
-        const GOAL = 200000;
         const progress = Math.min((totalWithdrawals / GOAL) * 100, 100);
         const remaining = GOAL - totalWithdrawals;
         const mxn = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -243,6 +300,31 @@ export default function BankrollView({ tickets }) {
         );
       })()}
 
+      {/* Balance over time */}
+      {balanceHistory.length > 1 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Balance Over Time
+          </Typography>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={balanceHistory} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <defs>
+                <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1976d2" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#1976d2" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+              <RechartsTooltip formatter={(v) => [usd(v), 'Balance']} />
+              <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
+              <Area type="monotone" dataKey="balance" stroke="#1976d2" strokeWidth={2} fill="url(#balanceGradient)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+
       {/* Weekly withdrawals chart */}
       {weeklyWithdrawals.length > 0 && (
         <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
@@ -261,6 +343,31 @@ export default function BankrollView({ tickets }) {
                 ))}
               </Bar>
             </BarChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+
+      {/* Cumulative withdrawals */}
+      {cumulativeWithdrawals.length > 1 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Cumulative Withdrawals
+          </Typography>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={cumulativeWithdrawals} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <defs>
+                <linearGradient id="withdrawalsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2e7d32" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#2e7d32" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+              <RechartsTooltip formatter={(v) => [usd(v), 'Withdrawn']} />
+              <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
+              <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
+            </AreaChart>
           </ResponsiveContainer>
         </Box>
       )}
