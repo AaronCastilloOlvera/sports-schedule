@@ -38,6 +38,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
   const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [boxscoreGame, setBoxscoreGame] = useState(null);
+  const [boxscoreLeague, setBoxscoreLeague] = useState('lmb');
   const [showWaveChart, setShowWaveChart] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
@@ -184,6 +185,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
     const match = allMatches.find(m => m.fixture.id === fixtureId);
     if (match?.sport === 'baseball') {
       setBoxscoreGame(match.raw);
+      setBoxscoreLeague(match.league.id);
       return;
     }
     setSelectedTeams({ team1: team1Id, team2: team2Id });
@@ -347,7 +349,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       />
 
       {boxscoreGame && (
-        <BoxscoreModal game={boxscoreGame} onClose={() => setBoxscoreGame(null)} />
+        <BoxscoreModal game={boxscoreGame} league={boxscoreLeague} onClose={() => setBoxscoreGame(null)} />
       )}
 
       {showWaveChart && (

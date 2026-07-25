@@ -260,7 +260,7 @@ export default function BaseballSchedule() {
 
         {/* ── Box score modal ───────────────────────────────────────────────── */}
         {openGame && (
-          <BoxscoreModal game={openGame} onClose={() => setOpenGame(null)} />
+          <BoxscoreModal game={openGame} league={league} onClose={() => setOpenGame(null)} />
         )}
       </Box>
     </LocalizationProvider>

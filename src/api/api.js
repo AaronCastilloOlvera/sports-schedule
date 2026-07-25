@@ -141,6 +141,16 @@ class ApiClient {
     const response = await this.client.get(`/baseball/boxscore/${gamePk}`);
     return response.data;
   }
+
+  async fetchPitcherStats(personId, league = 'lmb') {
+    const response = await this.client.get(`/baseball/pitcher-stats/${personId}?league=${league}`);
+    return response.data;
+  }
+
+  async fetchPitcherGameLog(personId, league = 'lmb', seasons = 1) {
+    const response = await this.client.get(`/baseball/pitcher-gamelog/${personId}?league=${league}&seasons=${seasons}`);
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient(import.meta.env.VITE_API_HOST);
