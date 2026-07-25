@@ -71,7 +71,9 @@ export function normalizeBaseballGame(game, league) {
       home: { id: homeId, name: home.team?.name ?? '—', logo: teamLogo(homeId, home.team?.name) },
       away: { id: awayId, name: away.team?.name ?? '—', logo: teamLogo(awayId, away.team?.name) },
     },
-    goals: { home: home.score ?? null, away: away.score ?? null },
+    goals: shortStatus === 'NS'
+      ? { home: null, away: null }
+      : { home: home.score ?? null, away: away.score ?? null },
   };
 }
 
