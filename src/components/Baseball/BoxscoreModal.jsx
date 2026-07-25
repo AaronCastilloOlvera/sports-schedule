@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Alert, Avatar, Box, CircularProgress, Dialog, DialogContent, DialogTitle,
   Divider, IconButton, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs,
@@ -9,7 +9,7 @@ import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api';
 import {
   fmtTime, inningLabel, outsLabel, isLive, isFinal, isSuspended,
-  playerHeadshotUrl, teamColor, teamInitials, teamLogoUrl, aggregatePitcherVsOpponent,
+  playerHeadshotUrl, teamColor, teamInitials, teamLogoUrl,
   filterGamesVsOpponent, aggregateGames,
 } from './baseballHelpers';
 
@@ -96,31 +96,43 @@ function BattingTable({ teamData }) {
   );
 }
 
-function HistoricalTable({ games }) {
+function HistoricalTable({ games, finalScores }) {
   if (!games.length) return (
     <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin inicios contra este rival.</Typography>
   );
 
   return (
     <Box sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 420 }}>
+      <Table size="small" sx={{ minWidth: 480 }}>
         <TableHead>
           <TableRow>
-            {['Fecha', 'Sede', 'IP', 'H', 'ER', 'BB', 'K'].map((h) => (
+            {['Fecha', 'Sede', 'Resultado', 'IP', 'H', 'ER', 'BB', 'K'].map((h) => (
               <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>{h}</TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
-          {games.map((g, i) => (
-            <TableRow key={g.game?.gamePk ?? i}>
-              <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>{g.date}</TableCell>
-              <TableCell sx={{ fontSize: 12, py: 0.5 }}>{g.isHome ? 'Local' : 'Visita'}</TableCell>
-              {[g.stat?.inningsPitched, g.stat?.hits, g.stat?.earnedRuns, g.stat?.baseOnBalls, g.stat?.strikeOuts].map((v, j) => (
-                <TableCell key={j} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
-              ))}
-            </TableRow>
-          ))}
+          {games.map((g, i) => {
+            const score = finalScores?.[g.game?.gamePk];
+            const forScore = score ? (g.isHome ? score.home : score.away) : null;
+            const againstScore = score ? (g.isHome ? score.away : score.home) : null;
+            const outcome = forScore != null && againstScore != null
+              ? (forScore > againstScore ? 'W' : forScore < againstScore ? 'L' : 'T')
+              : null;
+            const outcomeColor = outcome === 'W' ? '#2e7d32' : outcome === 'L' ? '#d32f2f' : 'text.secondary';
+            return (
+              <TableRow key={g.game?.gamePk ?? i}>
+                <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>{g.date}</TableCell>
+                <TableCell sx={{ fontSize: 12, py: 0.5 }}>{g.isHome ? 'Local' : 'Visita'}</TableCell>
+                <TableCell sx={{ fontSize: 12, py: 0.5, fontWeight: 700, color: outcomeColor, whiteSpace: 'nowrap' }}>
+                  {outcome ? `${outcome} ${forScore}-${againstScore}` : '—'}
+                </TableCell>
+                {[g.stat?.inningsPitched, g.stat?.hits, g.stat?.earnedRuns, g.stat?.baseOnBalls, g.stat?.strikeOuts].map((v, j) => (
+                  <TableCell key={j} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </Box>
@@ -129,12 +141,13 @@ function HistoricalTable({ games }) {
 
 HistoricalTable.propTypes = {
   games: PropTypes.array.isRequired,
+  finalScores: PropTypes.object,
 };
 
 // Season stats for the two probable pitchers, headshot + W-L/ERA/SO — the
 // "Gameday preview" strip. Kept visible regardless of game state, same as
 // MLB.com does, since it's useful matchup context even mid-game.
-function PitcherCard({ pitcher, stats, vsOpponent, opponentName, loading }) {
+function PitcherCard({ pitcher, stats, loading }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   if (!pitcher?.id) {
@@ -182,13 +195,6 @@ function PitcherCard({ pitcher, stats, vsOpponent, opponentName, loading }) {
             ? `${stats.wins ?? 0}-${stats.losses ?? 0}, ${stats.era} ERA, ${stats.strikeOuts ?? 0} SO`
             : 'Sin stats de temporada'}
       </Typography>
-      <Typography sx={{ fontSize: 10, color: 'text.disabled', mt: 0.5 }}>
-        {loading
-          ? ''
-          : vsOpponent
-            ? `vs ${opponentName}: ${vsOpponent.starts} inicio${vsOpponent.starts === 1 ? '' : 's'}, ${vsOpponent.era} ERA, ${vsOpponent.ip} IP, ${vsOpponent.strikeOuts} SO`
-            : `Sin historial vs ${opponentName}`}
-      </Typography>
     </Box>
   );
 }
@@ -196,8 +202,6 @@ function PitcherCard({ pitcher, stats, vsOpponent, opponentName, loading }) {
 PitcherCard.propTypes = {
   pitcher: PropTypes.shape({ id: PropTypes.number, fullName: PropTypes.string }),
   stats: PropTypes.object,
-  vsOpponent: PropTypes.object,
-  opponentName: PropTypes.string,
   loading: PropTypes.bool,
 };
 
@@ -251,7 +255,6 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const [box, setBox] = useState(null);
   const [loadingBox, setLoadingBox] = useState(true);
   const [pitcherStats, setPitcherStats] = useState({ home: null, away: null });
-  const [gameLogs, setGameLogs] = useState({ home: [], away: [] });
   const [loadingPitchers, setLoadingPitchers] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [side, setSide] = useState('away');
@@ -259,6 +262,7 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const [historicalLogs, setHistoricalLogs] = useState({ home: [], away: [] });
   const [historicalFetched, setHistoricalFetched] = useState(false);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
+  const [finalScores, setFinalScores] = useState({});
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -282,17 +286,11 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
     Promise.all([
       homeId ? apiClient.fetchPitcherStats(homeId, league) : Promise.resolve({ data: null }),
       awayId ? apiClient.fetchPitcherStats(awayId, league) : Promise.resolve({ data: null }),
-      homeId ? apiClient.fetchPitcherGameLog(homeId, league) : Promise.resolve({ data: [] }),
-      awayId ? apiClient.fetchPitcherGameLog(awayId, league) : Promise.resolve({ data: [] }),
     ])
-      .then(([homeStatsRes, awayStatsRes, homeLogRes, awayLogRes]) => {
+      .then(([homeStatsRes, awayStatsRes]) => {
         setPitcherStats({ home: homeStatsRes.data, away: awayStatsRes.data });
-        setGameLogs({ home: homeLogRes.data, away: awayLogRes.data });
       })
-      .catch(() => {
-        setPitcherStats({ home: null, away: null });
-        setGameLogs({ home: [], away: [] });
-      })
+      .catch(() => setPitcherStats({ home: null, away: null }))
       .finally(() => setLoadingPitchers(false));
   }, [home?.probablePitcher?.id, away?.probablePitcher?.id, league]);
 
@@ -318,21 +316,27 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const awayScore = away?.score ?? 0;
   const homeScore = home?.score ?? 0;
 
-  // Home pitcher's history is against the away team, and vice versa.
-  const homeVsOpponent = aggregatePitcherVsOpponent(gameLogs.home, away?.team?.id);
-  const awayVsOpponent = aggregatePitcherVsOpponent(gameLogs.away, home?.team?.id);
-
   // Histórico tab: same side/team toggle picks whose pitcher's multi-season
   // history to show, filtered against the other team and optionally by venue.
   const historicalPitcher = side === 'home' ? home?.probablePitcher : away?.probablePitcher;
   const historicalOpponent = side === 'home' ? away?.team : home?.team;
   const isHomeFilter = venueFilter === 'home' ? true : venueFilter === 'away' ? false : undefined;
-  const historicalGames = filterGamesVsOpponent(
-    side === 'home' ? historicalLogs.home : historicalLogs.away,
-    historicalOpponent?.id,
-    isHomeFilter,
-  ).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const historicalGames = useMemo(() => (
+    filterGamesVsOpponent(
+      side === 'home' ? historicalLogs.home : historicalLogs.away,
+      historicalOpponent?.id,
+      isHomeFilter,
+    ).sort((a, b) => new Date(b.date) - new Date(a.date))
+  ), [historicalLogs, side, historicalOpponent?.id, isHomeFilter]);
   const historicalSummary = aggregateGames(historicalGames);
+
+  useEffect(() => {
+    const gamePks = historicalGames.map(g => g.game?.gamePk).filter(Boolean);
+    if (!gamePks.length) return;
+    apiClient.fetchGamesFinalScores(gamePks)
+      .then(scores => setFinalScores(prev => ({ ...prev, ...scores })))
+      .catch(() => {});
+  }, [historicalGames]);
 
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
@@ -370,12 +374,10 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
             <Stack direction="row" alignItems="stretch" spacing={1} sx={{ px: 2, py: 1.5 }}>
               <PitcherCard
                 pitcher={away?.probablePitcher} stats={pitcherStats.away}
-                vsOpponent={awayVsOpponent} opponentName={home?.team?.name}
                 loading={loadingPitchers}
               />
               <PitcherCard
                 pitcher={home?.probablePitcher} stats={pitcherStats.home}
-                vsOpponent={homeVsOpponent} opponentName={away?.team?.name}
                 loading={loadingPitchers}
               />
             </Stack>
@@ -435,7 +437,7 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
                           {historicalSummary.starts} inicio{historicalSummary.starts === 1 ? '' : 's'} · {historicalSummary.era} ERA · {historicalSummary.ip} IP · {historicalSummary.strikeOuts} SO
                         </Typography>
                       )}
-                      <HistoricalTable games={historicalGames} />
+                      <HistoricalTable games={historicalGames} finalScores={finalScores} />
                     </>
                   )}
                 </Box>
