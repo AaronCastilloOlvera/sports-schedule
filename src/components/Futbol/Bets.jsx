@@ -9,6 +9,7 @@ import TicketModal from "./../modals/TicketModal";
 import BetsAnalytics from "./BetsAnalytics";
 import BankrollView from "./BankrollView";
 import BettingRules from "./BettingRules";
+import TicketsSkeleton from "./TicketsSkeleton";
 
 const initialStatedata = {
     ticket_id: '',
@@ -110,6 +111,7 @@ TicketCard.propTypes = {
 function Bets() {
   const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
   const [currentTicket, setCurrentTicket] = useState(initialStatedata);
@@ -146,7 +148,8 @@ function Bets() {
       .catch((error) => {
         console.error(error);
         showToast(t('bets.error_load'), 'error');
-      });
+      })
+      .finally(() => setLoadingTickets(false));
   }
 
   useEffect(() => {
@@ -399,6 +402,9 @@ function Bets() {
       </Tabs>
 
       {mainTab === 0 && (
+        loadingTickets ? (
+          <TicketsSkeleton isMobile={isMobile} />
+        ) : (
         <Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(5, 1fr)' }, gap: 2, mb: 3 }}>
             {[
@@ -450,6 +456,7 @@ function Bets() {
             </Box>
           )}
         </Box>
+        )
       )}
 
       {mainTab === 1 && <BetsAnalytics tickets={tickets} />}
