@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Alert, Avatar, Box, CircularProgress, Dialog, DialogContent, DialogTitle,
+  Alert, Avatar, Box, Card, CardContent, CircularProgress, Dialog, DialogContent, DialogTitle,
   Divider, IconButton, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs,
-  ToggleButton, ToggleButtonGroup, Typography,
+  ToggleButton, ToggleButtonGroup, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import PropTypes from 'prop-types';
@@ -96,6 +96,59 @@ function BattingTable({ teamData }) {
   );
 }
 
+// Shared W/L reading from the pitcher's team perspective — same math backs
+// both the desktop table and the mobile cards below.
+function gameOutcome(g, finalScores) {
+  const score = finalScores?.[g.game?.gamePk];
+  if (!score) return { outcome: null, forScore: null, againstScore: null, color: 'text.secondary' };
+  const forScore = g.isHome ? score.home : score.away;
+  const againstScore = g.isHome ? score.away : score.home;
+  const outcome = forScore > againstScore ? 'W' : forScore < againstScore ? 'L' : 'T';
+  const color = outcome === 'W' ? '#2e7d32' : outcome === 'L' ? '#d32f2f' : 'text.secondary';
+  return { outcome, forScore, againstScore, color };
+}
+
+function HistoricalCards({ games, finalScores }) {
+  if (!games.length) return (
+    <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin inicios contra este rival.</Typography>
+  );
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {games.map((g, i) => {
+        const { outcome, forScore, againstScore, color } = gameOutcome(g, finalScores);
+        return (
+          <Card key={g.game?.gamePk ?? i} variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
+                <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                  {g.date} · {g.isHome ? 'Local' : 'Visita'}
+                </Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 700, color }}>
+                  {outcome ? `${outcome} ${forScore}-${againstScore}` : '—'}
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={2}>
+                {[['IP', g.stat?.inningsPitched], ['H', g.stat?.hits], ['ER', g.stat?.earnedRuns], ['BB', g.stat?.baseOnBalls], ['K', g.stat?.strikeOuts]].map(([label, v]) => (
+                  <Box key={label} sx={{ textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>{label}</Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{v ?? '—'}</Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </Box>
+  );
+}
+
+HistoricalCards.propTypes = {
+  games: PropTypes.array.isRequired,
+  finalScores: PropTypes.object,
+};
+
 function HistoricalTable({ games, finalScores }) {
   if (!games.length) return (
     <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin inicios contra este rival.</Typography>
@@ -113,18 +166,12 @@ function HistoricalTable({ games, finalScores }) {
         </TableHead>
         <TableBody>
           {games.map((g, i) => {
-            const score = finalScores?.[g.game?.gamePk];
-            const forScore = score ? (g.isHome ? score.home : score.away) : null;
-            const againstScore = score ? (g.isHome ? score.away : score.home) : null;
-            const outcome = forScore != null && againstScore != null
-              ? (forScore > againstScore ? 'W' : forScore < againstScore ? 'L' : 'T')
-              : null;
-            const outcomeColor = outcome === 'W' ? '#2e7d32' : outcome === 'L' ? '#d32f2f' : 'text.secondary';
+            const { outcome, forScore, againstScore, color } = gameOutcome(g, finalScores);
             return (
               <TableRow key={g.game?.gamePk ?? i}>
                 <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>{g.date}</TableCell>
                 <TableCell sx={{ fontSize: 12, py: 0.5 }}>{g.isHome ? 'Local' : 'Visita'}</TableCell>
-                <TableCell sx={{ fontSize: 12, py: 0.5, fontWeight: 700, color: outcomeColor, whiteSpace: 'nowrap' }}>
+                <TableCell sx={{ fontSize: 12, py: 0.5, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
                   {outcome ? `${outcome} ${forScore}-${againstScore}` : '—'}
                 </TableCell>
                 {[g.stat?.inningsPitched, g.stat?.hits, g.stat?.earnedRuns, g.stat?.baseOnBalls, g.stat?.strikeOuts].map((v, j) => (
@@ -252,6 +299,8 @@ TeamHeading.propTypes = {
 };
 
 export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [box, setBox] = useState(null);
   const [loadingBox, setLoadingBox] = useState(true);
   const [pitcherStats, setPitcherStats] = useState({ home: null, away: null });
@@ -441,11 +490,17 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
               {activeTab === 2 && (
                 <Box>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
-                      {historicalPitcher?.id
-                        ? `${historicalPitcher.fullName} vs ${historicalOpponent?.name ?? ''} (últimas ${HISTORY_SEASONS} temporadas)`
-                        : 'Pitcher no confirmado'}
-                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+                      {historicalOpponent?.id && (
+                        <Box component="img" src={teamLogoUrl(historicalOpponent.id)} alt={historicalOpponent.name}
+                          sx={{ width: 20, height: 20, objectFit: 'contain', flexShrink: 0 }} />
+                      )}
+                      <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                        {historicalPitcher?.id
+                          ? `${historicalPitcher.fullName} vs ${historicalOpponent?.name ?? ''} (últimas ${HISTORY_SEASONS} temporadas)`
+                          : 'Pitcher no confirmado'}
+                      </Typography>
+                    </Stack>
                     <ToggleButtonGroup value={venueFilter} exclusive onChange={(_, v) => v && setVenueFilter(v)} size="small">
                       <ToggleButton value="all" sx={{ fontSize: 11 }}>Todos</ToggleButton>
                       <ToggleButton value="home" sx={{ fontSize: 11 }}>Local</ToggleButton>
@@ -464,7 +519,9 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
                           {historicalSummary.starts} inicio{historicalSummary.starts === 1 ? '' : 's'} · {historicalSummary.era} ERA · {historicalSummary.ip} IP · {historicalSummary.strikeOuts} SO
                         </Typography>
                       )}
-                      <HistoricalTable games={historicalGames} finalScores={finalScores} />
+                      {isMobile
+                        ? <HistoricalCards games={historicalGames} finalScores={finalScores} />
+                        : <HistoricalTable games={historicalGames} finalScores={finalScores} />}
                     </>
                   )}
                 </Box>
