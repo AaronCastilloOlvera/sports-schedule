@@ -110,7 +110,8 @@ VenueSummaryLine.propTypes = {
   summary: PropTypes.object,
 };
 
-const dowOf = (dateStr) => new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').getDay();
+const weekdayOf = (dateStr, locale) =>
+  new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long' });
 
 function gameOutcome(g, finalScores) {
   const score = finalScores?.[g.game?.gamePk];
@@ -122,8 +123,14 @@ function gameOutcome(g, finalScores) {
   return { outcome, forScore, againstScore, color };
 }
 
-function HistoricalCards({ games, finalScores, todaysDow }) {
-  const { t } = useTranslation();
+function allowedFirstInningRun(g, finalScores) {
+  const score = finalScores?.[g.game?.gamePk];
+  const runs = g.isHome ? score?.firstInningAway : score?.firstInningHome;
+  return runs == null ? null : runs > 0;
+}
+
+function HistoricalCards({ games, finalScores }) {
+  const { i18n } = useTranslation();
 
   if (!games.length) return (
     <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin inicios contra este rival.</Typography>
@@ -133,14 +140,14 @@ function HistoricalCards({ games, finalScores, todaysDow }) {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {games.map((g, i) => {
         const { outcome, forScore, againstScore, color } = gameOutcome(g, finalScores);
-        const sameDow = dowOf(g.date) === todaysDow;
+        const firstInningRun = allowedFirstInningRun(g, finalScores);
         return (
           <Card key={g.game?.gamePk ?? i} variant="outlined" sx={{ borderRadius: 2 }}>
             <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.75 }}>
                 <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
                   {g.date} · {g.isHome ? 'Local' : 'Visita'}
-                  {sameDow && <Typography component="span" sx={{ fontSize: 11, color: 'primary.main', fontWeight: 600 }}> · {t('baseball.sameDayOfWeek')}</Typography>}
+                  <Typography component="span" sx={{ fontSize: 11, color: 'text.disabled', textTransform: 'capitalize' }}> · {weekdayOf(g.date, i18n.language)}</Typography>
                 </Typography>
                 <Typography sx={{ fontSize: 13, fontWeight: 700, color }}>
                   {outcome ? `${outcome} ${forScore}-${againstScore}` : '—'}
@@ -153,6 +160,12 @@ function HistoricalCards({ games, finalScores, todaysDow }) {
                     <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{v ?? '—'}</Typography>
                   </Box>
                 ))}
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>1ra Ent</Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 700, color: firstInningRun === true ? '#d32f2f' : firstInningRun === false ? '#2e7d32' : 'text.disabled' }}>
+                    {firstInningRun === true ? 'Sí' : firstInningRun === false ? 'No' : '—'}
+                  </Typography>
+                </Box>
               </Stack>
             </CardContent>
           </Card>
@@ -165,11 +178,10 @@ function HistoricalCards({ games, finalScores, todaysDow }) {
 HistoricalCards.propTypes = {
   games: PropTypes.array.isRequired,
   finalScores: PropTypes.object,
-  todaysDow: PropTypes.number,
 };
 
-function HistoricalTable({ games, finalScores, todaysDow }) {
-  const { t } = useTranslation();
+function HistoricalTable({ games, finalScores }) {
+  const { i18n } = useTranslation();
 
   if (!games.length) return (
     <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin inicios contra este rival.</Typography>
@@ -180,7 +192,7 @@ function HistoricalTable({ games, finalScores, todaysDow }) {
       <Table size="small" sx={{ minWidth: 520 }}>
         <TableHead>
           <TableRow>
-            {['Fecha', 'Sede', 'Resultado', 'IP', 'H', 'ER', 'BB', 'K', t('baseball.sameDayOfWeek')].map((h) => (
+            {['Fecha', 'Sede', 'Resultado', 'IP', 'H', 'ER', 'BB', 'K', '1ra Entrada'].map((h) => (
               <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>{h}</TableCell>
             ))}
           </TableRow>
@@ -188,10 +200,13 @@ function HistoricalTable({ games, finalScores, todaysDow }) {
         <TableBody>
           {games.map((g, i) => {
             const { outcome, forScore, againstScore, color } = gameOutcome(g, finalScores);
-            const sameDow = dowOf(g.date) === todaysDow;
+            const firstInningRun = allowedFirstInningRun(g, finalScores);
             return (
               <TableRow key={g.game?.gamePk ?? i}>
-                <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>{g.date}</TableCell>
+                <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>
+                  <Box>{g.date}</Box>
+                  <Box sx={{ fontSize: 10, color: 'text.disabled', textTransform: 'capitalize' }}>{weekdayOf(g.date, i18n.language)}</Box>
+                </TableCell>
                 <TableCell sx={{ fontSize: 12, py: 0.5 }}>{g.isHome ? 'Local' : 'Visita'}</TableCell>
                 <TableCell sx={{ fontSize: 12, py: 0.5, fontWeight: 700, color, whiteSpace: 'nowrap' }}>
                   {outcome ? `${outcome} ${forScore}-${againstScore}` : '—'}
@@ -199,8 +214,8 @@ function HistoricalTable({ games, finalScores, todaysDow }) {
                 {[g.stat?.inningsPitched, g.stat?.hits, g.stat?.earnedRuns, g.stat?.baseOnBalls, g.stat?.strikeOuts].map((v, j) => (
                   <TableCell key={j} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
                 ))}
-                <TableCell sx={{ fontSize: 12, py: 0.5, textAlign: 'center' }}>
-                  {sameDow ? <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>✓</Box> : '—'}
+                <TableCell sx={{ fontSize: 12, py: 0.5, textAlign: 'center', fontWeight: 700, color: firstInningRun === true ? '#d32f2f' : firstInningRun === false ? '#2e7d32' : 'text.disabled' }}>
+                  {firstInningRun === true ? 'Sí' : firstInningRun === false ? 'No' : '—'}
                 </TableCell>
               </TableRow>
             );
@@ -214,7 +229,6 @@ function HistoricalTable({ games, finalScores, todaysDow }) {
 HistoricalTable.propTypes = {
   games: PropTypes.array.isRequired,
   finalScores: PropTypes.object,
-  todaysDow: PropTypes.number,
 };
 
 // Season stats for the two probable pitchers, headshot + W-L/ERA/SO — the
@@ -388,7 +402,6 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const teamData = box?.teams?.[side];
   const awayScore = away?.score ?? 0;
   const homeScore = home?.score ?? 0;
-  const todaysDow = dowOf(game.gameDate);
 
   const historicalPitcher = historicalSide === 'home' ? home?.probablePitcher : away?.probablePitcher;
   const historicalOpponent = historicalSide === 'home' ? away?.team : home?.team;
@@ -554,14 +567,14 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
                       <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.5 }}>{primaryVenue.label}</Typography>
                       <VenueSummaryLine summary={primaryVenue.summary} />
                       {isMobile
-                        ? <HistoricalCards games={primaryVenue.games} finalScores={finalScores} todaysDow={todaysDow} />
-                        : <HistoricalTable games={primaryVenue.games} finalScores={finalScores} todaysDow={todaysDow} />}
+                        ? <HistoricalCards games={primaryVenue.games} finalScores={finalScores} />
+                        : <HistoricalTable games={primaryVenue.games} finalScores={finalScores} />}
 
                       <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.5, mt: 2.5 }}>{secondaryVenue.label}</Typography>
                       <VenueSummaryLine summary={secondaryVenue.summary} />
                       {isMobile
-                        ? <HistoricalCards games={secondaryVenue.games} finalScores={finalScores} todaysDow={todaysDow} />
-                        : <HistoricalTable games={secondaryVenue.games} finalScores={finalScores} todaysDow={todaysDow} />}
+                        ? <HistoricalCards games={secondaryVenue.games} finalScores={finalScores} />
+                        : <HistoricalTable games={secondaryVenue.games} finalScores={finalScores} />}
                     </>
                   )}
                 </Box>
