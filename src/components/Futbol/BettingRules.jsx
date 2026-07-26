@@ -21,6 +21,10 @@ const RULES = [
     text: "Slow, steady bankroll growth beats one lucky night — every time.",
     author: "Compound Interest",
   },
+  {
+    text: "Máximo 3 apuestas al mismo tiempo. 3 pérdidas al día y te detienes: nada de apuestas hasta el próximo día.",
+    author: "Disciplina",
+  },
 ];
 
 function QuoteCard({ text, author }) {

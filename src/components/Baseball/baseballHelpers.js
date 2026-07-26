@@ -20,7 +20,8 @@ export const outsLabel = (outs) => (outs != null ? `${outs} out${outs !== 1 ? 's
 // even weeks after it stopped — it's not actually in progress, so it needs its
 // own bucket instead of showing a pulsing "EN VIVO" badge for a dead game.
 export const isSuspended = (g) => g?.status?.detailedState === 'Suspended';
-export const isLive   = (g) => g?.status?.abstractGameState === 'Live' && !isSuspended(g);
+export const isWarmup = (g) => g?.status?.detailedState === 'Warmup';
+export const isLive   = (g) => g?.status?.abstractGameState === 'Live' && !isSuspended(g) && !isWarmup(g);
 export const isFinal  = (g) => g?.status?.abstractGameState === 'Final';
 export const isWinner = (side) => side?.isWinner === true;
 

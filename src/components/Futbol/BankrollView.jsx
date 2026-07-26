@@ -10,6 +10,7 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ReferenceLine,
   ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis,
 } from 'recharts';
+import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
 import BankrollSkeleton from './BankrollSkeleton';
 
@@ -62,6 +63,18 @@ function TransactionCard({ row, onEdit, onDelete }) {
   );
 }
 
+TransactionCard.propTypes = {
+  row: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    type: PropTypes.string,
+    amount: PropTypes.number,
+    date: PropTypes.string,
+    notes: PropTypes.string,
+  }).isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
 function SummaryCard({ label, value, color }) {
   return (
     <Card sx={{ flex: 1, boxShadow: 2 }}>
@@ -72,6 +85,12 @@ function SummaryCard({ label, value, color }) {
     </Card>
   );
 }
+
+SummaryCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.number.isRequired,
+  color: PropTypes.string,
+};
 
 export default function BankrollView({ tickets }) {
   const theme = useTheme();
@@ -439,3 +458,10 @@ export default function BankrollView({ tickets }) {
     </Box>
   );
 }
+
+BankrollView.propTypes = {
+  tickets: PropTypes.arrayOf(PropTypes.shape({
+    status: PropTypes.string,
+    net_profit: PropTypes.number,
+  })),
+};

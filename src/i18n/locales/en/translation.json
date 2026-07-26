@@ -108,5 +108,8 @@
         "Red Cards":        "Red Cards"
       }
     }
+  },
+  "baseball": {
+    "sameDayOfWeek": "Same day"
   }
 }

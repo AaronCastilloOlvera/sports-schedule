@@ -108,5 +108,8 @@
         "Red Cards":        "Tarjetas Rojas"
       }
     }
+  },
+  "baseball": {
+    "sameDayOfWeek": "Mismo día"
   }
 }
