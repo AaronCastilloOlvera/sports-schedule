@@ -75,6 +75,22 @@ TransactionCard.propTypes = {
   onDelete: PropTypes.func.isRequired,
 };
 
+function StakeTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <Box sx={{ bgcolor: 'white', border: '1px solid #eee', borderRadius: 1, p: 1, boxShadow: 1 }}>
+      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{row.date}</Typography>
+      <Typography sx={{ fontSize: 12 }}>{row.pct}% ({usd(row.stake)} de {usd(row.bankroll)})</Typography>
+    </Box>
+  );
+}
+
+StakeTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.array,
+};
+
 function SummaryCard({ label, value, color }) {
   return (
     <Card sx={{ flex: 1, boxShadow: 2 }}>
@@ -181,6 +197,40 @@ export default function BankrollView({ tickets }) {
         return { date: fmtWeekLabel(date), total: parseFloat(running.toFixed(2)) };
       });
   }, [transactions]);
+
+  const stakeVsBankroll = useMemo(() => {
+    const events = [
+      ...transactions.map(t => ({
+        time: new Date((t.date ?? '').substring(0, 10) + 'T00:00:00').getTime(),
+        delta: t.type === 'deposit' ? t.amount : -t.amount,
+      })),
+      ...(tickets || [])
+        .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
+        .map(t => ({
+          time: new Date(t.match_datetime).getTime(),
+          delta: t.net_profit || 0,
+        })),
+    ].filter(e => !isNaN(e.time));
+
+    return (tickets || [])
+      .filter(t => t.match_datetime && (t.stake || 0) > 0)
+      .map(t => {
+        const betTime = new Date(t.match_datetime).getTime();
+        const bankrollBefore = events
+          .filter(e => e.time < betTime)
+          .reduce((s, e) => s + e.delta, 0);
+        return {
+          betTime,
+          date: fmtWeekLabel(t.match_datetime),
+          stake: t.stake,
+          bankroll: bankrollBefore,
+          pct: bankrollBefore > 0 ? parseFloat(((t.stake / bankrollBefore) * 100).toFixed(1)) : null,
+        };
+      })
+      .filter(row => row.pct != null)
+      .sort((a, b) => a.betTime - b.betTime)
+      .map((row, i) => ({ ...row, n: i + 1 }));
+  }, [transactions, tickets]);
 
   const betsNetProfit = (tickets || [])
     .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
@@ -387,6 +437,28 @@ export default function BankrollView({ tickets }) {
               <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
               <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
             </AreaChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+
+      {/* Stake sizing vs bankroll */}
+      {stakeVsBankroll.length > 0 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Stake as % of Bankroll
+          </Typography>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={stakeVsBankroll} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="n" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+              <RechartsTooltip content={<StakeTooltip />} />
+              <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
+                {stakeVsBankroll.map((row, i) => (
+                  <Cell key={i} fill={row.pct > 10 ? '#d32f2f' : row.pct > 5 ? '#ed6c02' : '#1976d2'} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </Box>
       )}

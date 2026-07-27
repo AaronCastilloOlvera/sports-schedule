@@ -1,26 +1,55 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControlLabel, MenuItem, Stack, Tab, Tabs, TextField, Typography,
+  FormControlLabel, IconButton, InputAdornment, MenuItem, Stack, Tab, Tabs, TextField, Tooltip, Typography,
 } from "@mui/material";
+import { SwapHoriz } from "@mui/icons-material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES } from "../../utils/consts.jsx";
 import PropTypes from "prop-types";
 
+const americanToDecimal = (val) => {
+  const v = parseFloat(val);
+  if (!val || isNaN(v) || v === 0) return null;
+  return v > 0
+    ? ((v / 100) + 1).toFixed(2)
+    : ((100 / Math.abs(v)) + 1).toFixed(2);
+};
+
+function CurrencyField({ label, name, value, onChange }) {
+  const [focused, setFocused] = useState(false);
+  const numValue = parseFloat(value);
+  const displayValue = focused
+    ? (value ?? '')
+    : (isNaN(numValue) ? '' : numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+  return (
+    <TextField
+      label={label}
+      value={displayValue}
+      fullWidth
+      size="small"
+      inputMode="decimal"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onChange={(e) => onChange({ target: { name, value: e.target.value.replace(/[^0-9.-]/g, '') } })}
+      slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> } }}
+    />
+  );
+}
+
+CurrencyField.propTypes = {
+  label: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func.isRequired,
+};
+
 function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
   const [tab, setTab] = useState(0);
-  const [amOdds, setAmOdds] = useState('');
   const isEdit = Boolean(currentTicket.ticket_id);
 
-  const decimal = (() => {
-    const v = parseFloat(amOdds);
-    if (!amOdds || isNaN(v) || v === 0) return null;
-    return v > 0
-      ? ((v / 100) + 1).toFixed(2)
-      : ((100 / Math.abs(v)) + 1).toFixed(2);
-  })();
-
   useEffect(() => {
-    if (openModal) { setTab(0); setAmOdds(''); }
+    if (openModal) setTab(0);
   }, [openModal]);
 
   const handlePaste = useCallback((event) => {
@@ -75,37 +104,24 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
 
         {tab === 1 && (
           <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={1}>
               <TextField label="Odds" name="odds" type="number" value={currentTicket.odds} fullWidth size="small" onChange={handleChange} />
-              <TextField label="Stake" name="stake" type="number" value={currentTicket.stake} fullWidth size="small" onChange={handleChange} />
-            </Stack>
-            <Box sx={{ bgcolor: '#f0f4ff', border: '1px solid #c5d3f0', borderRadius: 1, p: 1.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>🔄 American → Decimal</Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.75 }}>
-                <TextField
-                  placeholder="+150 or -200"
+              <Tooltip title="Convertir de momio americano a decimal">
+                <IconButton
                   size="small"
-                  value={amOdds}
-                  onChange={(e) => setAmOdds(e.target.value)}
-                  sx={{ flex: 1, bgcolor: 'white' }}
-                />
-                <Typography variant="body2" color="text.secondary">→</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold', minWidth: 46, textAlign: 'center', color: decimal ? 'primary.main' : 'text.disabled' }}>
-                  {decimal ?? '—'}
-                </Typography>
-                <Button
-                  size="small"
-                  variant="contained"
-                  disabled={!decimal}
-                  onClick={() => { handleChange({ target: { name: 'odds', value: decimal } }); setAmOdds(''); }}
+                  onClick={() => {
+                    const converted = americanToDecimal(currentTicket.odds);
+                    if (converted) handleChange({ target: { name: 'odds', value: converted } });
+                  }}
                 >
-                  Use
-                </Button>
-              </Stack>
-            </Box>
+                  <SwapHoriz fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <CurrencyField label="Stake" name="stake" value={currentTicket.stake} onChange={handleChange} />
+            </Stack>
             <Stack direction="row" spacing={2}>
-              <TextField label="Payout" name="payout" type="number" value={currentTicket.payout} fullWidth size="small" onChange={handleChange} />
-              <TextField label="Net Profit" name="net_profit" type="number" value={currentTicket.net_profit} fullWidth size="small" onChange={handleChange} />
+              <CurrencyField label="Payout" name="payout" value={currentTicket.payout} onChange={handleChange} />
+              <CurrencyField label="Net Profit" name="net_profit" value={currentTicket.net_profit} onChange={handleChange} />
             </Stack>
             <TextField select label="Status" name="status" value={currentTicket.status} fullWidth size="small" onChange={handleChange}>
               {STATUS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
