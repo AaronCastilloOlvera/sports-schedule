@@ -26,6 +26,7 @@ const fmtWeekLabel = (dateStr) =>
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
 const GOAL = 200000;
+const NU_PURPLE = '#7b1fa2';
 
 const initialTx = {
   type: 'deposit',
@@ -35,17 +36,27 @@ const initialTx = {
 };
 
 function TransactionCard({ row, onEdit, onDelete }) {
-  const isDeposit = row.type === 'deposit';
-  const borderColor = isDeposit ? '#d32f2f' : '#2e7d32';
-  const amountColor = isDeposit ? '#d32f2f' : '#2e7d32';
-  const amountFormatted = `${isDeposit ? '+' : '-'}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  const isDeposit  = row.type === 'deposit';
+  const isNuExpense = row.type === 'nu_expense';
+  const borderColor = isDeposit ? '#d32f2f' : isNuExpense ? NU_PURPLE : '#2e7d32';
+  const amountColor = borderColor;
+  const sign = isDeposit ? '-' : '+';
+  const amountFormatted = `${sign}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
   const dateFormatted = new Date(row.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const chipLabel = isDeposit ? 'Deposit' : isNuExpense ? 'NU Expense' : 'Withdrawal';
+  const chipSx = isNuExpense ? { bgcolor: NU_PURPLE, color: '#fff' } : {};
 
   return (
     <Card sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-          <Chip label={isDeposit ? 'Deposit' : 'Withdrawal'} color={isDeposit ? 'error' : 'success'} size="small" />
+          <Chip
+            label={chipLabel}
+            color={isDeposit ? 'error' : isNuExpense ? 'default' : 'success'}
+            size="small"
+            sx={chipSx}
+          />
           <Typography variant="caption" color="text.secondary">{dateFormatted}</Typography>
         </Stack>
         <Typography variant="h6" sx={{ fontWeight: 'bold', color: amountColor, my: 0.5 }}>
@@ -131,6 +142,8 @@ export default function BankrollView({ tickets }) {
 
   const totalDeposits    = transactions.filter(t => t.type === 'deposit').reduce((s, t) => s + t.amount, 0);
   const totalWithdrawals = transactions.filter(t => t.type === 'withdrawal').reduce((s, t) => s + t.amount, 0);
+  const nuExpenses       = transactions.filter(t => t.type === 'nu_expense').reduce((s, t) => s + t.amount, 0);
+  const nuBalance        = totalWithdrawals * 0.99 - nuExpenses;
 
   const weeklyWithdrawals = useMemo(() => {
     const byWeek = {};
@@ -150,10 +163,12 @@ export default function BankrollView({ tickets }) {
   // shows the actual trajectory toward the withdrawal goal, not just weekly withdrawals.
   const balanceHistory = useMemo(() => {
     const events = [
-      ...transactions.map(t => ({
-        date: (t.date ?? '').substring(0, 10),
-        delta: t.type === 'deposit' ? t.amount : -t.amount,
-      })),
+      ...transactions
+        .filter(t => t.type !== 'nu_expense')
+        .map(t => ({
+          date: (t.date ?? '').substring(0, 10),
+          delta: t.type === 'deposit' ? t.amount : -t.amount,
+        })),
       ...(tickets || [])
         .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
         .map(t => ({
@@ -278,22 +293,29 @@ export default function BankrollView({ tickets }) {
 
   const columns = [
     {
-      field: 'type', headerName: 'Type', width: 120, align: 'center', headerAlign: 'center',
-      renderCell: (params) => (
-        <Chip
-          label={params.value === 'deposit' ? 'Deposit' : 'Withdrawal'}
-          color={params.value === 'deposit' ? 'error' : 'success'}
-          size="small"
-        />
-      ),
+      field: 'type', headerName: 'Type', width: 130, align: 'center', headerAlign: 'center',
+      renderCell: (params) => {
+        if (params.value === 'nu_expense') {
+          return <Chip label="NU Expense" size="small" sx={{ bgcolor: NU_PURPLE, color: '#fff' }} />;
+        }
+        return (
+          <Chip
+            label={params.value === 'deposit' ? 'Deposit' : 'Withdrawal'}
+            color={params.value === 'deposit' ? 'error' : 'success'}
+            size="small"
+          />
+        );
+      },
     },
     {
       field: 'amount', headerName: 'Amount', width: 130, align: 'center', headerAlign: 'center',
       renderCell: (params) => {
         const isDeposit = params.row.type === 'deposit';
+        const isNuExpense = params.row.type === 'nu_expense';
+        const color = isDeposit ? '#d32f2f' : isNuExpense ? NU_PURPLE : '#2e7d32';
         return (
-          <span style={{ fontWeight: 'bold', color: isDeposit ? '#d32f2f' : '#2e7d32' }}>
-            {isDeposit ? '+' : '-'}${Number(params.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <span style={{ fontWeight: 'bold', color }}>
+            {isDeposit ? '-' : '+'}${Number(params.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         );
       },
@@ -322,25 +344,28 @@ export default function BankrollView({ tickets }) {
   return (
     <Box>
       {/* Summary cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 2 }}>
         <SummaryCard label="Total Deposited" value={totalDeposits} color="#d32f2f" />
         <SummaryCard label="Total Withdrawn" value={totalWithdrawals} color="#2e7d32" />
         <SummaryCard label="Bets P&L" value={betsNetProfit} color={betsNetProfit >= 0 ? '#2e7d32' : '#d32f2f'} />
+      </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)' }, gap: 2, mb: 3 }}>
         <SummaryCard label="Real Balance (Playdo.it)" value={realBalance} color={realBalance >= 0 ? '#1976d2' : '#d32f2f'} />
+        <SummaryCard label="NU Balance" value={nuBalance} color={NU_PURPLE} />
       </Box>
 
       {/* Goal */}
       {(() => {
-        const progress = Math.min((totalWithdrawals / GOAL) * 100, 100);
-        const remaining = GOAL - totalWithdrawals;
+        const progress = Math.min((nuBalance / GOAL) * 100, 100);
+        const remaining = GOAL - nuBalance;
         const mxn = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
         return (
           <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1 }}>
               <Box>
-                <Typography variant="body2" color="text.secondary">Withdrawal Goal 🏆</Typography>
+                <Typography variant="body2" color="text.secondary">NU Goal 🏆</Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {mxn(totalWithdrawals)} <Typography component="span" variant="body2" color="text.secondary">of {mxn(GOAL)}</Typography>
+                  {mxn(nuBalance)} <Typography component="span" variant="body2" color="text.secondary">of {mxn(GOAL)}</Typography>
                 </Typography>
               </Box>
               <Tooltip title={`${mxn(remaining)} remaining`} placement="top">
@@ -369,30 +394,54 @@ export default function BankrollView({ tickets }) {
         );
       })()}
 
-      {/* Balance over time */}
-      {balanceHistory.length > 1 && (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
-            Balance Over Time
-          </Typography>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={balanceHistory} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <defs>
-                <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1976d2" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#1976d2" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-              <RechartsTooltip formatter={(v) => [usd(v), 'Balance']} />
-              <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
-              <Area type="monotone" dataKey="balance" stroke="#1976d2" strokeWidth={2} fill="url(#balanceGradient)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Box>
-      )}
+      {/* Balance over time + Cumulative withdrawals — same row */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
+        {balanceHistory.length > 1 && (
+          <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+              Balance Over Time (Playdo.it)
+            </Typography>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={balanceHistory} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1976d2" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#1976d2" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+                <RechartsTooltip formatter={(v) => [usd(v), 'Balance']} />
+                <Area type="monotone" dataKey="balance" stroke="#1976d2" strokeWidth={2} fill="url(#balanceGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        )}
+        {cumulativeWithdrawals.length > 1 && (
+          <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+              Cumulative Withdrawals
+            </Typography>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={cumulativeWithdrawals} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="withdrawalsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2e7d32" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#2e7d32" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+                <RechartsTooltip formatter={(v) => [usd(v), 'Withdrawn']} />
+                <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
+                <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        )}
+      </Box>
 
       {/* Weekly withdrawals chart */}
       {weeklyWithdrawals.length > 0 && (
@@ -412,31 +461,6 @@ export default function BankrollView({ tickets }) {
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
-        </Box>
-      )}
-
-      {/* Cumulative withdrawals */}
-      {cumulativeWithdrawals.length > 1 && (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
-            Cumulative Withdrawals
-          </Typography>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={cumulativeWithdrawals} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <defs>
-                <linearGradient id="withdrawalsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2e7d32" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#2e7d32" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-              <RechartsTooltip formatter={(v) => [usd(v), 'Withdrawn']} />
-              <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
-              <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
-            </AreaChart>
           </ResponsiveContainer>
         </Box>
       )}
@@ -488,11 +512,11 @@ export default function BankrollView({ tickets }) {
       ) : (
         <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2 }}>
           <DataGrid
-            rows={transactions}
+            rows={[...transactions].sort((a, b) => new Date(b.date) - new Date(a.date))}
             columns={columns}
             getRowId={(row) => row.id}
             pageSizeOptions={[10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } }, sorting: { sortModel: [{ field: 'date', sort: 'desc' }] } }}
+            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
             disableRowSelectionOnClick
             disableColumnMenu
             rowHeight={42}
@@ -512,6 +536,7 @@ export default function BankrollView({ tickets }) {
             <TextField select label="Type" value={current.type} onChange={(e) => setCurrent(p => ({ ...p, type: e.target.value }))} fullWidth>
               <MenuItem value="deposit">Deposit</MenuItem>
               <MenuItem value="withdrawal">Withdrawal</MenuItem>
+              <MenuItem value="nu_expense">NU Expense</MenuItem>
             </TextField>
             <TextField label="Amount (MXN)" type="number" value={current.amount} onChange={(e) => setCurrent(p => ({ ...p, amount: e.target.value }))} fullWidth />
             <TextField label="Date" type="date" value={current.date} onChange={(e) => setCurrent(p => ({ ...p, date: e.target.value }))} fullWidth InputLabelProps={{ shrink: true }} />
