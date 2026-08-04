@@ -7,8 +7,8 @@ import {
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ReferenceLine,
-  ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
+  ReferenceLine, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis,
 } from 'recharts';
 import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
@@ -252,6 +252,26 @@ export default function BankrollView({ tickets }) {
     .reduce((s, t) => s + (t.net_profit || 0), 0);
   const realBalance = totalDeposits - totalWithdrawals + betsNetProfit;
 
+  const resolvedTickets = (tickets || []).filter(t => ['won', 'lost', 'push'].includes(t.status));
+  const winCount  = resolvedTickets.filter(t => t.status === 'won').length;
+  const lossCount = resolvedTickets.filter(t => t.status === 'lost').length;
+  const pushCount = resolvedTickets.filter(t => t.status === 'push').length;
+  const winRate   = (winCount + lossCount) > 0 ? (winCount / (winCount + lossCount)) * 100 : 0;
+  const totalStaked = resolvedTickets.reduce((s, t) => s + (t.stake || 0), 0);
+  const roi = totalStaked > 0 ? (betsNetProfit / totalStaked) * 100 : 0;
+  const avgOdds = resolvedTickets.length > 0
+    ? resolvedTickets.reduce((s, t) => s + (t.odds || 0), 0) / resolvedTickets.length
+    : 0;
+  const last10 = [...resolvedTickets]
+    .filter(t => t.match_datetime)
+    .sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))
+    .slice(0, 10);
+  const winLossPieData = [
+    { name: 'Won',  value: winCount,  color: '#2e7d32' },
+    { name: 'Lost', value: lossCount, color: '#d32f2f' },
+    ...(pushCount > 0 ? [{ name: 'Push', value: pushCount, color: '#9e9e9e' }] : []),
+  ].filter(d => d.value > 0);
+
   const handleSubmit = async () => {
     try {
       if (editId) {
@@ -353,6 +373,91 @@ export default function BankrollView({ tickets }) {
         <SummaryCard label="Real Balance (Playdo.it)" value={realBalance} color={realBalance >= 0 ? '#1976d2' : '#d32f2f'} />
         <SummaryCard label="NU Balance" value={nuBalance} color={NU_PURPLE} />
       </Box>
+
+      {/* Betting Performance */}
+      {resolvedTickets.length > 0 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Betting Performance
+          </Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'auto 1fr' }, gap: 3, alignItems: 'center' }}>
+            {/* Donut W/L/P */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Box sx={{ position: 'relative', width: 130, height: 130 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={winLossPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={58} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
+                      {winLossPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.1 }}>{winRate.toFixed(0)}%</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1 }}>Win</Typography>
+                </Box>
+              </Box>
+              <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#2e7d32' }} />
+                  <Typography variant="caption">{winCount}W</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#d32f2f' }} />
+                  <Typography variant="caption">{lossCount}L</Typography>
+                </Box>
+                {pushCount > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#9e9e9e' }} />
+                    <Typography variant="caption">{pushCount}P</Typography>
+                  </Box>
+                )}
+              </Stack>
+            </Box>
+
+            {/* Stats + Last 10 */}
+            <Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 2.5 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">ROI</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', lineHeight: 1.2, color: roi >= 0 ? '#2e7d32' : '#d32f2f' }}>
+                    {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Total Bets</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>{resolvedTickets.length}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Avg Odds</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>{avgOdds.toFixed(2)}x</Typography>
+                </Box>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>Last 10</Typography>
+                <Stack direction="row" spacing={0.5}>
+                  {last10.map((t, i) => (
+                    <Tooltip key={i} title={`${t.match_name || ''} · ${t.status}`} arrow>
+                      <Box sx={{
+                        width: 24, height: 24, borderRadius: '5px',
+                        bgcolor: t.status === 'won' ? '#2e7d32' : t.status === 'lost' ? '#d32f2f' : '#9e9e9e',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'default',
+                      }}>
+                        <Typography sx={{ fontSize: 9, color: '#fff', fontWeight: 'bold' }}>
+                          {t.status === 'won' ? 'W' : t.status === 'lost' ? 'L' : 'P'}
+                        </Typography>
+                      </Box>
+                    </Tooltip>
+                  ))}
+                  {[...Array(Math.max(0, 10 - last10.length))].map((_, i) => (
+                    <Box key={`empty-${i}`} sx={{ width: 24, height: 24, borderRadius: '5px', bgcolor: 'action.hover' }} />
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
 
       {/* Goal */}
       {(() => {
