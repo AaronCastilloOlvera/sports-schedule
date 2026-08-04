@@ -25,7 +25,7 @@ const fmtWeekLabel = (dateStr) =>
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
-const GOAL = 200000;
+const GOAL = 50000;
 const NU_PURPLE = '#7b1fa2';
 
 const initialTx = {
