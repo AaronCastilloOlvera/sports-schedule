@@ -437,13 +437,12 @@ function Bets() {
           ) : (
             <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
               <DataGrid
-                rows={filteredTickets}
+                rows={[...filteredTickets].sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))}
                 columns={columns}
                 getRowId={(row) => row.ticket_id}
                 pageSizeOptions={[5, 10, 25]}
                 initialState={{
                   pagination: { paginationModel: { pageSize: 10 } },
-                  sorting: { sortModel: [{ field: 'match_datetime', sort: 'desc' }] },
                 }}
                 disableRowSelectionOnClick
                 disableColumnMenu
