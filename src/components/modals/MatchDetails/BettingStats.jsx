@@ -1,8 +1,10 @@
-import { Box, Stack, Typography, Tooltip } from '@mui/material';
+import { useState } from 'react';
+import { Box, Stack, Tab, Tabs, Typography, Tooltip } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import { useBettingStats, fmt } from './useBettingStats';
+import CornersChart from './CornersChart';
 
 // ── WinDistributionBar ───────────────────────────────────────────────────────
 // (moved here from HeadToHead.jsx so the H2H tab stays focused on the match list)
@@ -167,6 +169,7 @@ Pill.propTypes = {
 
 export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome, teamAway, oddsData }) {
   const stats = useBettingStats({ h2hData, homeRecent, awayRecent, teamHome, teamAway, oddsData });
+  const [subTab, setSubTab] = useState(0);
 
   if (!stats || !teamHome || !teamAway) {
     return (
@@ -180,74 +183,94 @@ export default function BettingStats({ h2hData, homeRecent, awayRecent, teamHome
   const awayName = teamAway.name ?? '';
 
   return (
-    <Box sx={{ p: 2, overflowY: 'auto', flex: 1 }}>
-      {/* H2H overview: win distribution */}
-      <Box sx={{ mx: -2, mt: -2, mb: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
+      {/* H2H overview: win distribution — always visible */}
+      <Box sx={{ mx: 0, mt: 0 }}>
         <WinDistributionBar
           homeWins={stats.h2hHomeWins} draws={stats.h2hDraws} awayWins={stats.h2hAwayWins}
           teamHome={teamHome} teamAway={teamAway}
         />
       </Box>
 
-      {/* Goals */}
-      <StatCard
-        icon="⚽" title="Goals"
-        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante from recent form (goals scored + conceded per game). H2H avg = average total goals in the last ${stats.h2hCount} completed matches between these two teams. Over 2.5 / Both score = % of those H2H matches. Projected = home local avg + away visitante avg.`}
-        homeLabel={homeName} homeVal={stats.homeGoals} homeCount={stats.homeVenueCount}
-        awayLabel={awayName} awayVal={stats.awayGoals} awayCount={stats.awayVenueCount}
-        h2hVal={stats.h2hGoals}
-      >
-        <Pill
-          label="Over 2.5:"
-          value={stats.over25Rate !== null ? `${stats.over25Rate}%` : '—'}
-          highlight={stats.over25Rate !== null ? (stats.over25Rate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
-        />
-        <Pill label="Both score:" value={stats.bothScoreRate !== null ? `${stats.bothScoreRate}%` : '—'} />
-        <Pill label="Projected:" value={fmt(stats.projGoals)} />
-      </StatCard>
+      {/* Sub-tabs */}
+      <Box sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 2 }}>
+        <Tabs value={subTab} onChange={(_, v) => setSubTab(v)} sx={{ minHeight: 36 }}>
+          <Tab label="Corners" sx={{ fontSize: 12, minHeight: 36, py: 0.5 }} />
+          <Tab label="Stats" sx={{ fontSize: 12, minHeight: 36, py: 0.5 }} />
+        </Tabs>
+      </Box>
 
-      {/* Corners */}
-      <StatCard
-        icon="🚩" title="Corners"
-        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (corner kicks per game). H2H avg = average total corners in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
-        homeLabel={homeName} homeVal={stats.homeCorners} homeCount={stats.homeVenueCount}
-        awayLabel={awayName} awayVal={stats.awayCorners} awayCount={stats.awayVenueCount}
-        h2hVal={stats.h2hCorners}
-      >
-        {stats.cornerLine !== null && (
-          <Pill
-            label={`Over ${fmt(stats.cornerLine)}:`}
-            value={stats.overCornersRate !== null ? `${stats.overCornersRate}%` : '—'}
-            highlight={stats.overCornersRate !== null ? (stats.overCornersRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
-          />
+      <Box sx={{ p: 2, flex: 1 }}>
+        {/* ── Tab 0: Corners Trend ── */}
+        {subTab === 0 && (
+          <CornersChart stats={stats} teamHome={teamHome} teamAway={teamAway} />
         )}
-        <Pill label="Projected total:" value={fmt(stats.projCorners)} />
-        {stats.statsWithData === 0 && (
-          <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>No stats in H2H</Typography>
-        )}
-      </StatCard>
 
-      {/* Yellow Cards */}
-      <StatCard
-        icon="🟨" title="Yellow Cards"
-        tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (yellow cards per game). H2H avg = average total yellow cards in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
-        homeLabel={homeName} homeVal={stats.homeYellows} homeCount={stats.homeVenueCount}
-        awayLabel={awayName} awayVal={stats.awayYellows} awayCount={stats.awayVenueCount}
-        h2hVal={stats.h2hYellows}
-      >
-        {stats.yellowLine !== null && (
-          <Pill
-            label={`Over ${fmt(stats.yellowLine)}:`}
-            value={stats.overYellowsRate !== null ? `${stats.overYellowsRate}%` : '—'}
-            highlight={stats.overYellowsRate !== null ? (stats.overYellowsRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
-          />
-        )}
-        <Pill label="Projected total:" value={fmt(stats.projYellows)} />
-      </StatCard>
+        {/* ── Tab 1: Stats cards ── */}
+        {subTab === 1 && (
+          <>
+            {/* Goals */}
+            <StatCard
+              icon="⚽" title="Goals"
+              tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante from recent form (goals scored + conceded per game). H2H avg = average total goals in the last ${stats.h2hCount} completed matches between these two teams. Over 2.5 / Both score = % of those H2H matches. Projected = home local avg + away visitante avg.`}
+              homeLabel={homeName} homeVal={stats.homeGoals} homeCount={stats.homeVenueCount}
+              awayLabel={awayName} awayVal={stats.awayGoals} awayCount={stats.awayVenueCount}
+              h2hVal={stats.h2hGoals}
+            >
+              <Pill
+                label="Over 2.5:"
+                value={stats.over25Rate !== null ? `${stats.over25Rate}%` : '—'}
+                highlight={stats.over25Rate !== null ? (stats.over25Rate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
+              />
+              <Pill label="Both score:" value={stats.bothScoreRate !== null ? `${stats.bothScoreRate}%` : '—'} />
+              <Pill label="Projected:" value={fmt(stats.projGoals)} />
+            </StatCard>
 
-      <Typography sx={{ fontSize: 10, color: 'text.disabled', textAlign: 'center', mt: 1, pb: 1 }}>
-        H2H based on {stats.h2hCount} completed matches · Recent = home team matches as local, away team matches as visitante
-      </Typography>
+            {/* Corners */}
+            <StatCard
+              icon="🚩" title="Corners"
+              tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (corner kicks per game). H2H avg = average total corners in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
+              homeLabel={homeName} homeVal={stats.homeCorners} homeCount={stats.homeVenueCount}
+              awayLabel={awayName} awayVal={stats.awayCorners} awayCount={stats.awayVenueCount}
+              h2hVal={stats.h2hCorners}
+            >
+              {stats.cornerLine !== null && (
+                <Pill
+                  label={`Over ${fmt(stats.cornerLine)}:`}
+                  value={stats.overCornersRate !== null ? `${stats.overCornersRate}%` : '—'}
+                  highlight={stats.overCornersRate !== null ? (stats.overCornersRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
+                />
+              )}
+              <Pill label="Projected total:" value={fmt(stats.projCorners)} />
+              {stats.statsWithData === 0 && (
+                <Typography sx={{ fontSize: 10, color: 'text.disabled' }}>No stats in H2H</Typography>
+              )}
+            </StatCard>
+
+            {/* Yellow Cards */}
+            <StatCard
+              icon="🟨" title="Yellow Cards"
+              tooltip={`Team averages use only ${homeName}'s matches as local and ${awayName}'s matches as visitante (yellow cards per game). H2H avg = average total yellow cards in the last ${stats.h2hCount} completed matches between these two teams. Over line is set at the H2H average rounded down to the nearest .5, so it's tailored to this matchup rather than a fixed number. Projected total = home local avg + away visitante avg.`}
+              homeLabel={homeName} homeVal={stats.homeYellows} homeCount={stats.homeVenueCount}
+              awayLabel={awayName} awayVal={stats.awayYellows} awayCount={stats.awayVenueCount}
+              h2hVal={stats.h2hYellows}
+            >
+              {stats.yellowLine !== null && (
+                <Pill
+                  label={`Over ${fmt(stats.yellowLine)}:`}
+                  value={stats.overYellowsRate !== null ? `${stats.overYellowsRate}%` : '—'}
+                  highlight={stats.overYellowsRate !== null ? (stats.overYellowsRate >= 50 ? '#2e7d32' : '#d32f2f') : undefined}
+                />
+              )}
+              <Pill label="Projected total:" value={fmt(stats.projYellows)} />
+            </StatCard>
+          </>
+        )}
+
+        <Typography sx={{ fontSize: 10, color: 'text.disabled', textAlign: 'center', mt: 1, pb: 1 }}>
+          H2H based on {stats.h2hCount} completed matches · Recent = home team matches as local, away team matches as visitante
+        </Typography>
+      </Box>
     </Box>
   );
 }

@@ -302,6 +302,35 @@ export function useBettingStats({ h2hData, homeRecent, awayRecent, teamHome, tea
       yellowLine,
       overYellowsRate,
       valuePicks,
+      // raw chart points — oldest first so the chart reads left→right chronologically
+      h2hCornerPoints: [...h2hFT].reverse().map(m => ({
+        date:  m.fixture.date?.substring(0, 10) ?? '',
+        label: m.fixture.date?.substring(5, 10) ?? '',
+        total: getTotalStat(m, 'Corner Kicks'),
+        home:  getStat(m, teamHome.id, 'Corner Kicks'),
+        away:  getStat(m, teamAway.id, 'Corner Kicks'),
+        vs: `${m.teams.home.name} vs ${m.teams.away.name}`,
+      })),
+      homeCornerPoints: [...homeRecent].reverse().map(m => {
+        const isHome = m.teams?.home?.id === teamHome.id;
+        return {
+          date:    m.fixture?.date?.substring(0, 10) ?? '',
+          label:   m.fixture?.date?.substring(5, 10) ?? '',
+          corners: getStat(m, teamHome.id, 'Corner Kicks'),
+          venue:   isHome ? 'home' : 'away',
+          vs:      isHome ? m.teams.away.name : m.teams.home.name,
+        };
+      }),
+      awayCornerPoints: [...awayRecent].reverse().map(m => {
+        const isHome = m.teams?.home?.id === teamAway.id;
+        return {
+          date:    m.fixture?.date?.substring(0, 10) ?? '',
+          label:   m.fixture?.date?.substring(5, 10) ?? '',
+          corners: getStat(m, teamAway.id, 'Corner Kicks'),
+          venue:   isHome ? 'home' : 'away',
+          vs:      isHome ? m.teams.away.name : m.teams.home.name,
+        };
+      }),
     };
   }, [h2hData, homeRecent, awayRecent, teamHome, teamAway, oddsData]);
 }
