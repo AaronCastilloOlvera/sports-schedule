@@ -1,7 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Avatar, Box, Chip, IconButton, Tooltip, Typography, Stack, useMediaQuery } from '@mui/material';
+import { Avatar, Box, Chip, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import { Waves } from '@mui/icons-material';
+const PULSE_DOT = (
+  <Box sx={{
+    width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
+    animation: 'livePulse 1.5s ease-in-out infinite',
+    '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+  }} />
+);
 import dayjs from 'dayjs';
 import { apiClient } from '../../api/api';
 import MatchDetailsModal from '../modals/MatchDetails';
@@ -40,6 +47,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const [boxscoreGame, setBoxscoreGame] = useState(null);
   const [boxscoreLeague, setBoxscoreLeague] = useState('lmb');
   const [showWaveChart, setShowWaveChart] = useState(false);
+  const [onlyLive, setOnlyLive] = useState(false);
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -131,8 +139,12 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
         )
       : byLeague;
 
+    const withoutLive = onlyLive
+      ? filtered.filter(m => m.fixture.status.short === 'NS')
+      : filtered;
+
     // Order by status priority and then by time
-    return [...filtered].sort((a, b) => {
+    return [...withoutLive].sort((a, b) => {
       const statusA = a.fixture.status.short;
       const statusB = b.fixture.status.short;
 
@@ -144,7 +156,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       return new Date(a.fixture.date) - new Date(b.fixture.date);
     });
 
-  }, [allMatches, selectedLeagues, searchTerm]);
+  }, [allMatches, selectedLeagues, searchTerm, onlyLive]);
 
   // Per-sport, so each chip can show its own live-pulse dot rather than one
   // global indicator that doesn't say which sport actually has something live.
@@ -254,11 +266,26 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
               })}
             </Stack>
 
-            <Tooltip title="Ver partidos simultáneos por hora">
-              <IconButton size="small" color="primary" onClick={() => setShowWaveChart(true)}>
-                <Waves />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row" sx={{ gap: 1 }}>
+              <Chip
+                label="⏳ Upcoming"
+                onClick={() => setOnlyLive(v => !v)}
+                color={onlyLive ? 'primary' : 'default'}
+                variant={onlyLive ? 'filled' : 'outlined'}
+                clickable
+                sx={{ fontWeight: onlyLive ? 600 : 400 }}
+              />
+              <Tooltip title="Partidos simultáneos por hora">
+                <Chip
+                  icon={<Waves fontSize="small" />}
+                  label="Schedule"
+                  onClick={() => setShowWaveChart(true)}
+                  variant="outlined"
+                  clickable
+                  sx={{ fontWeight: 400 }}
+                />
+              </Tooltip>
+            </Stack>
           </Stack>
 
           {/* League filter chips — reflects whichever sports are currently active */}
