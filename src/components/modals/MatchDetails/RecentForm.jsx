@@ -257,15 +257,63 @@ TeamToggle.propTypes = {
   onChange:  PropTypes.func.isRequired,
 };
 
+function VenueToggle({ value, onChange }) {
+  const { t } = useTranslation();
+  const options = [
+    { key: 'all',  label: t('h2h.filters.all') },
+    { key: 'home', label: t('h2h.filters.home') },
+    { key: 'away', label: t('h2h.filters.away') },
+  ];
+  return (
+    <Box sx={{ display: 'inline-flex', bgcolor: 'action.hover', borderRadius: '9px', p: '2px' }}>
+      {options.map(({ key, label }) => {
+        const active = value === key;
+        return (
+          <Box
+            key={key}
+            component="button"
+            onClick={() => onChange(key)}
+            sx={{
+              bgcolor: active ? 'background.paper' : 'transparent',
+              border: 'none', outline: 'none', cursor: 'pointer',
+              borderRadius: '7px',
+              px: { xs: '10px', sm: '14px' }, py: { xs: '4px', sm: '5px' },
+              fontSize: { xs: 12, sm: 13 },
+              fontWeight: active ? 600 : 400,
+              color: active ? 'text.primary' : 'text.disabled',
+              transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
+              letterSpacing: '-0.1px',
+              fontFamily: FONT,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+VenueToggle.propTypes = {
+  value:    PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+};
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAway, team1Id, team2Id, teamView, onTeamViewChange }) {
   const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState(null);
+  const [venueFilter, setVenueFilter] = useState('all');
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
 
-  const matches = teamView === 'home' ? homeMatches : awayMatches;
-  const teamId  = teamView === 'home' ? team1Id : team2Id;
+  const teamId = teamView === 'home' ? team1Id : team2Id;
+  const allMatches = teamView === 'home' ? homeMatches : awayMatches;
+  const matches = venueFilter === 'all'
+    ? allMatches
+    : allMatches.filter(m => (venueFilter === 'home' ? m.teams.home.id === teamId : m.teams.away.id === teamId));
 
   return (
     <Box sx={{ bgcolor: 'background.paper', fontFamily: FONT, display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -284,14 +332,15 @@ export default function RecentForm({ homeMatches, awayMatches, teamHome, teamAwa
             {matches.length} {t('recent.results')}
           </Typography>
         </Box>
-        <Box sx={{ ml: 'auto' }}>
+        <Stack direction="row" spacing={1} sx={{ ml: 'auto', flexWrap: 'wrap', gap: 1 }}>
           <TeamToggle
             teamHome={teamHome}
             teamAway={teamAway}
             value={teamView}
             onChange={onTeamViewChange}
           />
-        </Box>
+          <VenueToggle value={venueFilter} onChange={setVenueFilter} />
+        </Stack>
       </Box>
 
       {/* Form pill row */}
