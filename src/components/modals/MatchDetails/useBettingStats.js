@@ -79,6 +79,22 @@ const noVigProbPct = (overOdd, underOdd) => {
   return total > 0 ? Math.round((pOver / total) * 100) : null;
 };
 
+// Among every line a bookmaker offers (8.5, 9.5, 10.5...), the one closest to a
+// 50/50 de-vigged split is the one they consider their true expectation.
+const bestBalancedLine = (bet) => {
+  let best = null;
+  for (const [lineStr, pair] of Object.entries(parseOverUnderLines(bet))) {
+    if (pair.over == null || pair.under == null) continue;
+    const impliedOverPct = noVigProbPct(pair.over, pair.under);
+    if (impliedOverPct === null) continue;
+    const balance = Math.abs(impliedOverPct - 50);
+    if (!best || balance < best.balance) {
+      best = { line: parseFloat(lineStr), over: pair.over, under: pair.under, balance };
+    }
+  }
+  return best;
+};
+
 // only surface picks in this odd range — "considerable risk, nada raro":
 // no heavy favorites (odd < 1.50) and no longshots (odd > 2.00)
 export const MIN_ODD = 1.5;
@@ -236,6 +252,8 @@ export function useBettingStats({ h2hData, homeRecent, awayRecent, teamHome, tea
     const awayCornerAvg = avg(awayCornerArr);
     const cornerLine     = lineFromMedian(median(h2hCornerArr));
     const overCornersRate = rateOver(h2hCornerArr, cornerLine);
+    const cornersBet      = bookmakers[0]?.bets?.find(b => b.name === 'Corners Over Under');
+    const realCornerLine  = cornersBet ? bestBalancedLine(cornersBet) : null;
 
     // Yellow cards
     const h2hYellowArr  = h2hFT.map(m => getTotalStat(m, 'Yellow Cards'));
@@ -294,6 +312,7 @@ export function useBettingStats({ h2hData, homeRecent, awayRecent, teamHome, tea
       projCorners:      homeCornerAvg !== null && awayCornerAvg !== null ? homeCornerAvg + awayCornerAvg : null,
       cornerLine,
       overCornersRate,
+      realCornerLine,
       // yellows
       h2hYellows:       avg(h2hYellowArr),
       homeYellows:      homeYellowAvg,

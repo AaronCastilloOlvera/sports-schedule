@@ -92,7 +92,7 @@ CombinedTooltip.propTypes = { active: PropTypes.bool, payload: PropTypes.array, 
 
 // ── Single-line mini chart (used for H2H) ────────────────────────────────────
 
-function MiniChart({ data, barKey, barColor, avgVal, line, emptyMsg }) {
+function MiniChart({ data, barKey, barColor, avgVal, line, realLine, emptyMsg }) {
   const filtered = data.filter(d => d[barKey] !== null && d[barKey] !== undefined);
   if (!filtered.length) {
     return (
@@ -105,7 +105,12 @@ function MiniChart({ data, barKey, barColor, avgVal, line, emptyMsg }) {
     <Box>
       {avgVal !== null && (
         <Typography sx={{ fontSize: 10, color: 'text.disabled', mb: 0.5, textAlign: 'right' }}>
-          avg {fmt(avgVal)}{line !== null ? ` · line ${fmt(line)}` : ''}
+          avg {fmt(avgVal)}{line !== null ? ` · mediana H2H ${fmt(line)}` : ''}
+          {realLine && (
+            <Typography component="span" sx={{ color: '#1976d2', fontWeight: 700 }}>
+              {' · Bet365 '}{fmt(realLine.line)} ({realLine.over}/{realLine.under})
+            </Typography>
+          )}
         </Typography>
       )}
       <ResponsiveContainer width="100%" height={130}>
@@ -119,6 +124,9 @@ function MiniChart({ data, barKey, barColor, avgVal, line, emptyMsg }) {
           )}
           {line !== null && (
             <ReferenceLine y={line} stroke="#d32f2f" strokeDasharray="4 3" label={{ value: fmt(line), fontSize: 9, fill: '#d32f2f', position: 'insideTopRight' }} />
+          )}
+          {realLine && (
+            <ReferenceLine y={realLine.line} stroke="#1976d2" strokeWidth={1.5} label={{ value: `Bet365 ${fmt(realLine.line)}`, fontSize: 9, fill: '#1976d2', position: 'insideBottomRight' }} />
           )}
           <Line
             type="monotone"
@@ -140,12 +148,13 @@ MiniChart.propTypes = {
   barColor: PropTypes.string,
   avgVal: PropTypes.number,
   line: PropTypes.number,
+  realLine: PropTypes.shape({ line: PropTypes.number, over: PropTypes.number, under: PropTypes.number }),
   emptyMsg: PropTypes.string,
 };
 
 // ── Combined two-line chart (home as local, away as visitante) ───────────────
 
-function CombinedChart({ data, homeAvg, awayAvg, teamHome, teamAway }) {
+function CombinedChart({ data, homeAvg, awayAvg, teamHome, teamAway, realLine }) {
   if (!data.length) return null;
   return (
     <Box>
@@ -153,6 +162,11 @@ function CombinedChart({ data, homeAvg, awayAvg, teamHome, teamAway }) {
         <Typography component="span" sx={{ color: HOME_COLOR, fontWeight: 700, fontSize: 10 }}>avg {fmt(homeAvg)}</Typography>
         {' · '}
         <Typography component="span" sx={{ color: AWAY_COLOR, fontWeight: 700, fontSize: 10 }}>avg {fmt(awayAvg)}</Typography>
+        {realLine && (
+          <Typography component="span" sx={{ color: '#1976d2', fontWeight: 700 }}>
+            {' · Bet365 '}{fmt(realLine.line)} ({realLine.over}/{realLine.under})
+          </Typography>
+        )}
       </Typography>
       <ResponsiveContainer width="100%" height={150}>
         <LineChart data={data} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
@@ -165,6 +179,9 @@ function CombinedChart({ data, homeAvg, awayAvg, teamHome, teamAway }) {
           />
           {homeAvg !== null && <ReferenceLine y={homeAvg} stroke={HOME_COLOR} strokeDasharray="4 3" strokeOpacity={0.5} />}
           {awayAvg !== null && <ReferenceLine y={awayAvg} stroke={AWAY_COLOR} strokeDasharray="4 3" strokeOpacity={0.5} />}
+          {realLine && (
+            <ReferenceLine y={realLine.line} stroke="#1976d2" strokeWidth={1.5} label={{ value: `Bet365 ${fmt(realLine.line)}`, fontSize: 9, fill: '#1976d2', position: 'insideBottomRight' }} />
+          )}
           <Legend
             iconType="circle"
             iconSize={8}
@@ -200,6 +217,7 @@ CombinedChart.propTypes = {
   awayAvg: PropTypes.number,
   teamHome: PropTypes.object,
   teamAway: PropTypes.object,
+  realLine: PropTypes.shape({ line: PropTypes.number, over: PropTypes.number, under: PropTypes.number }),
 };
 
 // ── CornersChart ──────────────────────────────────────────────────────────────
@@ -219,6 +237,7 @@ export default function CornersChart({ stats, teamHome, teamAway }) {
 
   const h2hAvg  = useMemo(() => mean(h2hData.map(d => d._val)), [h2hData]);
   const h2hLine = h2hFilter === 'total' ? (stats?.cornerLine ?? null) : null;
+  const h2hRealLine = h2hFilter === 'total' ? (stats?.realCornerLine ?? null) : null;
   const h2hColor = h2hFilter === 'total' ? TOTAL_COLOR : h2hFilter === 'home' ? HOME_COLOR : AWAY_COLOR;
 
   // Combined: home team as local, away team as visitante
@@ -273,6 +292,7 @@ export default function CornersChart({ stats, teamHome, teamAway }) {
               barColor={h2hColor}
               avgVal={h2hAvg}
               line={h2hLine}
+              realLine={h2hRealLine}
             />
           </Box>
         )}
@@ -289,6 +309,7 @@ export default function CornersChart({ stats, teamHome, teamAway }) {
               awayAvg={awayAvg}
               teamHome={teamHome}
               teamAway={teamAway}
+              realLine={stats?.realCornerLine ?? null}
             />
           </Box>
         )}

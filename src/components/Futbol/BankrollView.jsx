@@ -7,7 +7,7 @@ import {
 import { Add, Delete, Edit } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   ReferenceLine, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis,
 } from 'recharts';
 import PropTypes from 'prop-types';
@@ -22,6 +22,10 @@ const getWeekStart = (dateStr) => {
 };
 const fmtWeekLabel = (dateStr) =>
   new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+const fmtMonthLabel = (monthStr) =>
+  new Date(`${monthStr}-15T12:00:00`).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+
+const FLOW_LABELS = { deposited: 'Deposited', withdrawn: 'Withdrawn', net: 'Net (real gain)' };
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
@@ -156,6 +160,29 @@ export default function BankrollView({ tickets }) {
     return Object.entries(byWeek)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([week, total]) => ({ week: fmtWeekLabel(week), total: parseFloat(total.toFixed(2)) }));
+  }, [transactions]);
+
+  const monthlyFlow = useMemo(() => {
+    const byMonth = {};
+    transactions.forEach(t => {
+      const month = (t.date ?? '').substring(0, 7);
+      if (!month) return;
+      if (!byMonth[month]) byMonth[month] = { deposited: 0, withdrawn: 0 };
+      if (t.type === 'deposit') byMonth[month].deposited += t.amount;
+      else byMonth[month].withdrawn += t.amount;
+    });
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, { deposited, withdrawn }]) => {
+        const hasDeposits = deposited > 0;
+        return {
+          month: fmtMonthLabel(month),
+          deposited: parseFloat(deposited.toFixed(2)),
+          withdrawn: hasDeposits ? parseFloat(withdrawn.toFixed(2)) : null,
+          net: parseFloat((withdrawn - deposited).toFixed(2)),
+          hasDeposits,
+        };
+      });
   }, [transactions]);
 
   // Running balance over time: every deposit/withdrawal and every resolved
@@ -565,6 +592,31 @@ export default function BankrollView({ tickets }) {
                   <Cell key={i} fill="#2e7d32" fillOpacity={0.75 + (i % 2) * 0.15} />
                 ))}
               </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+
+      {/* Monthly deposits vs withdrawals vs net */}
+      {monthlyFlow.length > 0 && (
+        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Deposits vs Withdrawals per Month
+          </Typography>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={monthlyFlow} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+              <RechartsTooltip formatter={(v, name) => [usd(v), FLOW_LABELS[name] ?? name]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => FLOW_LABELS[value] ?? value} />
+              <Bar dataKey="deposited" fill="#d32f2f" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="net" fill="#1976d2" radius={[4, 4, 0, 0]}>
+                {monthlyFlow.map((row, i) => (
+                  <Cell key={i} fill={!row.hasDeposits ? '#2e7d32' : row.net >= 0 ? '#1976d2' : '#ed6c02'} />
+                ))}
+              </Bar>
+              <Bar dataKey="withdrawn" fill="#2e7d32" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Box>
