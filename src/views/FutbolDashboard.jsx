@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, IconButton, InputAdornment, TextField } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -14,8 +14,25 @@ export default function FutbolDashboard() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { t } = useTranslation();
 
-  const handlePreviousDay = () => setSelectedDate(prev => prev.subtract(1, 'day'));
-  const handleNextDay = () => setSelectedDate(prev => prev.add(1, 'day'));
+  const followsToday = useRef(true);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !followsToday.current) return;
+      const today = dayjs();
+      setSelectedDate(prev => (prev.isSame(today, 'day') ? prev : today));
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  const setManualDate = (newDate) => {
+    followsToday.current = newDate.isSame(dayjs(), 'day');
+    setSelectedDate(newDate);
+  };
+
+  const handlePreviousDay = () => setManualDate(selectedDate.subtract(1, 'day'));
+  const handleNextDay = () => setManualDate(selectedDate.add(1, 'day'));
 
   const handleSearchClose = () => {
     setSearchTerm('');
@@ -54,7 +71,7 @@ export default function FutbolDashboard() {
             <DatePicker
               label={t('fixtures.selectDate')}
               value={selectedDate}
-              onChange={newValue => setSelectedDate(newValue)}
+              onChange={newValue => setManualDate(newValue)}
               format="DD/MM/YYYY"
               slotProps={{
                 textField: {
