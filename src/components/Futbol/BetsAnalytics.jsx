@@ -71,7 +71,6 @@ export default function BetsAnalytics() {
 
   const leaguePie = [...analytics.league_data]
     .sort((a, b) => b.count - a.count)
-    .slice(0, 8)
     .map((d, i) => ({ name: d.league, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
   // Apply label mapping from raw bet_type values
@@ -219,33 +218,31 @@ export default function BetsAnalytics() {
 
       {tab === 2 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-            <ChartCard title="Top Leagues by Profit" sx={{ flex: 2 }}>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={analytics.league_data} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={usd} tick={{ fontSize: 12 }} />
-                  <YAxis type="category" dataKey="league" width={130} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
-                  <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
-                    {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
+          <ChartCard title="Leagues by Profit">
+            <ResponsiveContainer width="100%" height={Math.max(300, analytics.league_data.length * 28)}>
+              <BarChart data={analytics.league_data} layout="vertical" margin={{ left: 10, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tickFormatter={usd} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="league" width={150} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
+                  {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
-            <ChartCard title="Tickets by League" sx={{ flex: 1 }}>
-              <ResponsiveContainer width="100%" height={350}>
-                <PieChart>
-                  <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
-                    {leaguePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                  </Pie>
-                  <Tooltip {...renderPieTooltip(leaguePie)} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </Stack>
+          <ChartCard title="Tickets by League">
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
+                  {leaguePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip {...renderPieTooltip(leaguePie)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
           <ChartCard title="ROI % by League">
             <ResponsiveContainer width="100%" height={250}>

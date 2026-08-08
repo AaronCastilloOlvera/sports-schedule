@@ -102,6 +102,11 @@ class ApiClient {
     const response = await this.client.get('/bets/analytics');
     return response.data;
   }
+
+  async fetchLeaguesBySport(sport) {
+    const response = await this.client.get(`/bets/leagues?sport=${encodeURIComponent(sport)}`);
+    return response.data;
+  }
   async createTicket(formData) {
     const response = await this.client.post(`/bets/create-ticket`, formData);
     return response.data;

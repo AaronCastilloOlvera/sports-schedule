@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
+  Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControlLabel, IconButton, InputAdornment, MenuItem, Stack, Tab, Tabs, TextField, Tooltip, Typography,
 } from "@mui/material";
 import { SwapHoriz } from "@mui/icons-material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES } from "../../utils/consts.jsx";
+import { apiClient } from "../../api/api.js";
 import PropTypes from "prop-types";
 
 const americanToDecimal = (val) => {
@@ -46,11 +47,19 @@ CurrencyField.propTypes = {
 
 function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
   const [tab, setTab] = useState(0);
+  const [leagueOptions, setLeagueOptions] = useState([]);
   const isEdit = Boolean(currentTicket.ticket_id);
 
   useEffect(() => {
     if (openModal) setTab(0);
   }, [openModal]);
+
+  useEffect(() => {
+    if (!openModal || !currentTicket.sport) return;
+    apiClient.fetchLeaguesBySport(currentTicket.sport)
+      .then(setLeagueOptions)
+      .catch(() => setLeagueOptions([]));
+  }, [currentTicket.sport, openModal]);
 
   const handlePaste = useCallback((event) => {
     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -90,7 +99,21 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
               </TextField>
             </Stack>
             <Stack direction="row" spacing={2}>
-              <TextField label="League" name="league" value={currentTicket.league} fullWidth size="small" onChange={handleChange} />
+              <Autocomplete
+                freeSolo
+                options={leagueOptions}
+                value={currentTicket.league ?? ''}
+                onChange={(_, newValue) =>
+                  handleChange({ target: { name: 'league', value: newValue ?? '' } })
+                }
+                onInputChange={(_, newValue, reason) => {
+                  if (reason === 'input')
+                    handleChange({ target: { name: 'league', value: newValue } });
+                }}
+                fullWidth
+                size="small"
+                renderInput={(params) => <TextField {...params} label="League" size="small" />}
+              />
               <TextField
                 label="Match Date" name="match_datetime" type="datetime-local"
                 value={currentTicket.match_datetime} fullWidth size="small"
