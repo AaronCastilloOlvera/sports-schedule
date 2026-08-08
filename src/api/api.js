@@ -86,8 +86,20 @@ class ApiClient {
   }
 
   // Tickets
-  async fetchTickets() {
-    const response = await this.client.get('/bets/get-tickets');
+  async fetchTickets(page = 0, limit = 10, search = '') {
+    const params = new URLSearchParams({ page, limit });
+    if (search) params.append('search', search);
+    const response = await this.client.get(`/bets/get-tickets?${params}`);
+    return response.data;
+  }
+
+  async fetchBetsStats() {
+    const response = await this.client.get('/bets/stats');
+    return response.data;
+  }
+
+  async fetchBetsAnalytics() {
+    const response = await this.client.get('/bets/analytics');
     return response.data;
   }
   async createTicket(formData) {
@@ -111,8 +123,18 @@ class ApiClient {
   }
 
   // Bankroll
-  async fetchTransactions() {
-    const response = await this.client.get('/bankroll/transactions');
+  async fetchBankrollSummary() {
+    const response = await this.client.get('/bankroll/summary');
+    return response.data;
+  }
+
+  async fetchBankrollChartData() {
+    const response = await this.client.get('/bankroll/chart-data');
+    return response.data;
+  }
+
+  async fetchTransactions(page = 0, limit = 10) {
+    const response = await this.client.get(`/bankroll/transactions?page=${page}&limit=${limit}`);
     return response.data;
   }
 

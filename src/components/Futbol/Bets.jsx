@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
@@ -111,6 +111,9 @@ TicketCard.propTypes = {
 function Bets() {
   const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
+  const [ticketsTotal, setTicketsTotal] = useState(0);
+  const [ticketsPage, setTicketsPage] = useState(0);
+  const [stats, setStats] = useState(null);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
@@ -122,39 +125,36 @@ function Bets() {
   const [searchId, setSearchId] = useState('');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const filteredTickets = useMemo(() => {
-    const term = searchId.trim().toLowerCase();
-    return term ? tickets.filter(t => (t.ticket_id || '').toLowerCase().includes(term)) : tickets;
-  }, [tickets, searchId]);
-
-  const logStats = useMemo(() => {
-    const resolved = tickets.filter(t => t.status === 'won' || t.status === 'lost');
-    const winRate = resolved.length ? (resolved.filter(t => t.status === 'won').length / resolved.length * 100).toFixed(1) : 0;
-    const netProfit = tickets.filter(t => t.status !== 'pending').reduce((s, t) => s + (t.net_profit || 0), 0);
-    const totalStaked = tickets.reduce((s, t) => s + (t.stake || 0), 0);
-    const withOdds = tickets.filter(t => t.odds > 0);
-    const avgOdds = withOdds.length ? (withOdds.reduce((s, t) => s + t.odds, 0) / withOdds.length).toFixed(2) : 0;
-    return { total: tickets.length, winRate, netProfit, totalStaked, avgOdds };
-  }, [tickets]);
+  const skipSearchEffect = useRef(true);
 
   const showToast = (message, severity = 'success') => {
     setToast({ open: true, message, severity });
   };
 
-  const fetchTickets = () => {
-    apiClient.fetchTickets()
-      .then((tickets) => { setTickets(tickets) })
-      .catch((error) => {
-        console.error(error);
-        showToast(t('bets.error_load'), 'error');
-      })
+  const loadTickets = (page, search) => {
+    setLoadingTickets(true);
+    return apiClient.fetchTickets(page, 10, search)
+      .then(res => { setTickets(res.data); setTicketsTotal(res.total); })
+      .catch(() => showToast(t('bets.error_load'), 'error'))
       .finally(() => setLoadingTickets(false));
-  }
+  };
+
+  const loadStats = () => apiClient.fetchBetsStats().then(setStats).catch(() => {});
 
   useEffect(() => {
-    fetchTickets();
+    loadStats();
+    loadTickets(0, '');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced server-side search — skip the initial render
+  useEffect(() => {
+    if (skipSearchEffect.current) { skipSearchEffect.current = false; return; }
+    const timer = setTimeout(() => {
+      setTicketsPage(0);
+      loadTickets(0, searchId.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -192,7 +192,9 @@ function Bets() {
       }
 
       handleCloseModal();
-      fetchTickets();
+      loadStats();
+      setTicketsPage(0);
+      loadTickets(0, searchId);
     } catch {
       const key = editId ? 'bets.error_update' : 'bets.error_create';
       showToast(t(key), 'error');
@@ -215,7 +217,9 @@ function Bets() {
     try {
       await apiClient.deleteTicket(ticket_id);
       showToast(t('bets.ticket_deleted'));
-      fetchTickets();
+      loadStats();
+      setTicketsPage(0);
+      loadTickets(0, searchId);
       setFile(null);
       setCurrentTicket(initialStatedata);
       setOpenModal(false);
@@ -408,11 +412,11 @@ function Bets() {
         <Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(5, 1fr)' }, gap: 2, mb: 3 }}>
             {[
-              { label: 'Total Tickets', display: logStats.total, color: '#1976d2' },
-              { label: 'Avg Odds', display: logStats.avgOdds ? `${logStats.avgOdds}x` : '—', color: '#1976d2' },
-              { label: 'Win Rate', display: `${logStats.winRate}%`, color: '#2e7d32' },
-              { label: 'Net Profit', display: `$${Number(logStats.netProfit).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: logStats.netProfit >= 0 ? '#2e7d32' : '#d32f2f' },
-              { label: 'Total Staked', display: `$${Number(logStats.totalStaked).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: '#757575' },
+              { label: 'Total Tickets', display: stats?.total ?? '—', color: '#1976d2' },
+              { label: 'Avg Odds', display: stats?.avg_odds ? `${stats.avg_odds}x` : '—', color: '#1976d2' },
+              { label: 'Win Rate', display: stats ? `${stats.win_rate}%` : '—', color: '#2e7d32' },
+              { label: 'Net Profit', display: stats ? `$${Number(stats.net_profit).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—', color: (stats?.net_profit ?? 0) >= 0 ? '#2e7d32' : '#d32f2f' },
+              { label: 'Total Staked', display: stats ? `$${Number(stats.total_staked).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—', color: '#757575' },
             ].map(({ label, display, color }) => (
               <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2, ...(label === 'Total Staked' && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
                 <Typography variant="body2" color="text.secondary">{label}</Typography>
@@ -422,28 +426,39 @@ function Bets() {
           </Box>
           {isMobile ? (
             <Box>
-              {filteredTickets.length === 0 ? (
+              {tickets.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-                  <Typography>{tickets.length === 0 ? 'No tickets yet. Tap + to add your first bet.' : 'No tickets match that ID.'}</Typography>
+                  <Typography>{ticketsTotal === 0 ? 'No tickets yet. Tap + to add your first bet.' : 'No tickets match that ID.'}</Typography>
                 </Box>
               ) : (
-                [...filteredTickets]
-                  .sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))
-                  .map(ticket => (
+                <>
+                  {tickets.map(ticket => (
                     <TicketCard key={ticket.ticket_id} ticket={ticket} onEdit={handleEdit} onDelete={handleDelete} />
-                  ))
+                  ))}
+                  {ticketsTotal > 10 && (
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+                      <Button size="small" disabled={ticketsPage === 0} onClick={() => { const p = ticketsPage - 1; setTicketsPage(p); loadTickets(p, searchId); }}>Prev</Button>
+                      <Typography variant="caption" color="text.secondary">{ticketsPage + 1} / {Math.ceil(ticketsTotal / 10)}</Typography>
+                      <Button size="small" disabled={(ticketsPage + 1) * 10 >= ticketsTotal} onClick={() => { const p = ticketsPage + 1; setTicketsPage(p); loadTickets(p, searchId); }}>Next</Button>
+                    </Stack>
+                  )}
+                </>
               )}
             </Box>
           ) : (
             <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
               <DataGrid
-                rows={[...filteredTickets].sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime))}
+                rows={tickets}
                 columns={columns}
                 getRowId={(row) => row.ticket_id}
-                pageSizeOptions={[5, 10, 25]}
-                initialState={{
-                  pagination: { paginationModel: { pageSize: 10 } },
+                rowCount={ticketsTotal}
+                paginationMode="server"
+                paginationModel={{ page: ticketsPage, pageSize: 10 }}
+                onPaginationModelChange={(model) => {
+                  setTicketsPage(model.page);
+                  loadTickets(model.page, searchId);
                 }}
+                pageSizeOptions={[10]}
                 disableRowSelectionOnClick
                 disableColumnMenu
                 rowHeight={42}
@@ -458,8 +473,8 @@ function Bets() {
         )
       )}
 
-      {mainTab === 1 && <BetsAnalytics tickets={tickets} />}
-      {mainTab === 2 && <BankrollView tickets={tickets} />}
+      {mainTab === 1 && <BetsAnalytics />}
+      {mainTab === 2 && <BankrollView />}
       {mainTab === 3 && <BettingRules />}
 
       <TicketModal

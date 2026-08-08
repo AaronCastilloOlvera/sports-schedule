@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
-import { Box, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Box, CircularProgress, Stack, Tab, Tabs, Typography } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
   Pie, PieChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { BET_TYPES } from '../../utils/consts.jsx';
+import { apiClient } from '../../api/api.js';
 
 const GREEN = '#2e7d32';
 const RED = '#d32f2f';
@@ -13,20 +13,6 @@ const BLUE = '#1976d2';
 const PIE_COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#7b1fa2', '#0097a7', '#c62828', '#558b2f', '#ad1457'];
 const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
 const BET_TYPE_LABELS = Object.fromEntries(BET_TYPES.map(b => [b.value, b.label]));
-const ODDS_BUCKETS = [
-  { label: '1.00-1.50', min: 1.00, max: 1.50 },
-  { label: '1.50-2.00', min: 1.50, max: 2.00 },
-  { label: '2.00-3.00', min: 2.00, max: 3.00 },
-  { label: '3.00+',     min: 3.00, max: Infinity },
-];
-const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // Date#getDay(): 0 = Sunday
-const TIME_BUCKETS = [
-  { label: 'Night (0-6)',      min: 0,  max: 6  },
-  { label: 'Morning (6-12)',   min: 6,  max: 12 },
-  { label: 'Afternoon (12-18)', min: 12, max: 18 },
-  { label: 'Evening (18-24)',  min: 18, max: 24 },
-];
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (value, data) => `${((value / data.reduce((s, d) => s + d.value, 0)) * 100).toFixed(1)}%`;
@@ -42,11 +28,6 @@ function ScatterTooltip({ active, payload }) {
   );
 }
 
-ScatterTooltip.propTypes = {
-  active: PropTypes.bool,
-  payload: PropTypes.array,
-};
-
 function ChartCard({ title, children, sx = {} }) {
   return (
     <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, ...sx }}>
@@ -56,271 +37,54 @@ function ChartCard({ title, children, sx = {} }) {
   );
 }
 
-export default function BetsAnalytics({ tickets }) {
+export default function BetsAnalytics() {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
 
-  const resolved = useMemo(
-    () => tickets.filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push'),
-    [tickets],
-  );
+  useEffect(() => {
+    apiClient.fetchBetsAnalytics()
+      .then(setAnalytics)
+      .finally(() => setLoading(false));
+  }, []);
 
-  // General — accumulated profit
-  const accumulatedData = useMemo(() => {
-    let acc = 0;
-    const points = [...resolved]
-      .sort((a, b) => new Date(a.match_datetime) - new Date(b.match_datetime))
-      .map(t => {
-        acc += t.net_profit || 0;
-        return {
-          date: new Date(t.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' }),
-          profit: parseFloat(acc.toFixed(2)),
-        };
-      });
-    return [{ date: '', profit: 0 }, ...points];
-  }, [resolved]);
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  }
 
-  // General — daily P&L
-  const dailyData = useMemo(() => {
-    const byDay = {};
-    resolved.forEach(t => {
-      const date = new Date(t.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-      byDay[date] = (byDay[date] || 0) + (t.net_profit || 0);
-    });
-    return Object.entries(byDay)
-      .map(([date, profit]) => ({ date, profit: parseFloat(profit.toFixed(2)) }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [resolved]);
+  if (!analytics) return null;
 
-  // General — won/lost/push pie
-  const winLossPie = useMemo(() => {
-    const won = resolved.filter(t => t.status === 'won').length;
-    const lost = resolved.filter(t => t.status === 'lost').length;
-    const push = resolved.filter(t => t.status === 'push').length;
-    return [
-      { name: 'Won', value: won, fill: GREEN },
-      { name: 'Lost', value: lost, fill: RED },
-      ...(push > 0 ? [{ name: 'Push', value: push, fill: '#757575' }] : []),
-    ].filter(d => d.value > 0);
-  }, [resolved]);
+  const { summary } = analytics;
 
-  // By sport — profit + win rate + ROI
-  const sportData = useMemo(() => {
-    const map = {};
-    resolved.forEach(t => {
-      const key = t.sport || 'Unknown';
-      if (!map[key]) map[key] = { profit: 0, won: 0, total: 0, stake: 0 };
-      map[key].profit += t.net_profit || 0;
-      map[key].stake += t.stake || 0;
-      map[key].total++;
-      if (t.status === 'won') map[key].won++;
-    });
-    return Object.entries(map).map(([sport, d]) => ({
-      sport,
-      profit: parseFloat(d.profit.toFixed(2)),
-      winRate: parseFloat(((d.won / d.total) * 100).toFixed(1)),
-      roi: d.stake ? parseFloat((d.profit / d.stake * 100).toFixed(1)) : 0,
-      count: d.total,
-    }));
-  }, [resolved]);
+  // Pie helpers — trivial index-based color maps, no useMemo needed
+  const winLossPie = [
+    { name: 'Won',  value: analytics.win_loss_counts.won,  fill: GREEN },
+    { name: 'Lost', value: analytics.win_loss_counts.lost, fill: RED },
+    ...(analytics.win_loss_counts.push > 0 ? [{ name: 'Push', value: analytics.win_loss_counts.push, fill: '#757575' }] : []),
+  ].filter(d => d.value > 0);
 
-  // By sport — pie (tickets by sport)
-  const sportPie = useMemo(() =>
-    sportData.map((d, i) => ({ name: `${SPORT_ICONS[d.sport] || '🎯'} ${d.sport}`, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [sportData],
-  );
+  const sportPie = analytics.sport_data.map((d, i) => ({
+    name: `${SPORT_ICONS[d.sport] || '🎯'} ${d.sport}`,
+    value: d.count,
+    fill: PIE_COLORS[i % PIE_COLORS.length],
+  }));
 
-  // By bet type — profit + win rate + ROI
-  const betTypeData = useMemo(() => {
-    const map = {};
-    resolved.forEach(t => {
-      const key = t.bet_type || 'Unknown';
-      if (!map[key]) map[key] = { profit: 0, won: 0, total: 0, stake: 0 };
-      map[key].profit += t.net_profit || 0;
-      map[key].stake += t.stake || 0;
-      map[key].total++;
-      if (t.status === 'won') map[key].won++;
-    });
-    return Object.entries(map).map(([betType, d]) => ({
-      betType: BET_TYPE_LABELS[betType] || betType,
-      profit: parseFloat(d.profit.toFixed(2)),
-      winRate: parseFloat(((d.won / d.total) * 100).toFixed(1)),
-      roi: d.stake ? parseFloat((d.profit / d.stake * 100).toFixed(1)) : 0,
-      count: d.total,
-    })).sort((a, b) => b.profit - a.profit);
-  }, [resolved]);
+  const leaguePie = [...analytics.league_data]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map((d, i) => ({ name: d.league, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
-  // By bet type — pie (tickets by bet type)
-  const betTypePie = useMemo(() =>
-    betTypeData.map((d, i) => ({ name: d.betType, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [betTypeData],
-  );
+  // Apply label mapping from raw bet_type values
+  const betTypeData = analytics.bet_type_data.map(d => ({
+    ...d,
+    betType: BET_TYPE_LABELS[d.betType] || d.betType,
+  }));
+  const betTypePie = betTypeData.map((d, i) => ({ name: d.betType, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
-  // By league — top 10 by profit, + ROI
-  const leagueData = useMemo(() => {
-    const map = {};
-    resolved.forEach(t => {
-      const key = t.league || 'Unknown';
-      if (!map[key]) map[key] = { profit: 0, count: 0, stake: 0 };
-      map[key].profit += t.net_profit || 0;
-      map[key].stake += t.stake || 0;
-      map[key].count++;
-    });
-    return Object.entries(map)
-      .map(([league, d]) => ({
-        league,
-        profit: parseFloat(d.profit.toFixed(2)),
-        roi: d.stake ? parseFloat((d.profit / d.stake * 100).toFixed(1)) : 0,
-        count: d.count,
-      }))
-      .sort((a, b) => b.profit - a.profit)
-      .slice(0, 10);
-  }, [resolved]);
-
-  // By league — pie (tickets by league, top 8)
-  const leaguePie = useMemo(() =>
-    [...leagueData]
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8)
-      .map((d, i) => ({ name: d.league, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [leagueData],
-  );
-
-  // By odds range — profit + win rate
-  const oddsBucketData = useMemo(() => {
-    const map = {};
-    ODDS_BUCKETS.forEach(b => { map[b.label] = { profit: 0, won: 0, total: 0 }; });
-    resolved.forEach(t => {
-      if (!t.odds || t.odds <= 0) return;
-      const bucket = ODDS_BUCKETS.find(b => t.odds >= b.min && t.odds < b.max) ?? ODDS_BUCKETS[ODDS_BUCKETS.length - 1];
-      map[bucket.label].profit += t.net_profit || 0;
-      map[bucket.label].total++;
-      if (t.status === 'won') map[bucket.label].won++;
-    });
-    return ODDS_BUCKETS.map(b => ({
-      range: b.label,
-      profit: parseFloat(map[b.label].profit.toFixed(2)),
-      winRate: map[b.label].total ? parseFloat((map[b.label].won / map[b.label].total * 100).toFixed(1)) : 0,
-      count: map[b.label].total,
-    })).filter(d => d.count > 0);
-  }, [resolved]);
-
-  const oddsBucketPie = useMemo(() =>
-    oddsBucketData.map((d, i) => ({ name: d.range, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [oddsBucketData],
-  );
-
-  // Studied vs not — profit + win rate
-  const studiedData = useMemo(() => {
-    const map = { Studied: { profit: 0, won: 0, total: 0 }, 'Not Studied': { profit: 0, won: 0, total: 0 } };
-    resolved.forEach(t => {
-      const key = t.studied ? 'Studied' : 'Not Studied';
-      map[key].profit += t.net_profit || 0;
-      map[key].total++;
-      if (t.status === 'won') map[key].won++;
-    });
-    return Object.entries(map)
-      .map(([label, d]) => ({
-        label,
-        profit: parseFloat(d.profit.toFixed(2)),
-        winRate: d.total ? parseFloat((d.won / d.total * 100).toFixed(1)) : 0,
-        count: d.total,
-      }))
-      .filter(d => d.count > 0);
-  }, [resolved]);
-
-  const studiedPie = useMemo(() =>
-    studiedData.map(d => ({ name: d.label, value: d.count, fill: d.label === 'Studied' ? BLUE : '#757575' })),
-    [studiedData],
-  );
-
-  // By day of week — profit + win rate
-  const dayOfWeekData = useMemo(() => {
-    const map = {};
-    resolved.forEach(t => {
-      const key = DAY_NAMES[new Date(t.match_datetime).getDay()];
-      if (!map[key]) map[key] = { profit: 0, won: 0, total: 0 };
-      map[key].profit += t.net_profit || 0;
-      map[key].total++;
-      if (t.status === 'won') map[key].won++;
-    });
-    return DAY_ORDER.filter(day => map[day]).map(day => ({
-      day,
-      profit: parseFloat(map[day].profit.toFixed(2)),
-      winRate: parseFloat((map[day].won / map[day].total * 100).toFixed(1)),
-      count: map[day].total,
-    }));
-  }, [resolved]);
-
-  const dayOfWeekPie = useMemo(() =>
-    dayOfWeekData.map((d, i) => ({ name: d.day, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [dayOfWeekData],
-  );
-
-  // By time of day — profit + win rate
-  const timeOfDayData = useMemo(() => {
-    const map = {};
-    TIME_BUCKETS.forEach(b => { map[b.label] = { profit: 0, won: 0, total: 0 }; });
-    resolved.forEach(t => {
-      const hour = new Date(t.match_datetime).getHours();
-      const bucket = TIME_BUCKETS.find(b => hour >= b.min && hour < b.max);
-      if (!bucket) return;
-      map[bucket.label].profit += t.net_profit || 0;
-      map[bucket.label].total++;
-      if (t.status === 'won') map[bucket.label].won++;
-    });
-    return TIME_BUCKETS.map(b => ({
-      time: b.label,
-      profit: parseFloat(map[b.label].profit.toFixed(2)),
-      winRate: map[b.label].total ? parseFloat((map[b.label].won / map[b.label].total * 100).toFixed(1)) : 0,
-      count: map[b.label].total,
-    })).filter(d => d.count > 0);
-  }, [resolved]);
-
-  const timeOfDayPie = useMemo(() =>
-    timeOfDayData.map((d, i) => ({ name: d.time, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] })),
-    [timeOfDayData],
-  );
-
-  // Bets placed that day vs. that day's profit — tests the "fewer bets, better results" hunch
-  const dailyCountProfit = useMemo(() => {
-    const byDay = {};
-    resolved.forEach(t => {
-      const date = new Date(t.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-      if (!byDay[date]) byDay[date] = { profit: 0, count: 0 };
-      byDay[date].profit += t.net_profit || 0;
-      byDay[date].count++;
-    });
-    return Object.entries(byDay).map(([date, d]) => ({
-      date,
-      count: d.count,
-      profit: parseFloat(d.profit.toFixed(2)),
-    }));
-  }, [resolved]);
-
-  // Analytics summary stats
-  const analyticsStats = useMemo(() => {
-    const byDay = {};
-    resolved.forEach(t => {
-      const date = new Date(t.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-      byDay[date] = (byDay[date] || 0) + (t.net_profit || 0);
-    });
-    const bestDay = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
-    const bestBet = resolved.reduce((best, t) => (t.net_profit || 0) > (best?.net_profit || 0) ? t : best, null);
-    const sorted = [...resolved]
-      .filter(t => t.status === 'won' || t.status === 'lost')
-      .sort((a, b) => new Date(b.match_datetime) - new Date(a.match_datetime));
-    let streak = 0, streakType = null;
-    for (const t of sorted) {
-      if (!streakType) { streakType = t.status; streak = 1; }
-      else if (t.status === streakType) streak++;
-      else break;
-    }
-    const withOdds = resolved.filter(t => t.odds > 0);
-    const avgOdds = withOdds.length ? (withOdds.reduce((s, t) => s + t.odds, 0) / withOdds.length).toFixed(2) : 0;
-    return { bestDay, bestBet, streak, streakType, avgOdds };
-  }, [resolved]);
-
-  const { bestDay, bestBet, streak, streakType, avgOdds } = analyticsStats;
+  const oddsBucketPie = analytics.odds_bucket_data.map((d, i) => ({ name: d.range, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
+  const studiedPie    = analytics.studied_data.map(d => ({ name: d.label, value: d.count, fill: d.label === 'Studied' ? BLUE : '#757575' }));
+  const dayOfWeekPie  = analytics.day_of_week_data.map((d, i) => ({ name: d.day, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
+  const timeOfDayPie  = analytics.time_of_day_data.map((d, i) => ({ name: d.time, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
   const renderPieTooltip = (data) => ({ formatter: (v) => [`${v} tickets (${pct(v, data)})`, ''] });
 
@@ -329,10 +93,10 @@ export default function BetsAnalytics({ tickets }) {
       {/* Summary cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
         {[
-          { label: 'Best Day', display: bestDay ? `${usd(bestDay[1])} (${bestDay[0]})` : '—', color: GREEN },
-          { label: 'Best Bet', display: bestBet ? usd(bestBet.net_profit) : '—', color: GREEN },
-          { label: 'Current Streak', display: streak ? `${streak} ${streakType === 'won' ? 'W' : 'L'}` : '—', color: streakType === 'won' ? GREEN : RED },
-          { label: 'Avg Odds', display: avgOdds ? `${avgOdds}x` : '—', color: BLUE },
+          { label: 'Best Day',       display: summary.best_day  ? `${usd(summary.best_day.profit)} (${summary.best_day.date})` : '—', color: GREEN },
+          { label: 'Best Bet',       display: summary.best_bet_profit != null ? usd(summary.best_bet_profit) : '—', color: GREEN },
+          { label: 'Current Streak', display: summary.streak ? `${summary.streak} ${summary.streak_type === 'won' ? 'W' : 'L'}` : '—', color: summary.streak_type === 'won' ? GREEN : RED },
+          { label: 'Avg Odds',       display: summary.avg_odds ? `${summary.avg_odds}x` : '—', color: BLUE },
         ].map(({ label, display, color }) => (
           <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
             <Typography variant="body2" color="text.secondary">{label}</Typography>
@@ -356,7 +120,7 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Accumulated Profit" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={accumulatedData}>
+                <LineChart data={analytics.accumulated_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
@@ -369,7 +133,7 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Won / Lost / Push" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={winLossPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={winLossPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {winLossPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
                   <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
@@ -381,13 +145,13 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Daily P&L">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={dailyData}>
+              <BarChart data={analytics.daily_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v) => [usd(v), 'P&L']} />
                 <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                  {dailyData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                  {analytics.daily_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -400,13 +164,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Sport" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={sportData}>
+                <BarChart data={analytics.sport_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {sportData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.sport_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -415,10 +179,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by Sport" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={sportPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={sportPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {sportPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(sportPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -427,7 +191,7 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Win Rate by Sport">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={sportData}>
+              <BarChart data={analytics.sport_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -439,13 +203,13 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="ROI % by Sport">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={sportData}>
+              <BarChart data={analytics.sport_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v) => [`${v}%`, 'ROI']} />
                 <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
-                  {sportData.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
+                  {analytics.sport_data.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -458,13 +222,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Top Leagues by Profit" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={leagueData} layout="vertical" margin={{ left: 10 }}>
+                <BarChart data={analytics.league_data} layout="vertical" margin={{ left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tickFormatter={usd} tick={{ fontSize: 12 }} />
                   <YAxis type="category" dataKey="league" width={130} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
-                    {leagueData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -473,10 +237,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by League" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
-                  <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110} >
+                  <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
                     {leaguePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(leaguePie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -485,13 +249,13 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="ROI % by League">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={leagueData}>
+              <BarChart data={analytics.league_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="league" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
                 <YAxis unit="%" tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v) => [`${v}%`, 'ROI']} />
                 <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
-                  {leagueData.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
+                  {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -519,10 +283,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by Bet Type" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={betTypePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={betTypePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {betTypePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(betTypePie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -562,13 +326,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Odds Range" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={oddsBucketData}>
+                <BarChart data={analytics.odds_bucket_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {oddsBucketData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.odds_bucket_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -577,10 +341,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by Odds Range" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={oddsBucketPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={oddsBucketPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {oddsBucketPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(oddsBucketPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -589,7 +353,7 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Win Rate by Odds Range">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={oddsBucketData}>
+              <BarChart data={analytics.odds_bucket_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -606,13 +370,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit — Studied vs Not" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={studiedData}>
+                <BarChart data={analytics.studied_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {studiedData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.studied_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -621,10 +385,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets — Studied vs Not" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={studiedPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={studiedPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {studiedPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(studiedPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -633,7 +397,7 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Win Rate — Studied vs Not">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={studiedData}>
+              <BarChart data={analytics.studied_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -650,13 +414,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Day of Week" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={dayOfWeekData}>
+                <BarChart data={analytics.day_of_week_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {dayOfWeekData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.day_of_week_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -665,10 +429,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by Day of Week" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={dayOfWeekPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={dayOfWeekPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {dayOfWeekPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(dayOfWeekPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -677,7 +441,7 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Win Rate by Day of Week">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={dayOfWeekData}>
+              <BarChart data={analytics.day_of_week_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -690,13 +454,13 @@ export default function BetsAnalytics({ tickets }) {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Time of Day" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={timeOfDayData}>
+                <BarChart data={analytics.time_of_day_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {timeOfDayData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.time_of_day_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -705,10 +469,10 @@ export default function BetsAnalytics({ tickets }) {
             <ChartCard title="Tickets by Time of Day" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={timeOfDayPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} >
+                  <Pie data={timeOfDayPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {timeOfDayPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip {...renderPieTooltip(timeOfDayPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -717,7 +481,7 @@ export default function BetsAnalytics({ tickets }) {
 
           <ChartCard title="Win Rate by Time of Day">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={timeOfDayData}>
+              <BarChart data={analytics.time_of_day_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -734,15 +498,12 @@ export default function BetsAnalytics({ tickets }) {
             <ResponsiveContainer width="100%" height={280}>
               <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  type="number" dataKey="count" name="Bets" allowDecimals={false}
-                  tick={{ fontSize: 12 }}
-                  label={{ value: 'Bets that day', position: 'insideBottom', offset: -5, fontSize: 12 }}
-                />
+                <XAxis type="number" dataKey="count" name="Bets" allowDecimals={false} tick={{ fontSize: 12 }}
+                  label={{ value: 'Bets that day', position: 'insideBottom', offset: -5, fontSize: 12 }} />
                 <YAxis type="number" dataKey="profit" name="Profit" tickFormatter={usd} tick={{ fontSize: 12 }} />
                 <Tooltip content={<ScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-                <Scatter data={dailyCountProfit}>
-                  {dailyCountProfit.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                <Scatter data={analytics.daily_count_profit}>
+                  {analytics.daily_count_profit.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>

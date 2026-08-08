@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
   DialogContent, DialogTitle, IconButton, LinearProgress, MenuItem,
@@ -13,17 +13,6 @@ import {
 import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
 import BankrollSkeleton from './BankrollSkeleton';
-
-const getWeekStart = (dateStr) => {
-  const d = new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00');
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().substring(0, 10);
-};
-const fmtWeekLabel = (dateStr) =>
-  new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
-const fmtMonthLabel = (monthStr) =>
-  new Date(`${monthStr}-15T12:00:00`).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
 
 const FLOW_LABELS = { deposited: 'Deposited', withdrawn: 'Withdrawn', net: 'Net (real gain)' };
 
@@ -123,11 +112,15 @@ SummaryCard.propTypes = {
   color: PropTypes.string,
 };
 
-export default function BankrollView({ tickets }) {
+export default function BankrollView() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [transactions, setTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txPage, setTxPage] = useState(0);
+  const [summary, setSummary] = useState(null);
+  const [chartData, setChartData] = useState(null);
+  const [loadingInit, setLoadingInit] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [current, setCurrent] = useState(initialTx);
   const [editId, setEditId] = useState(null);
@@ -135,154 +128,45 @@ export default function BankrollView({ tickets }) {
 
   const showToast = (message, severity = 'success') => setToast({ open: true, message, severity });
 
-  const fetchTransactions = () => {
-    apiClient.fetchTransactions()
-      .then(setTransactions)
-      .catch(() => showToast('Error al cargar transacciones.', 'error'))
-      .finally(() => setLoadingTransactions(false));
+  const loadTransactions = (page = 0) =>
+    apiClient.fetchTransactions(page, 10).then(res => {
+      setTransactions(res.data);
+      setTxTotal(res.total);
+    });
+
+  useEffect(() => {
+    Promise.all([
+      apiClient.fetchBankrollSummary().then(setSummary),
+      apiClient.fetchBankrollChartData().then(setChartData),
+      loadTransactions(0),
+    ])
+      .catch(() => showToast('Error al cargar datos.', 'error'))
+      .finally(() => setLoadingInit(false));
+  }, []);
+
+  const refreshAll = (page = txPage) => {
+    Promise.all([
+      apiClient.fetchBankrollSummary().then(setSummary),
+      apiClient.fetchBankrollChartData().then(setChartData),
+      loadTransactions(page),
+    ]).catch(() => showToast('Error al actualizar.', 'error'));
   };
 
-  useEffect(() => { fetchTransactions(); }, []);
+  const totalDeposits    = summary?.total_deposits    ?? 0;
+  const totalWithdrawals = summary?.total_withdrawals ?? 0;
+  const betsNetProfit    = summary?.bets_net_profit   ?? 0;
+  const totalStaked      = summary?.total_staked      ?? 0;
+  const nuBalance        = summary?.nu_balance        ?? 0;
+  const realBalance      = summary?.real_balance      ?? 0;
+  const roi              = summary?.roi               ?? 0;
+  const roiColor         = roi >= 0 ? '#2e7d32' : '#d32f2f';
 
-  const totalDeposits    = transactions.filter(t => t.type === 'deposit').reduce((s, t) => s + t.amount, 0);
-  const totalWithdrawals = transactions.filter(t => t.type === 'withdrawal').reduce((s, t) => s + t.amount, 0);
-  const nuExpenses       = transactions.filter(t => t.type === 'nu_expense').reduce((s, t) => s + t.amount, 0);
-  const nuBalance        = totalWithdrawals * 0.99 - nuExpenses;
+  const balanceHistory        = chartData?.balance_history        ?? [];
+  const cumulativeWithdrawals = chartData?.cumulative_withdrawals ?? [];
+  const weeklyWithdrawals     = chartData?.weekly_withdrawals     ?? [];
+  const monthlyFlow           = chartData?.monthly_flow           ?? [];
+  const stakeVsBankroll       = chartData?.stake_vs_bankroll      ?? [];
 
-  const weeklyWithdrawals = useMemo(() => {
-    const byWeek = {};
-    transactions
-      .filter(t => t.type === 'withdrawal')
-      .forEach(t => {
-        const week = getWeekStart(t.date);
-        byWeek[week] = (byWeek[week] ?? 0) + t.amount;
-      });
-    return Object.entries(byWeek)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([week, total]) => ({ week: fmtWeekLabel(week), total: parseFloat(total.toFixed(2)) }));
-  }, [transactions]);
-
-  const monthlyFlow = useMemo(() => {
-    const byMonth = {};
-    transactions.forEach(t => {
-      const month = (t.date ?? '').substring(0, 7);
-      if (!month) return;
-      if (!byMonth[month]) byMonth[month] = { deposited: 0, withdrawn: 0 };
-      if (t.type === 'deposit') byMonth[month].deposited += t.amount;
-      else byMonth[month].withdrawn += t.amount;
-    });
-    return Object.entries(byMonth)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, { deposited, withdrawn }]) => {
-        const hasDeposits = deposited > 0;
-        return {
-          month: fmtMonthLabel(month),
-          deposited: parseFloat(deposited.toFixed(2)),
-          withdrawn: hasDeposits ? parseFloat(withdrawn.toFixed(2)) : null,
-          net: parseFloat((withdrawn - deposited).toFixed(2)),
-          hasDeposits,
-        };
-      });
-  }, [transactions]);
-
-  // Running balance over time: every deposit/withdrawal and every resolved
-  // bet's net_profit, merged into one chronological timeline and accumulated —
-  // shows the actual trajectory toward the withdrawal goal, not just weekly withdrawals.
-  const balanceHistory = useMemo(() => {
-    const events = [
-      ...transactions
-        .filter(t => t.type !== 'nu_expense')
-        .map(t => ({
-          date: (t.date ?? '').substring(0, 10),
-          delta: t.type === 'deposit' ? t.amount : -t.amount,
-        })),
-      ...(tickets || [])
-        .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
-        .map(t => ({
-          date: (t.match_datetime ?? '').substring(0, 10),
-          delta: t.net_profit || 0,
-        })),
-    ]
-      .filter(e => e.date)
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    let running = 0;
-    const byDate = {};
-    events.forEach(({ date, delta }) => {
-      running += delta;
-      byDate[date] = running;
-    });
-
-    return Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, balance]) => ({ date: fmtWeekLabel(date), balance: parseFloat(balance.toFixed(2)) }));
-  }, [transactions, tickets]);
-
-  // Withdrawals only, accumulated day by day — isolates withdrawal pace
-  // toward the goal, without deposits or bet variance muddying the trend.
-  const cumulativeWithdrawals = useMemo(() => {
-    const byDate = {};
-    transactions
-      .filter(t => t.type === 'withdrawal')
-      .map(t => ({ date: (t.date ?? '').substring(0, 10), amount: t.amount }))
-      .filter(e => e.date)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .forEach(({ date, amount }) => {
-        byDate[date] = (byDate[date] ?? 0) + amount;
-      });
-
-    let running = 0;
-    return Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, total]) => {
-        running += total;
-        return { date: fmtWeekLabel(date), total: parseFloat(running.toFixed(2)) };
-      });
-  }, [transactions]);
-
-  const stakeVsBankroll = useMemo(() => {
-    const events = [
-      ...transactions.map(t => ({
-        time: new Date((t.date ?? '').substring(0, 10) + 'T00:00:00').getTime(),
-        delta: t.type === 'deposit' ? t.amount : -t.amount,
-      })),
-      ...(tickets || [])
-        .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
-        .map(t => ({
-          time: new Date(t.match_datetime).getTime(),
-          delta: t.net_profit || 0,
-        })),
-    ].filter(e => !isNaN(e.time));
-
-    return (tickets || [])
-      .filter(t => t.match_datetime && (t.stake || 0) > 0)
-      .map(t => {
-        const betTime = new Date(t.match_datetime).getTime();
-        const bankrollBefore = events
-          .filter(e => e.time < betTime)
-          .reduce((s, e) => s + e.delta, 0);
-        return {
-          betTime,
-          date: fmtWeekLabel(t.match_datetime),
-          stake: t.stake,
-          bankroll: bankrollBefore,
-          pct: bankrollBefore > 0 ? parseFloat(((t.stake / bankrollBefore) * 100).toFixed(1)) : null,
-        };
-      })
-      .filter(row => row.pct != null)
-      .sort((a, b) => a.betTime - b.betTime)
-      .map((row, i) => ({ ...row, n: i + 1 }));
-  }, [transactions, tickets]);
-
-  const betsNetProfit = (tickets || [])
-    .filter(t => t.status === 'won' || t.status === 'lost' || t.status === 'push')
-    .reduce((s, t) => s + (t.net_profit || 0), 0);
-  const realBalance = totalDeposits - totalWithdrawals + betsNetProfit;
-
-  const resolvedTickets = (tickets || []).filter(t => ['won', 'lost', 'push'].includes(t.status));
-  const totalStaked = resolvedTickets.reduce((s, t) => s + (t.stake || 0), 0);
-  const roi = totalStaked > 0 ? (betsNetProfit / totalStaked) * 100 : 0;
-  const roiColor = roi >= 0 ? '#2e7d32' : '#d32f2f';
 
 
   const handleSubmit = async () => {
@@ -297,7 +181,8 @@ export default function BankrollView({ tickets }) {
       setOpenModal(false);
       setCurrent(initialTx);
       setEditId(null);
-      fetchTransactions();
+      refreshAll(0);
+      setTxPage(0);
     } catch {
       showToast('Error al guardar la transacción.', 'error');
     }
@@ -318,7 +203,8 @@ export default function BankrollView({ tickets }) {
     try {
       await apiClient.deleteTransaction(id);
       showToast('Transacción eliminada.');
-      fetchTransactions();
+      refreshAll(0);
+      setTxPage(0);
     } catch {
       showToast('Error al eliminar la transacción.', 'error');
     }
@@ -370,7 +256,7 @@ export default function BankrollView({ tickets }) {
     },
   ];
 
-  if (loadingTransactions) {
+  if (loadingInit) {
     return <BankrollSkeleton isMobile={isMobile} />;
   }
 
@@ -427,6 +313,7 @@ export default function BankrollView({ tickets }) {
               <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                 {mxn(remaining)} left to reach the goal
               </Typography>
+
             </CardContent>
           </Card>
         );
@@ -565,21 +452,34 @@ export default function BankrollView({ tickets }) {
               <Typography>No transactions yet.</Typography>
             </Box>
           ) : (
-            [...transactions]
-              .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .map(row => (
+            <>
+              {transactions.map(row => (
                 <TransactionCard key={row.id} row={row} onEdit={handleEdit} onDelete={handleDelete} />
-              ))
+              ))}
+              {txTotal > 10 && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+                  <Button size="small" disabled={txPage === 0} onClick={() => { const p = txPage - 1; setTxPage(p); loadTransactions(p); }}>Prev</Button>
+                  <Typography variant="caption" color="text.secondary">{txPage + 1} / {Math.ceil(txTotal / 10)}</Typography>
+                  <Button size="small" disabled={(txPage + 1) * 10 >= txTotal} onClick={() => { const p = txPage + 1; setTxPage(p); loadTransactions(p); }}>Next</Button>
+                </Stack>
+              )}
+            </>
           )}
         </Box>
       ) : (
         <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2 }}>
           <DataGrid
-            rows={[...transactions].sort((a, b) => new Date(b.date) - new Date(a.date))}
+            rows={transactions}
             columns={columns}
             getRowId={(row) => row.id}
-            pageSizeOptions={[10, 25]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+            rowCount={txTotal}
+            paginationMode="server"
+            paginationModel={{ page: txPage, pageSize: 10 }}
+            onPaginationModelChange={(model) => {
+              setTxPage(model.page);
+              loadTransactions(model.page);
+            }}
+            pageSizeOptions={[10]}
             disableRowSelectionOnClick
             disableColumnMenu
             rowHeight={42}
@@ -619,9 +519,4 @@ export default function BankrollView({ tickets }) {
   );
 }
 
-BankrollView.propTypes = {
-  tickets: PropTypes.arrayOf(PropTypes.shape({
-    status: PropTypes.string,
-    net_profit: PropTypes.number,
-  })),
-};
+BankrollView.propTypes = {};
