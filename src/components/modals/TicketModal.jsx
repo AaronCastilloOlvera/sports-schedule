@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControlLabel, IconButton, InputAdornment, MenuItem, Stack, Tab, Tabs, TextField, Tooltip, Typography,
+  FormControlLabel, InputAdornment, MenuItem, Stack, Tab, Tabs, TextField, Typography,
 } from "@mui/material";
-import { SwapHoriz } from "@mui/icons-material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES } from "../../utils/consts.jsx";
 import { apiClient } from "../../api/api.js";
 import PropTypes from "prop-types";
@@ -14,6 +13,14 @@ const americanToDecimal = (val) => {
   return v > 0
     ? ((v / 100) + 1).toFixed(2)
     : ((100 / Math.abs(v)) + 1).toFixed(2);
+};
+
+const decimalToAmerican = (val) => {
+  const d = parseFloat(val);
+  if (!d || isNaN(d) || d <= 1) return '';
+  return d >= 2
+    ? '+' + Math.round((d - 1) * 100)
+    : String(Math.round(-100 / (d - 1)));
 };
 
 function CurrencyField({ label, name, value, onChange }) {
@@ -48,11 +55,27 @@ CurrencyField.propTypes = {
 function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
   const [tab, setTab] = useState(0);
   const [leagueOptions, setLeagueOptions] = useState([]);
+  const [americanOdds, setAmericanOdds] = useState('');
   const isEdit = Boolean(currentTicket.ticket_id);
 
   useEffect(() => {
-    if (openModal) setTab(0);
-  }, [openModal]);
+    if (openModal) {
+      setTab(0);
+      setAmericanOdds(decimalToAmerican(currentTicket.odds));
+    }
+  }, [openModal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleOddsChange = (e) => {
+    handleChange(e);
+    setAmericanOdds(decimalToAmerican(e.target.value));
+  };
+
+  const handleAmericanChange = (e) => {
+    const val = e.target.value;
+    setAmericanOdds(val);
+    const decimal = americanToDecimal(val);
+    if (decimal) handleChange({ target: { name: 'odds', value: decimal } });
+  };
 
   useEffect(() => {
     if (!openModal || !currentTicket.sport) return;
@@ -127,22 +150,33 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
 
         {tab === 1 && (
           <Stack spacing={2}>
-            <Stack direction="row" spacing={1}>
-              <TextField label="Odds" name="odds" type="number" value={currentTicket.odds} fullWidth size="small" onChange={handleChange} />
-              <Tooltip title="Convertir de momio americano a decimal">
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const converted = americanToDecimal(currentTicket.odds);
-                    if (converted) handleChange({ target: { name: 'odds', value: converted } });
-                  }}
-                >
-                  <SwapHoriz fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <CurrencyField label="Stake" name="stake" value={currentTicket.stake} onChange={handleChange} />
-            </Stack>
             <Stack direction="row" spacing={2}>
+              <TextField
+                label="Decimal"
+                name="odds"
+                type="number"
+                value={currentTicket.odds}
+                fullWidth
+                size="small"
+                onChange={handleOddsChange}
+              />
+              <TextField
+                label="Americano"
+                value={americanOdds}
+                fullWidth
+                size="small"
+                placeholder="+110"
+                onChange={handleAmericanChange}
+                sx={{
+                  '& .MuiInputLabel-root:not(.Mui-focused)': { color: 'text.disabled' },
+                  '& .MuiOutlinedInput-root:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
+                    borderStyle: 'dashed',
+                  },
+                }}
+              />
+            </Stack>
+            <Stack direction="row" spacing={1.5}>
+              <CurrencyField label="Stake" name="stake" value={currentTicket.stake} onChange={handleChange} />
               <CurrencyField label="Payout" name="payout" value={currentTicket.payout} onChange={handleChange} />
               <CurrencyField label="Net Profit" name="net_profit" value={currentTicket.net_profit} onChange={handleChange} />
             </Stack>
