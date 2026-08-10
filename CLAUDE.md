@@ -64,7 +64,7 @@ App
     │                                 BaseballSchedule.jsx, see Possible improvements)
     ├── Leagues                  ("My Leagues" section — favorite-league management: search, star toggle)
     └── Bets                     ("Control" section — betting ticket CRUD — 4 tabs: Log, Analytics, Bankroll, Rules)
-        ├── TicketModal          (create/edit ticket dialog; supports clipboard image paste)
+        ├── TicketModal          (create/edit ticket dialog; supports clipboard image paste; League field is a freeSolo MUI Autocomplete populated from DB via `fetchLeaguesBySport` — allows custom values; odds entry has a primary decimal field + a ghost dashed-border Americano field that sync bidirectionally in real time)
         ├── BetsAnalytics        (Recharts charts — receives tickets[] as prop, no separate fetch;
         │                         7 tabs: General, By Sport, By League, By Bet Type, By Odds,
         │                         Studied, Timing — the last three are hit-rate/ROI/discipline
@@ -105,6 +105,7 @@ All methods live on the `ApiClient` class. Key endpoints:
 | `updateTicket(id, formData)` | PUT | `/bets/update-ticket` |
 | `deleteTicket(id)` | DELETE | `/bets/delete-ticket` |
 | `uploadTicketImage(id, formData)` | POST | `/bets/upload-ticket-image` |
+| `fetchLeaguesBySport(sport)` | GET | `/bets/leagues?sport={sport}` — distinct league names from DB for the given sport; used by `TicketModal` for the league autocomplete |
 | `fetchAnalyzeTicket(imageData)` | POST | `/bets/analyze-ticket` |
 | `fetchTransactions()` | GET | `/bankroll/transactions` |
 | `createTransaction(data)` | POST | `/bankroll/transactions` |
