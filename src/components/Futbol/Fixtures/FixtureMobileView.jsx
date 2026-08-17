@@ -1,5 +1,5 @@
-import { Box, Card, CardContent, Typography, IconButton } from '@mui/material';
-import { Insights } from '@mui/icons-material';
+import { Box, Card, CardContent, Tooltip, Typography, IconButton } from '@mui/material';
+import { Insights, Radar } from '@mui/icons-material';
 import LiveStatusChip from './LiveStatusChip';
 import PropTypes from "prop-types";
 import React from 'react';
@@ -20,6 +20,11 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
           <Typography variant="caption" color="textSecondary">
             {match.league.name}
           </Typography>
+          {match.betRadar && (
+            <Tooltip title="Picks de BetRadar disponibles">
+              <Radar fontSize="small" color="warning" />
+            </Tooltip>
+          )}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LiveStatusChip fixture={match.fixture} />

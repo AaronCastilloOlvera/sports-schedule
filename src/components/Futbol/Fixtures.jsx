@@ -48,6 +48,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const [boxscoreLeague, setBoxscoreLeague] = useState('lmb');
   const [showWaveChart, setShowWaveChart] = useState(false);
   const [onlyLive, setOnlyLive] = useState(false);
+  const [betRadarByFixture, setBetRadarByFixture] = useState({});
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -102,9 +103,23 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       });
   }, [selectedDate]);
 
+  // Cached only — never trigger the heavy on-demand analysis just to show a
+  // badge; if this date hasn't been prewarmed yet, simply show no indicators.
+  const loadBetRadarData = useCallback(() => {
+    const dateStr = selectedDate.format('YYYY-MM-DD');
+    apiClient.fetchBetRadarCached(dateStr)
+      .then(res => {
+        const byFixture = {};
+        (res?.suggestions ?? []).forEach(s => { byFixture[s.fixture_id] = s; });
+        setBetRadarByFixture(byFixture);
+      })
+      .catch(() => setBetRadarByFixture({}));
+  }, [selectedDate]);
+
   useEffect(() => {
     loadMatchesData(false, true);
     loadBaseballData(true);
+    loadBetRadarData();
 
     const interval = setInterval(() => {
       loadMatchesData(false, false);
@@ -113,15 +128,17 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
 
     return () => clearInterval(interval);
 
-  }, [selectedDate, loadMatchesData, loadBaseballData]);
+  }, [selectedDate, loadMatchesData, loadBaseballData, loadBetRadarData]);
 
   // Both sports are always fetched — chips only filter what's displayed, so
   // toggling a sport on/off is instant instead of waiting on a new request.
   const allMatches = useMemo(() => {
-    const soccer   = activeSports.includes('futbol')   ? (fixtures ?? []) : [];
-    const baseball = activeSports.includes('baseball') ? baseballGames    : [];
+    const soccer = activeSports.includes('futbol')
+      ? (fixtures ?? []).map(m => ({ ...m, betRadar: betRadarByFixture[m.fixture.id] ?? null }))
+      : [];
+    const baseball = activeSports.includes('baseball') ? baseballGames : [];
     return [...soccer, ...baseball];
-  }, [fixtures, baseballGames, activeSports]);
+  }, [fixtures, baseballGames, activeSports, betRadarByFixture]);
 
   const processedFixtures = useMemo(() => {
 

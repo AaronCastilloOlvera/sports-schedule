@@ -1,7 +1,7 @@
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, Tooltip } from '@mui/material';
 import PropTypes from "prop-types";
 import LiveStatusChip from './LiveStatusChip';
-import { Insights } from '@mui/icons-material';
+import { Insights, Radar } from '@mui/icons-material';
 import React, { useEffect, useRef, useState } from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { keyframes } from '@mui/system';
@@ -126,11 +126,18 @@ function MatchRow({ match, handleOpenH2HModal }) {
         <Typography variant="caption" color="textSecondary">{match.fixture.venue.name}</Typography>
       </TableCell>
       <TableCell>
-        <Tooltip title={t('fixtures.headToHead')}>
-          <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}>
-            <Insights />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          {match.betRadar && (
+            <Tooltip title="Picks de BetRadar disponibles">
+              <Radar fontSize="small" color="warning" sx={{ mr: 0.5 }} />
+            </Tooltip>
+          )}
+          <Tooltip title={t('fixtures.headToHead')}>
+            <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}>
+              <Insights />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </TableCell>
     </TableRow>
   );

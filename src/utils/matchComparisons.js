@@ -10,7 +10,8 @@ export const areRowsEqual = (prevProps, nextProps) => {
     prev.fixture.status.elapsed      === next.fixture.status.elapsed      &&
     prev.fixture.status.extra        === next.fixture.status.extra        &&
     prev.goals.home                  === next.goals.home                  &&
-    prev.goals.away                  === next.goals.away
+    prev.goals.away                  === next.goals.away                  &&
+    Boolean(prev.betRadar)           === Boolean(next.betRadar)
   );
 };
 

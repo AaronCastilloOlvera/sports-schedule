@@ -13,6 +13,7 @@ import RecentForm from './RecentForm';
 import MatchOdds from './MatchOdds';
 import BettingStats from './BettingStats';
 import ValuePicksTab from './ValuePicksTab';
+import BetRadarTab from './BetRadarTab';
 
 const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif';
 
@@ -158,11 +159,12 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
   }, [h2hData, filter, team1Id]);
 
   const TABS = [
-    { value: 'h2h',    label: t('h2h.tabs.h2h') },
-    { value: 'stats',  label: t('h2h.tabs.stats') },
-    { value: 'value',  label: t('h2h.tabs.value') },
-    { value: 'recent', label: t('h2h.tabs.recent') },
-    { value: 'odds',   label: t('h2h.tabs.odds') },
+    { value: 'h2h',      label: t('h2h.tabs.h2h') },
+    { value: 'stats',    label: t('h2h.tabs.stats') },
+    { value: 'value',    label: t('h2h.tabs.value') },
+    { value: 'recent',   label: t('h2h.tabs.recent') },
+    { value: 'odds',     label: t('h2h.tabs.odds') },
+    { value: 'betradar', label: t('h2h.tabs.betradar') },
   ];
 
   const recentContent = (() => {
@@ -321,6 +323,11 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
                     awayRecent={awayRecent}
                     teamHome={teamHome}
                     teamAway={teamAway}
+                    oddsData={oddsData}
+                  />
+                ) : activeTab === 'betradar' ? (
+                  <BetRadarTab
+                    suggestion={currentMatch?.betRadar}
                     oddsData={oddsData}
                   />
                 ) : recentContent}
