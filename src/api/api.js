@@ -117,6 +117,17 @@ class ApiClient {
     return response.data;
   }
 
+  // BetRadar
+  async fetchBetRadarSuggestions(date) {
+    const response = await this.client.get(`/bet-radar/suggestions?date=${date}`, { timeout: 45000 });
+    return response.data;
+  }
+
+  async fetchBetRadarCached(date) {
+    const response = await this.client.get(`/bet-radar/cached?date=${date}`);
+    return response.data;
+  }
+
   async updateTicket(ticketId, formData) {
     const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
     return response.data;

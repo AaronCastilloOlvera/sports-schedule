@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
@@ -10,6 +10,7 @@ import BetsAnalytics from "./BetsAnalytics";
 import BankrollView from "./BankrollView";
 import BettingRules from "./BettingRules";
 import TicketsSkeleton from "./TicketsSkeleton";
+import BetRadarView from "./BetRadarView";
 
 const initialStatedata = {
     ticket_id: '',
@@ -123,6 +124,8 @@ function Bets() {
   const [confirmDelete, setConfirmDelete] = useState({ open: false, ticketId: null });
   const [mainTab, setMainTab] = useState(0);
   const [searchId, setSearchId] = useState('');
+  const [leagueFilter, setLeagueFilter] = useState(null);
+  const [leagueOptions, setLeagueOptions] = useState([]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const skipSearchEffect = useRef(true);
@@ -131,19 +134,21 @@ function Bets() {
     setToast({ open: true, message, severity });
   };
 
-  const loadTickets = (page, search) => {
+  const loadTickets = (page, search, league = leagueFilter) => {
     setLoadingTickets(true);
-    return apiClient.fetchTickets(page, 10, search)
+    return apiClient.fetchTickets(page, 10, search, league || '')
       .then(res => { setTickets(res.data); setTicketsTotal(res.total); })
       .catch(() => showToast(t('bets.error_load'), 'error'))
       .finally(() => setLoadingTickets(false));
   };
 
-  const loadStats = () => apiClient.fetchBetsStats().then(setStats).catch(() => {});
+  const loadStats = (league = leagueFilter) =>
+    apiClient.fetchBetsStats(league || '').then(setStats).catch(() => {});
 
   useEffect(() => {
     loadStats();
     loadTickets(0, '');
+    apiClient.fetchLeagues().then(setLeagueOptions).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced server-side search — skip the initial render
@@ -155,6 +160,12 @@ function Bets() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setTicketsPage(0);
+    loadTickets(0, searchId.trim(), leagueFilter);
+    loadStats(leagueFilter);
+  }, [leagueFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -375,6 +386,14 @@ function Bets() {
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
         {mainTab === 0 && (
           <Stack direction="row" spacing={1.5} alignItems="center">
+            <Autocomplete
+              options={leagueOptions}
+              value={leagueFilter}
+              onChange={(_, value) => setLeagueFilter(value)}
+              size="small"
+              sx={{ width: { xs: 130, sm: 180 } }}
+              renderInput={(params) => <TextField {...params} placeholder="Liga..." />}
+            />
             <TextField
               size="small"
               placeholder="Buscar por ID..."
@@ -389,7 +408,7 @@ function Bets() {
                   ),
                 },
               }}
-              sx={{ width: { xs: 140, sm: 200 } }}
+              sx={{ width: { xs: 130, sm: 180 } }}
             />
             <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
               <Add />
@@ -403,6 +422,7 @@ function Bets() {
         <Tab label="Analytics" />
         <Tab label="Bankroll" />
         <Tab label="Rules" />
+        <Tab label="BetRadar" />
       </Tabs>
 
       {mainTab === 0 && (
@@ -476,6 +496,7 @@ function Bets() {
       {mainTab === 1 && <BetsAnalytics />}
       {mainTab === 2 && <BankrollView />}
       {mainTab === 3 && <BettingRules />}
+      {mainTab === 4 && <BetRadarView />}
 
       <TicketModal
         openModal={openModal}
