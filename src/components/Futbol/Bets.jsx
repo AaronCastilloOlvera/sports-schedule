@@ -148,7 +148,7 @@ function Bets() {
   useEffect(() => {
     loadStats();
     loadTickets(0, '');
-    apiClient.fetchLeagues().then(setLeagueOptions).catch(() => {});
+    apiClient.fetchLeaguesBySport('futbol').then(setLeagueOptions).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced server-side search — skip the initial render
@@ -391,8 +391,16 @@ function Bets() {
               value={leagueFilter}
               onChange={(_, value) => setLeagueFilter(value)}
               size="small"
-              sx={{ width: { xs: 130, sm: 180 } }}
-              renderInput={(params) => <TextField {...params} placeholder="Liga..." />}
+              sx={{ width: { xs: 150, sm: 200 } }}
+              isOptionEqualToValue={(opt, val) => opt === val}
+              noOptionsText="Sin ligas registradas"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Liga"
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              )}
             />
             <TextField
               size="small"

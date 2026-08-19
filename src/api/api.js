@@ -86,15 +86,17 @@ class ApiClient {
   }
 
   // Tickets
-  async fetchTickets(page = 0, limit = 10, search = '') {
+  async fetchTickets(page = 0, limit = 10, search = '', league = '') {
     const params = new URLSearchParams({ page, limit });
     if (search) params.append('search', search);
+    if (league) params.append('league', league);
     const response = await this.client.get(`/bets/get-tickets?${params}`);
     return response.data;
   }
 
-  async fetchBetsStats() {
-    const response = await this.client.get('/bets/stats');
+  async fetchBetsStats(league = '') {
+    const params = league ? `?league=${encodeURIComponent(league)}` : '';
+    const response = await this.client.get(`/bets/stats${params}`);
     return response.data;
   }
 
