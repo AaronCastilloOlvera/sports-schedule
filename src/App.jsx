@@ -5,18 +5,10 @@ import './App.css';
 import { ThemeModeProvider, useThemeMode } from './context/ThemeContext.jsx';
 import Header from './components/layout/Header.jsx';
 import FutbolDashboard from './views/FutbolDashboard.jsx';
-import Leagues from './components/Futbol/Leagues.jsx';
 import Bets from './components/Futbol/Bets.jsx';
 
-// Reads mode from context, builds the MUI theme, and renders the app.
-// Kept as a separate component so it can consume ThemeModeContext before
-// ThemeProvider is mounted — you cannot do both in the same component.
-// section → component mapping. "My Leagues" and "Control" (Bets) are sport-agnostic,
-// so they live at this top level instead of nested under a sport tab. "Home" is
-// the unified schedule — sport filter chips live inside Fixtures.jsx itself.
 const SECTION_VIEWS = {
-  home: <FutbolDashboard />,
-  myLeagues: <Leagues />,
+  home:    <FutbolDashboard />,
   control: <Bets />,
 };
 

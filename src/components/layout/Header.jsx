@@ -1,16 +1,22 @@
 import { useState } from "react";
 import PropTypes from 'prop-types';
 import {
-  AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemText, Popover, Switch,
-  Tab, Tabs, Toolbar, Tooltip, Typography,
+  AppBar, Box, Button, Dialog, DialogContent, DialogTitle, Drawer, IconButton,
+  List, ListItemButton, ListItemText, Popover, Switch,
+  Tab, Tabs, Toolbar, Tooltip, Typography, useMediaQuery, useTheme,
 } from "@mui/material";
 import {
+  Close as CloseIcon,
   DarkMode as DarkModeIcon,
+  Home as HomeIcon,
   LightMode as LightModeIcon,
   Menu as MenuIcon,
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
+  ShowChart as ShowChartIcon,
+  Star as StarIcon,
 } from "@mui/icons-material";
+import Leagues from '../Futbol/Leagues.jsx';
 import { useTranslation } from "react-i18next";
 import { useThemeMode } from "../../context/ThemeContext.jsx";
 import Status from "./../common/Status.jsx";
@@ -37,15 +43,17 @@ const LANG_OPTIONS = [
 const Header = ({ activeSection = 'home', onSectionChange }) => {
   const [anchor, setAnchor] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [leaguesOpen, setLeaguesOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const { mode, toggleTheme } = useThemeMode();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const open = Boolean(anchor);
 
   const SECTIONS = [
-    { value: 'home',      label: t('tabs.home') },
-    { value: 'myLeagues', label: t('tabs.myLeagues') },
-    { value: 'control',   label: t('tabs.control') },
+    { value: 'home',    label: t('tabs.home'),    icon: <HomeIcon fontSize="small" /> },
+    { value: 'control', label: t('tabs.control'), icon: <ShowChartIcon fontSize="small" /> },
   ];
 
   const handleRefreshLeagues = () => {
@@ -118,6 +126,27 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
           }}
         >
           <Box sx={{ p: '16px' }}>
+
+            {/* ── my leagues ── */}
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              startIcon={<StarIcon sx={{ color: '#f59e0b' }} />}
+              onClick={() => { setAnchor(null); setLeaguesOpen(true); }}
+              sx={{
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontSize: 13,
+                borderColor: 'divider',
+                color: 'text.primary',
+                justifyContent: 'flex-start',
+                mb: '16px',
+                '&:hover': { borderColor: 'text.disabled', bgcolor: 'action.hover' },
+              }}
+            >
+              My Leagues
+            </Button>
 
             {/* ── language ── */}
             <Typography sx={SECTION_LABEL_SX}>Language</Typography>
@@ -213,25 +242,106 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
           </Box>
         </Popover>
 
+        {/* ── my leagues dialog ── */}
+        <Dialog
+          open={leaguesOpen}
+          onClose={() => setLeaguesOpen(false)}
+          fullScreen={isMobile}
+          fullWidth
+          maxWidth="sm"
+          PaperProps={{ sx: { borderRadius: isMobile ? 0 : '16px' } }}
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <StarIcon sx={{ color: '#f59e0b', fontSize: 20 }} />
+              My Leagues
+            </Box>
+            <IconButton size="small" onClick={() => setLeaguesOpen(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ pt: 0 }}>
+            <Leagues />
+          </DialogContent>
+        </Dialog>
+
         {/* ── mobile nav drawer ── */}
         <Drawer
           anchor="left"
           open={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
-          PaperProps={{ sx: { width: 220 } }}
+          PaperProps={{ sx: { width: 270, display: 'flex', flexDirection: 'column' } }}
         >
-          <Typography sx={{ p: '16px', fontWeight: 700 }}>🔥 HotPicks365</Typography>
-          <List sx={{ pt: 0 }}>
-            {SECTIONS.map(section => (
-              <ListItemButton
-                key={section.value}
-                selected={activeSection === section.value}
-                onClick={() => handleMobileNavClick(section.value)}
-              >
-                <ListItemText primary={section.label} />
-              </ListItemButton>
-            ))}
+          {/* header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1.5 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
+              🔥 HotPicks365
+            </Typography>
+            <IconButton size="small" onClick={() => setMobileNavOpen(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ height: '1px', bgcolor: 'divider', mx: 2 }} />
+
+          {/* main nav */}
+          <List sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
+            {SECTIONS.map(({ value, label, icon }) => {
+              const active = activeSection === value;
+              return (
+                <ListItemButton
+                  key={value}
+                  onClick={() => handleMobileNavClick(value)}
+                  sx={{
+                    borderRadius: '10px',
+                    mb: 0.5,
+                    px: 1.5,
+                    bgcolor: active ? 'primary.main' : 'transparent',
+                    color: active ? 'primary.contrastText' : 'text.primary',
+                    '&:hover': {
+                      bgcolor: active ? 'primary.dark' : 'action.hover',
+                    },
+                    '& .MuiListItemText-primary': {
+                      fontWeight: active ? 700 : 500,
+                      fontSize: 15,
+                    },
+                  }}
+                >
+                  <Box sx={{ mr: 1.5, display: 'flex', opacity: active ? 1 : 0.6 }}>{icon}</Box>
+                  <ListItemText primary={label} />
+                </ListItemButton>
+              );
+            })}
           </List>
+
+          <Box sx={{ height: '1px', bgcolor: 'divider', mx: 2, my: 1 }} />
+
+          {/* secondary: my leagues */}
+          <List sx={{ px: 1.5, py: 0 }}>
+            <ListItemButton
+              onClick={() => { setMobileNavOpen(false); setLeaguesOpen(true); }}
+              sx={{ borderRadius: '10px', px: 1.5, '& .MuiListItemText-primary': { fontSize: 15, fontWeight: 500 } }}
+            >
+              <Box sx={{ mr: 1.5, display: 'flex', color: '#f59e0b' }}><StarIcon fontSize="small" /></Box>
+              <ListItemText primary="My Leagues" />
+            </ListItemButton>
+          </List>
+
+          {/* spacer */}
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Box sx={{ height: '1px', bgcolor: 'divider', mx: 2 }} />
+
+          {/* quick settings footer */}
+          <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {mode === 'dark'
+                ? <DarkModeIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                : <LightModeIcon fontSize="small" sx={{ color: 'text.secondary' }} />}
+              <Typography sx={{ fontSize: 14, color: 'text.secondary' }}>Dark mode</Typography>
+            </Box>
+            <Switch checked={mode === 'dark'} onChange={toggleTheme} size="small" />
+          </Box>
         </Drawer>
       </Toolbar>
     </AppBar>
