@@ -11,6 +11,7 @@ const GREEN = '#2e7d32';
 const RED = '#d32f2f';
 const BLUE = '#1976d2';
 const PIE_COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#7b1fa2', '#0097a7', '#c62828', '#558b2f', '#ad1457'];
+const LINE_COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#7b1fa2', '#0097a7', '#c62828', '#558b2f', '#ad1457'];
 const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
 const BET_TYPE_LABELS = Object.fromEntries(BET_TYPES.map(b => [b.value, b.label]));
 
@@ -116,16 +117,30 @@ export default function BetsAnalytics() {
 
       {tab === 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <ChartCard title="Accumulated Profit">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={analytics.accumulated_data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.accumulated_data.length / 8)} />
+                <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                <Line type="monotone" dataKey="profit" stroke={BLUE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-            <ChartCard title="Accumulated Profit" sx={{ flex: 2 }}>
+            <ChartCard title="Daily P&L" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={analytics.accumulated_data}>
+                <BarChart data={analytics.daily_data}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.daily_data.length / 8)} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
-                  <Line type="monotone" dataKey="profit" stroke={BLUE} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 5 }} />
-                </LineChart>
+                  <Tooltip formatter={(v) => [usd(v), 'P&L']} />
+                  <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                    {analytics.daily_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
@@ -141,25 +156,27 @@ export default function BetsAnalytics() {
               </ResponsiveContainer>
             </ChartCard>
           </Stack>
-
-          <ChartCard title="Daily P&L">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={analytics.daily_data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [usd(v), 'P&L']} />
-                <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                  {analytics.daily_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
         </Box>
       )}
 
       {tab === 1 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <ChartCard title="Accumulated Profit by Sport">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={analytics.accumulated_by_sport}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.accumulated_by_sport.length / 8)} />
+                <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v, name) => [usd(v), `${SPORT_ICONS[name] || '🎯'} ${name}`]} />
+                <Legend />
+                {(analytics.sports || []).map((sport, i) => (
+                  <Line key={sport} type="monotone" dataKey={sport} stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                    strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Sport" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
@@ -262,6 +279,22 @@ export default function BetsAnalytics() {
 
       {tab === 3 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <ChartCard title="Accumulated Profit by Bet Type">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={analytics.accumulated_by_bet_type}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor((analytics.accumulated_by_bet_type || []).length / 8)} />
+                <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v, name) => [usd(v), BET_TYPE_LABELS[name] || name]} />
+                <Legend formatter={(name) => BET_TYPE_LABELS[name] || name} />
+                {(analytics.bet_types || []).map((bt, i) => (
+                  <Line key={bt} type="monotone" dataKey={bt} stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                    strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Bet Type" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
