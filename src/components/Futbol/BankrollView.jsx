@@ -83,7 +83,7 @@ function StakeTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <Box sx={{ bgcolor: 'white', border: '1px solid #eee', borderRadius: 1, p: 1, boxShadow: 1 }}>
+    <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, boxShadow: 1 }}>
       <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{row.date}</Typography>
       <Typography sx={{ fontSize: 12 }}>{row.pct}% ({usd(row.stake)} de {usd(row.bankroll)})</Typography>
     </Box>
@@ -115,6 +115,12 @@ SummaryCard.propTypes = {
 export default function BankrollView() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tooltipStyle = {
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 8,
+    color: theme.palette.text.primary,
+  };
   const [transactions, setTransactions] = useState([]);
   const [txTotal, setTxTotal] = useState(0);
   const [txPage, setTxPage] = useState(0);
@@ -322,7 +328,7 @@ export default function BankrollView() {
       {/* Balance over time + Cumulative withdrawals — same row */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
         {balanceHistory.length > 1 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3 }}>
+          <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
               Balance Over Time (Playdo.it)
             </Typography>
@@ -334,17 +340,17 @@ export default function BankrollView() {
                     <stop offset="100%" stopColor="#1976d2" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-                <RechartsTooltip formatter={(v) => [usd(v), 'Balance']} />
+                <RechartsTooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Balance']} />
                 <Area type="monotone" dataKey="balance" stroke="#1976d2" strokeWidth={2} fill="url(#balanceGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </Box>
         )}
         {cumulativeWithdrawals.length > 1 && (
-          <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3 }}>
+          <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
               Cumulative Withdrawals
             </Typography>
@@ -356,10 +362,10 @@ export default function BankrollView() {
                     <stop offset="100%" stopColor="#2e7d32" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-                <RechartsTooltip formatter={(v) => [usd(v), 'Withdrawn']} />
+                <RechartsTooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Withdrawn']} />
                 <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
                 <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
               </AreaChart>
@@ -370,16 +376,16 @@ export default function BankrollView() {
 
       {/* Weekly withdrawals chart */}
       {weeklyWithdrawals.length > 0 && (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
             Withdrawals per Week
           </Typography>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weeklyWithdrawals} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
               <XAxis dataKey="week" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-              <RechartsTooltip formatter={(v) => [`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Withdrawn']} />
+              <RechartsTooltip contentStyle={tooltipStyle} formatter={(v) => [`$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 'Withdrawn']} />
               <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                 {weeklyWithdrawals.map((_, i) => (
                   <Cell key={i} fill="#2e7d32" fillOpacity={0.75 + (i % 2) * 0.15} />
@@ -392,16 +398,16 @@ export default function BankrollView() {
 
       {/* Monthly deposits vs withdrawals vs net */}
       {monthlyFlow.length > 0 && (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
             Deposits vs Withdrawals per Month
           </Typography>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={monthlyFlow} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
-              <RechartsTooltip formatter={(v, name) => [usd(v), FLOW_LABELS[name] ?? name]} />
+              <RechartsTooltip contentStyle={tooltipStyle} formatter={(v, name) => [usd(v), FLOW_LABELS[name] ?? name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => FLOW_LABELS[value] ?? value} />
               <Bar dataKey="deposited" fill="#d32f2f" radius={[4, 4, 0, 0]} />
               <Bar dataKey="net" fill="#1976d2" radius={[4, 4, 0, 0]}>
@@ -417,13 +423,13 @@ export default function BankrollView() {
 
       {/* Stake sizing vs bankroll */}
       {stakeVsBankroll.length > 0 && (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
             Stake as % of Bankroll
           </Typography>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={stakeVsBankroll} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
               <XAxis dataKey="n" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <RechartsTooltip content={<StakeTooltip />} />
@@ -467,7 +473,7 @@ export default function BankrollView() {
           )}
         </Box>
       ) : (
-        <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2 }}>
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2 }}>
           <DataGrid
             rows={transactions}
             columns={columns}

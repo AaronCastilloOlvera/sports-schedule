@@ -31,7 +31,7 @@ function QuoteCard({ text, author }) {
   return (
     <Box
       sx={{
-        bgcolor: 'white',
+        bgcolor: 'background.paper',
         borderRadius: 2,
         boxShadow: 2,
         p: 4,

@@ -18,7 +18,7 @@ function SummaryCardsSkeleton() {
 
 function GoalSkeleton() {
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+    <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1 }}>
         <Box>
           <Skeleton width={110} />
@@ -34,7 +34,7 @@ function GoalSkeleton() {
 
 function ChartSkeleton() {
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+    <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
       <Skeleton width={150} sx={{ mb: 2 }} />
       <Skeleton variant="rounded" height={180} />
     </Box>
@@ -62,7 +62,7 @@ function MobileTransactionsSkeleton() {
 function DesktopTransactionsSkeleton() {
   const colWidths = [120, 130, 120, 200, 100];
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+    <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 2 }}>
       <Stack direction="row" spacing={3} sx={{ mb: 1.5 }}>
         {colWidths.map((w, i) => <Skeleton key={i} width={w} height={20} />)}
       </Stack>

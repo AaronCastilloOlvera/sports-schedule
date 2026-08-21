@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, CircularProgress, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Box, CircularProgress, Paper, Stack, Tab, Tabs, Typography, useTheme } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
   Pie, PieChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
@@ -22,7 +22,7 @@ function ScatterTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
-    <Box sx={{ bgcolor: 'white', p: '8px 10px', borderRadius: 1, boxShadow: 2, fontSize: 12 }}>
+    <Box sx={{ bgcolor: 'background.paper', p: '8px 10px', borderRadius: 1, boxShadow: 2, fontSize: 12 }}>
       <div>{d.date}</div>
       <div>{d.count} bet{d.count === 1 ? '' : 's'} · {usd(d.profit)}</div>
     </Box>
@@ -31,10 +31,10 @@ function ScatterTooltip({ active, payload }) {
 
 function ChartCard({ title, children, sx = {} }) {
   return (
-    <Box sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 3, ...sx }}>
+    <Paper elevation={2} sx={{ borderRadius: 2, p: 3, ...sx }}>
       <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>{title}</Typography>
       {children}
-    </Box>
+    </Paper>
   );
 }
 
@@ -42,6 +42,13 @@ export default function BetsAnalytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
+  const theme = useTheme();
+  const tooltipStyle = {
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 8,
+    color: theme.palette.text.primary,
+  };
 
   useEffect(() => {
     apiClient.fetchBetsAnalytics()
@@ -98,10 +105,10 @@ export default function BetsAnalytics() {
           { label: 'Current Streak', display: summary.streak ? `${summary.streak} ${summary.streak_type === 'won' ? 'W' : 'L'}` : '—', color: summary.streak_type === 'won' ? GREEN : RED },
           { label: 'Avg Odds',       display: summary.avg_odds ? `${summary.avg_odds}x` : '—', color: BLUE },
         ].map(({ label, display, color }) => (
-          <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+          <Paper key={label} elevation={2} sx={{ borderRadius: 2, p: 2 }}>
             <Typography variant="body2" color="text.secondary">{label}</Typography>
             <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>{display}</Typography>
-          </Box>
+          </Paper>
         ))}
       </Box>
 
@@ -123,7 +130,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.accumulated_data.length / 8)} />
                 <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                 <Line type="monotone" dataKey="profit" stroke={BLUE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -136,7 +143,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.daily_data.length / 8)} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'P&L']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'P&L']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.daily_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -150,7 +157,7 @@ export default function BetsAnalytics() {
                   <Pie data={winLossPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {winLossPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v, name) => [`${v} tickets`, name]} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -167,7 +174,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.accumulated_by_sport.length / 8)} />
                 <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v, name) => [usd(v), `${SPORT_ICONS[name] || '🎯'} ${name}`]} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v, name) => [usd(v), `${SPORT_ICONS[name] || '🎯'} ${name}`]} />
                 <Legend />
                 {(analytics.sports || []).map((sport, i) => (
                   <Line key={sport} type="monotone" dataKey={sport} stroke={LINE_COLORS[i % LINE_COLORS.length]}
@@ -184,7 +191,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.sport_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -198,7 +205,7 @@ export default function BetsAnalytics() {
                   <Pie data={sportPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {sportPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(sportPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(sportPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -211,7 +218,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -223,7 +230,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="sport" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'ROI']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'ROI']} />
                 <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
                   {analytics.sport_data.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
                 </Bar>
@@ -241,7 +248,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" tickFormatter={usd} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="league" width={150} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                 <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
                   {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                 </Bar>
@@ -255,7 +262,7 @@ export default function BetsAnalytics() {
                 <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
                   {leaguePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
-                <Tooltip {...renderPieTooltip(leaguePie)} />
+                <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(leaguePie)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -267,7 +274,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="league" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
                 <YAxis unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'ROI']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'ROI']} />
                 <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
                   {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
                 </Bar>
@@ -285,7 +292,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor((analytics.accumulated_by_bet_type || []).length / 8)} />
                 <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v, name) => [usd(v), BET_TYPE_LABELS[name] || name]} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v, name) => [usd(v), BET_TYPE_LABELS[name] || name]} />
                 <Legend formatter={(name) => BET_TYPE_LABELS[name] || name} />
                 {(analytics.bet_types || []).map((bt, i) => (
                   <Line key={bt} type="monotone" dataKey={bt} stroke={LINE_COLORS[i % LINE_COLORS.length]}
@@ -302,7 +309,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="betType" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {betTypeData.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -316,7 +323,7 @@ export default function BetsAnalytics() {
                   <Pie data={betTypePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {betTypePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(betTypePie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(betTypePie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -329,7 +336,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="betType" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -341,7 +348,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="betType" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'ROI']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'ROI']} />
                 <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
                   {betTypeData.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
                 </Bar>
@@ -360,7 +367,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.odds_bucket_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -374,7 +381,7 @@ export default function BetsAnalytics() {
                   <Pie data={oddsBucketPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {oddsBucketPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(oddsBucketPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(oddsBucketPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -387,7 +394,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -404,7 +411,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.studied_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -418,7 +425,7 @@ export default function BetsAnalytics() {
                   <Pie data={studiedPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {studiedPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(studiedPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(studiedPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -431,7 +438,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -448,7 +455,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.day_of_week_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -462,7 +469,7 @@ export default function BetsAnalytics() {
                   <Pie data={dayOfWeekPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {dayOfWeekPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(dayOfWeekPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(dayOfWeekPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -475,7 +482,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -488,7 +495,7 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [usd(v), 'Profit']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                     {analytics.time_of_day_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
@@ -502,7 +509,7 @@ export default function BetsAnalytics() {
                   <Pie data={timeOfDayPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {timeOfDayPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip {...renderPieTooltip(timeOfDayPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(timeOfDayPie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -515,7 +522,7 @@ export default function BetsAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
                 <Bar dataKey="winRate" fill={BLUE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -531,7 +538,7 @@ export default function BetsAnalytics() {
                 <XAxis type="number" dataKey="count" name="Bets" allowDecimals={false} tick={{ fontSize: 12 }}
                   label={{ value: 'Bets that day', position: 'insideBottom', offset: -5, fontSize: 12 }} />
                 <YAxis type="number" dataKey="profit" name="Profit" tickFormatter={usd} tick={{ fontSize: 12 }} />
-                <Tooltip content={<ScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                <Tooltip contentStyle={tooltipStyle} content={<ScatterTooltip />} cursor={{ strokeDasharray: '3 3' }} />
                 <Scatter data={analytics.daily_count_profit}>
                   {analytics.daily_count_profit.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                 </Scatter>

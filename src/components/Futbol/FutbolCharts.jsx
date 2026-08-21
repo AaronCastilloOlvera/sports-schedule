@@ -64,7 +64,7 @@ export default function FutbolCharts() {
 
   // Render the chart
   return (
-    <Box sx={{ p: 3, backgroundColor: 'white', borderRadius: 2, boxShadow: 2, width: '60%', maxWidth: '100%', margin: '0 auto', mt: 6 }}>
+    <Box sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, width: '60%', maxWidth: '100%', margin: '0 auto', mt: 6 }}>
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
         Profit Evolution
       </Typography>

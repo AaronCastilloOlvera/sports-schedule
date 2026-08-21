@@ -24,7 +24,7 @@ function FixtureCard({ item }) {
 
   return (
     <Box sx={{
-      bgcolor: 'white', borderRadius: 2, boxShadow: 2,
+      bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2,
       borderLeft: `4px solid ${color}`, overflow: 'hidden',
     }}>
       {/* Header */}

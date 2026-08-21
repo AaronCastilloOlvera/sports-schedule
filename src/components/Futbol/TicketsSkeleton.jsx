@@ -5,7 +5,7 @@ function StatTilesSkeleton() {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(5, 1fr)' }, gap: 2, mb: 3 }}>
       {Array.from({ length: 5 }).map((_, i) => (
-        <Box key={i} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2, ...(i === 4 && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
+        <Box key={i} sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 2, ...(i === 4 && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
           <Skeleton width={80} />
           <Skeleton width={100} height={32} sx={{ mt: 0.5 }} />
         </Box>
@@ -43,7 +43,7 @@ function MobileCardsSkeleton() {
 function DesktopTableSkeleton() {
   const colWidths = [110, 250, 90, 100, 110, 100, 130, 150];
   return (
-    <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2, p: 2 }}>
+    <Box sx={{ width: '100%', backgroundColor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 2 }}>
       <Stack direction="row" spacing={3} sx={{ mb: 1.5 }}>
         {colWidths.map((w, i) => <Skeleton key={i} width={w} height={20} />)}
       </Stack>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Paper, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
@@ -446,10 +446,10 @@ function Bets() {
               { label: 'Net Profit', display: stats ? `$${Number(stats.net_profit).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—', color: (stats?.net_profit ?? 0) >= 0 ? '#2e7d32' : '#d32f2f' },
               { label: 'Total Staked', display: stats ? `$${Number(stats.total_staked).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—', color: '#757575' },
             ].map(({ label, display, color }) => (
-              <Box key={label} sx={{ bgcolor: 'white', borderRadius: 2, boxShadow: 2, p: 2, ...(label === 'Total Staked' && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
+              <Paper key={label} elevation={2} sx={{ borderRadius: 2, p: 2, ...(label === 'Total Staked' && { gridColumn: { xs: 'span 2', sm: 'auto' } }) }}>
                 <Typography variant="body2" color="text.secondary">{label}</Typography>
                 <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>{display}</Typography>
-              </Box>
+              </Paper>
             ))}
           </Box>
           {isMobile ? (
@@ -474,7 +474,7 @@ function Bets() {
               )}
             </Box>
           ) : (
-            <Box sx={{ width: '100%', backgroundColor: 'white', borderRadius: 2, boxShadow: 2 }}>
+            <Paper elevation={2} sx={{ width: '100%', borderRadius: 2 }}>
               <DataGrid
                 rows={tickets}
                 columns={columns}
@@ -495,7 +495,7 @@ function Bets() {
                   '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
                 }}
               />
-            </Box>
+            </Paper>
           )}
         </Box>
         )
