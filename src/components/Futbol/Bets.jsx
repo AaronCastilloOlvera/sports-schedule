@@ -36,6 +36,8 @@ const initialStatedata = {
     comments: ''
 }
 
+const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
+
 function TicketIdCell({ id = '' }) {
   const [copied, setCopied] = useState(false);
 
@@ -52,7 +54,7 @@ function TicketIdCell({ id = '' }) {
         sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', color: 'text.secondary', fontSize: '0.8rem' }}
       >
         <ContentCopy sx={{ fontSize: 13, opacity: 0.5 }} />
-        ...{String(id).slice(-6)}
+        ...{String(id).slice(-3)}
       </Box>
     </Tooltip>
   );
@@ -274,7 +276,7 @@ function Bets() {
     {
       field: 'ticket_id',
       headerName: 'ID',
-      width: 110,
+      width: 75,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) => <TicketIdCell id={params.value} />,
@@ -282,12 +284,27 @@ function Bets() {
     {
       field: 'pick',
       headerName: 'Pick',
-      width: 250,
-      renderCell: (params) => (
-        <Box title={params.value} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {params.value}
-        </Box>
-      ),
+      width: 350,
+      renderCell: (params) => {
+        const { pick, sport, match_name, bet_type } = params.row;
+        const icon = SPORT_ICONS[sport] || '🎯';
+        const isParlay = bet_type === 'parlay';
+        const isCrear = bet_type === 'crear_apuesta';
+        const badgeBase = { px: '4px', py: '1px', fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px', border: '1px solid', lineHeight: 1.4, flexShrink: 0 };
+        const tooltipContent = match_name ? `${match_name}\n${pick}` : pick;
+        return (
+          <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}>{tooltipContent}</span>} placement="top" arrow>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden', width: '100%' }}>
+              <span style={{ fontSize: 13, flexShrink: 0 }}>{icon}</span>
+              <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.83rem', fontWeight: 500 }}>
+                {pick}
+              </Box>
+              {isParlay && <Box component="span" sx={{ ...badgeBase, borderColor: 'primary.main', color: 'primary.main' }}>P</Box>}
+              {isCrear  && <Box component="span" sx={{ ...badgeBase, borderColor: 'warning.main',  color: 'warning.main'  }}>C</Box>}
+            </Box>
+          </Tooltip>
+        );
+      },
     },
     { 
       field: 'odds', 
@@ -498,7 +515,7 @@ function Bets() {
                 rowHeight={42}
                 sx={{
                   '& .MuiDataGrid-cell': { alignItems: 'center', display: 'flex' },
-                  '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' }
+                  '& .MuiDataGrid-columnHeader': { alignItems: 'center', display: 'flex' },
                 }}
               />
             </Paper>
