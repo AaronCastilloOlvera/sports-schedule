@@ -18,20 +18,23 @@ function MobileCardsSkeleton() {
   return (
     <Box>
       {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={i} sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1 }}>
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-              <Skeleton variant="rounded" width={60} height={22} />
-              <Skeleton width={40} />
+        <Card key={i} sx={{ mb: 1, borderRadius: 2, boxShadow: 1 }}>
+          <CardContent sx={{ p: '10px 12px', '&:last-child': { pb: '10px' } }}>
+            {/* Row 1: chip + pick + action icons */}
+            <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: '6px' }}>
+              <Skeleton variant="rounded" width={52} height={20} />
+              <Skeleton width="55%" height={18} />
+              <Box sx={{ flex: 1 }} />
+              <Skeleton variant="circular" width={20} height={20} />
+              <Skeleton variant="circular" width={20} height={20} />
             </Stack>
-            <Skeleton width="80%" sx={{ mb: 1.5 }} />
-            <Stack direction="row" spacing={3}>
-              {[45, 55, 55].map((w, j) => (
-                <Box key={j}>
-                  <Skeleton width={35} height={14} />
-                  <Skeleton width={w} height={20} />
-                </Box>
-              ))}
+            {/* Row 2: date · odds · stake · net P&L */}
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Skeleton width={32} height={14} />
+              <Skeleton width={32} height={14} />
+              <Skeleton width={48} height={14} />
+              <Box sx={{ flex: 1 }} />
+              <Skeleton width={60} height={18} />
             </Stack>
           </CardContent>
         </Card>

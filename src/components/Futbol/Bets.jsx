@@ -74,39 +74,47 @@ function TicketCard({ ticket, onEdit, onDelete }) {
   const isPush = ticket.status === 'push';
   const profitColor = isPush ? '#757575' : profit >= 0 ? '#2e7d32' : '#d32f2f';
   const absProfit = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(profit));
-  const stakeFormatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(ticket.stake || 0);
   const dateFormatted = new Date(ticket.match_datetime).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
+  const icon = SPORT_ICONS[ticket.sport] || '🎯';
+  const isParlay = ticket.bet_type === 'parlay';
+  const isCrear  = ticket.bet_type === 'crear_apuesta';
+  const badgeBase = { px: '4px', py: '1px', fontSize: '0.58rem', fontWeight: 700, borderRadius: '4px', border: '1px solid', lineHeight: 1.4 };
 
   return (
-    <Card sx={{ mb: 1.5, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-          <Chip label={ticket.status.toUpperCase()} color={chipColor} size="small" />
-          <Typography variant="caption" color="text.secondary">{dateFormatted}</Typography>
-        </Stack>
-        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500, lineHeight: 1.4 }}>
-          {ticket.pick || '—'}
-        </Typography>
-        <Stack direction="row" spacing={3} sx={{ mb: 1 }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary" display="block">Odds</Typography>
-            <Typography variant="body2" fontWeight="bold">{ticket.odds ? `${Number(ticket.odds).toFixed(2)}x` : '—'}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary" display="block">Stake</Typography>
-            <Typography variant="body2" fontWeight="bold">{stakeFormatted}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary" display="block">Net P&L</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', color: profitColor }}>
-              {profit >= 0 ? `+$${absProfit}` : `-$${absProfit}`}
+    <Card sx={{ mb: 1, borderRadius: 2, boxShadow: 1, borderLeft: `4px solid ${borderColor}` }}>
+      <CardContent sx={{ p: '10px 12px', '&:last-child': { pb: '10px' } }}>
+
+        {/* Row 1: status · pick · actions */}
+        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: '6px' }}>
+          <Chip label={ticket.status.toUpperCase()} color={chipColor} size="small"
+            sx={{ fontSize: '0.65rem', height: 20, '& .MuiChip-label': { px: '6px' } }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
+            <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+              {ticket.pick || '—'}
             </Typography>
+            {isParlay && <Box component="span" sx={{ ...badgeBase, borderColor: 'primary.main', color: 'primary.main', flexShrink: 0 }}>P</Box>}
+            {isCrear  && <Box component="span" sx={{ ...badgeBase, borderColor: 'warning.main',  color: 'warning.main',  flexShrink: 0 }}>C</Box>}
           </Box>
+          <IconButton size="small" sx={{ p: '2px' }} color="info"  onClick={() => onEdit(ticket.ticket_id)}><Edit sx={{ fontSize: 16 }} /></IconButton>
+          <IconButton size="small" sx={{ p: '2px' }} color="error" onClick={() => onDelete(ticket.ticket_id)}><Delete sx={{ fontSize: 16 }} /></IconButton>
         </Stack>
-        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-          <IconButton size="small" color="info" onClick={() => onEdit(ticket.ticket_id)}><Edit /></IconButton>
-          <IconButton size="small" color="error" onClick={() => onDelete(ticket.ticket_id)}><Delete /></IconButton>
+
+        {/* Row 2: date · odds · stake · net P&L */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0 }}>{dateFormatted}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+            {ticket.odds ? `${Number(ticket.odds).toFixed(2)}x` : '—'}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+            ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(ticket.stake || 0)}
+          </Typography>
+          <Box sx={{ flex: 1 }} />
+          <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: profitColor, flexShrink: 0 }}>
+            {profit >= 0 ? `+$${absProfit}` : `-$${absProfit}`}
+          </Typography>
         </Stack>
+
       </CardContent>
     </Card>
   );
