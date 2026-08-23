@@ -19,10 +19,13 @@ const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits
 const pct = (value, data) => `${((value / data.reduce((s, d) => s + d.value, 0)) * 100).toFixed(1)}%`;
 
 function ScatterTooltip({ active, payload }) {
+  const theme = useTheme();
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
+  const bg = theme.palette.mode === 'dark' ? '#3d3d3d' : '#fff';
+  const border = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0';
   return (
-    <Box sx={{ bgcolor: 'background.paper', p: '8px 10px', borderRadius: 1, boxShadow: 2, fontSize: 12 }}>
+    <Box sx={{ bgcolor: bg, p: '8px 10px', borderRadius: 1, boxShadow: 6, border: `1px solid ${border}`, fontSize: 12 }}>
       <div>{d.date}</div>
       <div>{d.count} bet{d.count === 1 ? '' : 's'} · {usd(d.profit)}</div>
     </Box>
@@ -44,10 +47,11 @@ export default function BetsAnalytics() {
   const [tab, setTab] = useState(0);
   const theme = useTheme();
   const tooltipStyle = {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.mode === 'dark' ? '#3d3d3d' : '#fff',
+    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
     borderRadius: 8,
     color: theme.palette.text.primary,
+    boxShadow: theme.shadows[6],
   };
 
   useEffect(() => {

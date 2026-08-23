@@ -80,10 +80,13 @@ TransactionCard.propTypes = {
 };
 
 function StakeTooltip({ active, payload }) {
+  const theme = useTheme();
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
+  const bg = theme.palette.mode === 'dark' ? '#3d3d3d' : '#fff';
+  const border = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0';
   return (
-    <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, boxShadow: 1 }}>
+    <Box sx={{ bgcolor: bg, border: `1px solid ${border}`, borderRadius: 1, p: 1, boxShadow: 6 }}>
       <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{row.date}</Typography>
       <Typography sx={{ fontSize: 12 }}>{row.pct}% ({usd(row.stake)} de {usd(row.bankroll)})</Typography>
     </Box>
@@ -116,10 +119,11 @@ export default function BankrollView() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const tooltipStyle = {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.mode === 'dark' ? '#3d3d3d' : '#fff',
+    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
     borderRadius: 8,
     color: theme.palette.text.primary,
+    boxShadow: theme.shadows[6],
   };
   const [transactions, setTransactions] = useState([]);
   const [txTotal, setTxTotal] = useState(0);

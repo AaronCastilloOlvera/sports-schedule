@@ -12,6 +12,12 @@ import BettingRules from "./BettingRules";
 import TicketsSkeleton from "./TicketsSkeleton";
 import BetRadarView from "./BetRadarView";
 
+const toLocalInput = (dt) => {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+};
+
 const initialStatedata = {
     ticket_id: '',
     bet_type: '',
@@ -19,7 +25,7 @@ const initialStatedata = {
     sport: 'futbol',
     league: '',
     match_name: '',
-    match_datetime: new Date().toISOString().substring(0, 16),
+    match_datetime: toLocalInput(new Date()),
     odds: 0,
     stake: 0,
     payout: 0,
@@ -249,7 +255,7 @@ function Bets() {
         sport: ticketToEdit.sport ?? 'futbol',
         league: ticketToEdit.league ?? '',
         match_name: ticketToEdit.match_name ?? '',
-        match_datetime: ticketToEdit.match_datetime ? ticketToEdit.match_datetime.substring(0, 16) : '',
+        match_datetime: toLocalInput(ticketToEdit.match_datetime),
         odds: ticketToEdit.odds ?? 0,
         stake: ticketToEdit.stake ?? 0,
         payout: ticketToEdit.payout ?? 0,
