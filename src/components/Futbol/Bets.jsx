@@ -208,12 +208,20 @@ function Bets() {
 
   const handleSubmit = async () => {
     try {
+      // The datetime-local input gives a local-time string (no timezone).
+      // Convert to UTC ISO so the backend stores the correct value.
+      const payload = {
+        ...currentTicket,
+        match_datetime: currentTicket.match_datetime
+          ? new Date(currentTicket.match_datetime).toISOString()
+          : currentTicket.match_datetime,
+      };
       if (editId) {
-        await apiClient.updateTicket(editId, currentTicket);
+        await apiClient.updateTicket(editId, payload);
         await handleUploadImage(editId, file);
         showToast(t('bets.ticket_updated'));
       } else {
-        const created = await apiClient.createTicket(currentTicket);
+        const created = await apiClient.createTicket(payload);
         await handleUploadImage(created.ticket_id, file);
         showToast(t('bets.ticket_created'));
       }
