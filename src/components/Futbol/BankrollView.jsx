@@ -371,7 +371,7 @@ export default function BankrollView() {
                 <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
                 <RechartsTooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Withdrawn']} />
                 <ReferenceLine y={GOAL} stroke="#757575" strokeDasharray="4 4" label={{ value: 'Goal', fontSize: 11, fill: '#757575', position: 'insideTopRight' }} />
-                <Area type="monotone" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" />
+                <Area type="linear" dataKey="total" stroke="#2e7d32" strokeWidth={2} fill="url(#withdrawalsGradient)" dot={false} />
               </AreaChart>
             </ResponsiveContainer>
           </Box>
