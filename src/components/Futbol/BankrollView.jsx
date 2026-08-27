@@ -35,7 +35,7 @@ function TransactionCard({ row, onEdit, onDelete }) {
   const amountColor = borderColor;
   const sign = isDeposit ? '-' : '+';
   const amountFormatted = `${sign}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-  const dateFormatted = new Date(row.date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateFormatted = new Date(`${row.date}T00:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   const chipLabel = isDeposit ? 'Deposit' : isNuExpense ? 'NU Expense' : 'Withdrawal';
   const chipSx = isNuExpense ? { bgcolor: NU_PURPLE, color: '#fff' } : {};
@@ -251,7 +251,7 @@ export default function BankrollView() {
     },
     {
       field: 'date', headerName: 'Date', width: 120, align: 'center', headerAlign: 'center',
-      valueGetter: (value) => new Date(value).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      valueGetter: (value) => new Date(`${value}T00:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     },
     { field: 'notes', headerName: 'Notes', flex: 1 },
     {
