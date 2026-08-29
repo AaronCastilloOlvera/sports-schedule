@@ -7,6 +7,7 @@ import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { keyframes } from '@mui/system';
 import { useTranslation } from 'react-i18next';
 import { statusPriority } from './consts';
+import { CONF_COLOR } from '../betRadarShared';
 
 // Gol animation keyframes
 const goalFlash = keyframes`
@@ -127,11 +128,14 @@ function MatchRow({ match, handleOpenH2HModal }) {
       </TableCell>
       <TableCell>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {match.betRadar && (
-            <Tooltip title="Picks de BetRadar disponibles">
-              <Radar fontSize="small" color="warning" sx={{ mr: 0.5 }} />
-            </Tooltip>
-          )}
+          {match.betRadar && (() => {
+            const maxConf = Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0);
+            return (
+              <Tooltip title={`BetRadar · mejor pick: ${maxConf}%`}>
+                <Radar fontSize="small" sx={{ mr: 0.5, color: CONF_COLOR(maxConf) }} />
+              </Tooltip>
+            );
+          })()}
           <Tooltip title={t('fixtures.headToHead')}>
             <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}>
               <Insights />

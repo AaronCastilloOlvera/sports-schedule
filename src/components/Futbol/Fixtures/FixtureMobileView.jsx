@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import React from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { statusPriority } from './consts';
+import { CONF_COLOR } from '../betRadarShared';
 
 // Component rendered for mobile view, showing matches in a card format
 const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
@@ -20,11 +21,14 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
           <Typography variant="caption" color="textSecondary">
             {match.league.name}
           </Typography>
-          {match.betRadar && (
-            <Tooltip title="Picks de BetRadar disponibles">
-              <Radar fontSize="small" color="warning" />
-            </Tooltip>
-          )}
+          {match.betRadar && (() => {
+            const maxConf = Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0);
+            return (
+              <Tooltip title={`BetRadar · mejor pick: ${maxConf}%`}>
+                <Radar fontSize="small" sx={{ color: CONF_COLOR(maxConf) }} />
+              </Tooltip>
+            );
+          })()}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LiveStatusChip fixture={match.fixture} />
