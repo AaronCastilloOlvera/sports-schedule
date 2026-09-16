@@ -130,6 +130,14 @@ class ApiClient {
     return response.data;
   }
 
+  async fetchBetRadarAccuracy(days = 7, minConfidence = 70) {
+    const response = await this.client.get(
+      `/bet-radar/accuracy?days=${days}&min_confidence=${minConfidence}`,
+      { timeout: 20000 },
+    );
+    return response.data;
+  }
+
   async updateTicket(ticketId, formData) {
     const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
     return response.data;

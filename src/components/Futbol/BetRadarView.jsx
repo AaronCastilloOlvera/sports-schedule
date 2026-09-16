@@ -1,218 +1,414 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Box, Button, Chip, CircularProgress, Collapse,
-  Divider, IconButton, Stack, TextField, Typography,
+  Alert, Box, Chip, CircularProgress, Collapse, Divider,
+  IconButton, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
-import { ExpandLess, ExpandMore } from '@mui/icons-material';
+import {
+  CompareArrows, ExpandLess, ExpandMore, Flag,
+  HelpOutline, SportsSoccer, Square,
+} from '@mui/icons-material';
+import dayjs from 'dayjs';
+import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
-import { CONF_COLOR, findOdd, MarketRow } from './betRadarShared';
 
-function FixtureCard({ item }) {
-  const [open, setOpen]         = useState(false);
-  const [oddsData, setOddsData] = useState(null);
+// ---------------------------------------------------------------------------
+// Market identity — mirrors TicketModal so a pick reads the same on both screens
+// ---------------------------------------------------------------------------
+const MARKET_META = {
+  goals:        { Icon: SportsSoccer,  color: '#4caf50', label: 'Goals'   },
+  corners:      { Icon: Flag,          color: '#2196f3', label: 'Corners' },
+  yellow_cards: { Icon: Square,        color: '#ffc107', label: 'Cards'   },
+  btts:         { Icon: CompareArrows, color: '#9c27b0', label: 'BTTS'    },
+};
 
-  useEffect(() => {
-    if (open && oddsData === null) {
-      apiClient.fetchOdds(item.fixture_id)
-        .then(res => setOddsData(res.data || []))
-        .catch(() => setOddsData([]));
-    }
-  }, [open]);
+const META = (market) => MARKET_META[market] || { Icon: HelpOutline, color: '#9e9e9e', label: market };
 
-  const bestPick = item.top_picks[0];
-  const color    = CONF_COLOR(bestPick.confidence);
+// MUI palette keys so both themes resolve correctly
+const confTone = (c) => (c >= 75 ? 'success' : c >= 68 ? 'warning' : 'info');
+
+const CONF_FILTERS = [
+  { value: 70, label: '≥70%' },
+  { value: 75, label: '≥75%' },
+  { value: 0,  label: 'Todos' },
+];
+
+// ---------------------------------------------------------------------------
+// Accuracy strip — the 7-day track record, shown where the decision is made
+// ---------------------------------------------------------------------------
+function AccuracyStrip({ accuracy }) {
+  if (!accuracy?.settled) return null;
+
+  const markets = Object.entries(accuracy.by_market)
+    .sort(([, a], [, b]) => b.accuracy - a.accuracy);
 
   return (
-    <Box sx={{
-      bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2,
-      borderLeft: `4px solid ${color}`, overflow: 'hidden',
-    }}>
-      {/* Header */}
-      <Stack
-        direction="row" alignItems="center" justifyContent="space-between"
-        sx={{ px: 2, py: 1.5, cursor: 'pointer' }}
-        onClick={() => setOpen(o => !o)}
-      >
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {item.home_team.name} vs {item.away_team.name}
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-            {item.referee && (
-              <Typography variant="caption" color="text.secondary">
-                🏁 {item.referee}
-              </Typography>
-            )}
-            {item.result && (
-              <Chip label={`Resultado: ${item.result}`} size="small" color="default" sx={{ height: 18, fontSize: 10 }} />
-            )}
-          </Stack>
-        </Box>
+    <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, px: 1.75, py: 1.25, mb: 2 }}>
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1 }}>
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'text.secondary' }}
+        >
+          Efectividad {accuracy.days}d
+        </Typography>
 
-        <Stack direction="row" spacing={1} alignItems="center">
-          {/* Show top 2 picks as chips */}
-          {item.top_picks.slice(0, 2).map((p, i) => (
-            <Chip
-              key={i}
-              label={`${p.label} · ${p.confidence}%`}
-              size="small"
-              sx={{
-                bgcolor: CONF_COLOR(p.confidence) + '18',
-                color: CONF_COLOR(p.confidence),
-                fontWeight: 600,
-                display: { xs: i > 0 ? 'none' : 'flex', sm: 'flex' },
-              }}
-            />
-          ))}
-          <IconButton size="small">{open ? <ExpandLess /> : <ExpandMore />}</IconButton>
+        <Chip
+          size="small"
+          label={`${accuracy.accuracy}%`}
+          color={confTone(accuracy.accuracy)}
+          sx={{ fontWeight: 700, height: 22 }}
+        />
+
+        <Box sx={{ flex: 1 }} />
+
+        <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
+          {markets.map(([market, stat]) => {
+            const { Icon, color, label } = META(market);
+            return (
+              <Tooltip key={market} title={`${label}: ${stat.wins}/${stat.total}`} placement="top">
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <Icon sx={{ fontSize: 15, color }} />
+                  <Typography
+                    variant="caption"
+                    sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                  >
+                    {stat.accuracy}%
+                  </Typography>
+                </Stack>
+              </Tooltip>
+            );
+          })}
         </Stack>
       </Stack>
 
-      {/* Expanded detail */}
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        {accuracy.wins}/{accuracy.settled} picks ganados con confianza ≥{accuracy.min_confidence}%
+      </Typography>
+    </Box>
+  );
+}
+
+AccuracyStrip.propTypes = { accuracy: PropTypes.object };
+
+// ---------------------------------------------------------------------------
+// PickRow — one row per pick, not per fixture. The pick is the decision unit.
+// ---------------------------------------------------------------------------
+function PickRow({ pick, started }) {
+  const [open, setOpen] = useState(false);
+  const { Icon, color } = META(pick.market);
+  const odd = pick.best_odd;
+
+  return (
+    <Box sx={{ opacity: started ? 0.5 : 1 }}>
+      <Stack
+        direction="row" spacing={1.25} alignItems="center"
+        sx={{ px: 1.5, py: 1.25, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+        onClick={() => setOpen(o => !o)}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            width: 42, flexShrink: 0, fontWeight: 700, textAlign: 'center',
+            fontVariantNumeric: 'tabular-nums',
+            color: started ? 'text.disabled' : 'text.primary',
+          }}
+        >
+          {dayjs(pick.kickoff).format('HH:mm')}
+        </Typography>
+
+        <Icon sx={{ fontSize: 20, color, flexShrink: 0 }} />
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+            {pick.label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+            {pick.home} vs {pick.away}
+          </Typography>
+        </Box>
+
+        <Chip
+          size="small"
+          label={`${pick.confidence}%`}
+          color={confTone(pick.confidence)}
+          sx={{ fontWeight: 700, minWidth: 50, height: 24 }}
+        />
+
+        <Tooltip title={odd ? odd.bookmaker : 'Sin momio disponible'} placement="top">
+          <Chip
+            size="small"
+            label={odd ? odd.odd.toFixed(2) : '—'}
+            variant={odd ? 'filled' : 'outlined'}
+            sx={{
+              minWidth: 52, height: 24, fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              ...(odd ? {} : { color: 'text.disabled' }),
+            }}
+          />
+        </Tooltip>
+
+        <IconButton size="small" sx={{ flexShrink: 0 }}>
+          {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        </IconButton>
+      </Stack>
+
       <Collapse in={open}>
-        <Divider />
-        <Box sx={{ px: 2, pb: 1.5 }}>
-          {/* Data quality row */}
-          <Stack direction="row" spacing={2} sx={{ pt: 1.5, pb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              📊 Datos: {item.home_locality_count}p casa · {item.away_locality_count}p vis. · {item.h2h_count}p H2H
-            </Typography>
+        <Box sx={{ px: 2, pb: 1.5, pl: 7 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+            {pick.note}
+          </Typography>
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ gap: 0.5 }}>
+            {pick.referee && (
+              <Chip size="small" variant="outlined" label={`Árb. ${pick.referee}`} sx={{ fontSize: 10, height: 20 }} />
+            )}
+            {Object.entries(pick.samples || {})
+              .filter(([, n]) => n > 0)
+              .map(([k, n]) => (
+                <Chip
+                  key={k}
+                  size="small"
+                  variant="outlined"
+                  label={`${{ h2h: 'H2H', referee: 'Árb', home: 'Casa', away: 'Vis.' }[k] || k} ${n}p`}
+                  sx={{ fontSize: 10, height: 20 }}
+                />
+              ))}
           </Stack>
-          <Divider sx={{ mb: 1 }} />
-          {item.top_picks.map((p) => {
-            const odd = p.best_odd || (oddsData ? findOdd(oddsData, p.market, p.side, p.line) : null);
-            return <MarketRow key={p.market} market={p.market} data={p} odd={odd} />;
-          })}
         </Box>
       </Collapse>
     </Box>
   );
 }
 
+PickRow.propTypes = {
+  pick: PropTypes.object.isRequired,
+  started: PropTypes.bool,
+};
+
+// ---------------------------------------------------------------------------
+// ParlayCard
+// ---------------------------------------------------------------------------
 function ParlayCard({ parlay }) {
   if (!parlay) return null;
-  const [p1, p2] = parlay.picks;
   return (
-    <Box sx={{
-      bgcolor: '#1565c0', color: 'white', borderRadius: 2,
-      p: 2, mb: 3,
-    }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-        🎯 Parlay sugerido del día
-      </Typography>
-      <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-        {[p1, p2].map((pick, i) => (
-          <Stack key={i} direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'white' }}>
-                {pick.label}
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                {pick.fixture}
-              </Typography>
-            </Box>
-            <Chip
-              label={`${pick.confidence}%`}
-              size="small"
-              sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 700 }}
-            />
-          </Stack>
-        ))}
+    <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2, px: 2, py: 1.5, mb: 2 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7 }}>
+          Parlay del día
+        </Typography>
+        <Chip
+          size="small"
+          label={`~${parlay.combined_probability}%`}
+          sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontWeight: 700, height: 22 }}
+        />
       </Stack>
-      <Typography variant="caption" sx={{ opacity: 0.75 }}>
-        Probabilidad combinada estimada: ~{parlay.combined_probability}% (asume independencia)
-      </Typography>
+      <Stack spacing={0.75}>
+        {parlay.picks.map((pick, i) => {
+          const { Icon } = META(pick.market);
+          return (
+            <Stack key={i} direction="row" spacing={1} alignItems="center">
+              <Icon sx={{ fontSize: 17, opacity: 0.9 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{pick.label}</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.8, display: 'block' }} noWrap>
+                  {pick.fixture}
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>{pick.confidence}%</Typography>
+            </Stack>
+          );
+        })}
+      </Stack>
     </Box>
   );
 }
 
-export default function BetRadarView() {
-  const todayStr = new Date().toISOString().substring(0, 10);
+ParlayCard.propTypes = { parlay: PropTypes.object };
 
-  const [date, setDate]           = useState(todayStr);
-  const [loading, setLoading]     = useState(false);
-  const [data, setData]           = useState(null);
-  const [error, setError]         = useState(null);
-  const [fromCache, setFromCache] = useState(false);
+// ---------------------------------------------------------------------------
+// BetRadarView
+// ---------------------------------------------------------------------------
+export default function BetRadarView() {
+  const todayStr = dayjs().format('YYYY-MM-DD');
+
+  const [date, setDate]             = useState(todayStr);
+  const [loading, setLoading]       = useState(false);
+  const [data, setData]             = useState(null);
+  const [accuracy, setAccuracy]     = useState(null);
+  const [error, setError]           = useState(null);
+  const [minConf, setMinConf]       = useState(70);
+  const [marketSel, setMarketSel]   = useState(null);
+  const [showStarted, setShowStarted] = useState(false);
 
   useEffect(() => { load(date); }, [date]);
+
+  useEffect(() => {
+    apiClient.fetchBetRadarAccuracy(7, 70).then(setAccuracy).catch(() => setAccuracy(null));
+  }, []);
 
   const load = (selectedDate) => {
     setLoading(true);
     setError(null);
     setData(null);
-    setFromCache(false);
 
-    // Try cache first; fall back to on-demand analysis
     apiClient.fetchBetRadarCached(selectedDate)
-      .then(d => { setData(d); setFromCache(true); })
+      .then(setData)
       .catch((err) => {
         if (err?.response?.status === 404) {
-          return apiClient.fetchBetRadarSuggestions(selectedDate)
-            .then(d => { setData(d); setFromCache(false); });
+          return apiClient.fetchBetRadarSuggestions(selectedDate).then(setData);
         }
         throw err;
       })
       .catch((err) => {
         const detail = err?.response?.data?.detail || err?.message || 'error desconocido';
         const status = err?.response?.status;
-        setError(status
-          ? `Error ${status}: ${detail}`
-          : `No se pudo conectar al backend: ${detail}`);
+        setError(status ? `Error ${status}: ${detail}` : `No se pudo conectar al backend: ${detail}`);
       })
       .finally(() => setLoading(false));
   };
 
-  return (
-    <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
-      <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-        BetRadar
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Analiza córners, goles, tarjetas y BTTS usando localía + H2H + árbitro.
-      </Typography>
+  // Flatten fixture-grouped suggestions into a chronological pick feed
+  const allPicks = useMemo(() => {
+    if (!data?.suggestions) return [];
+    return data.suggestions
+      .flatMap(s => (s.top_picks || []).map(p => ({
+        ...p,
+        fixture_id: s.fixture_id,
+        home: s.home_team.name,
+        away: s.away_team.name,
+        kickoff: s.date,
+        referee: s.referee,
+      })))
+      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+  }, [data]);
 
-      {/* Controls */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+  const filtered = useMemo(
+    () => allPicks.filter(p =>
+      p.confidence >= minConf && (marketSel === null || p.market === marketSel),
+    ),
+    [allPicks, minConf, marketSel],
+  );
+
+  const now = dayjs();
+  const upcoming = filtered.filter(p => dayjs(p.kickoff).isAfter(now));
+  const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
+
+  const marketsPresent = useMemo(
+    () => [...new Set(allPicks.map(p => p.market))],
+    [allPicks],
+  );
+
+  return (
+    <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, flex: 1 }}>
+          Radar
+        </Typography>
         <TextField
           type="date"
           size="small"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          label="Fecha"
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: 180 }}
+          sx={{ width: 155 }}
         />
-        {loading && <CircularProgress size={20} />}
-        {!loading && fromCache && (
-          <Chip label="Redis cache" size="small" color="success" variant="outlined" />
-        )}
+        {loading && <CircularProgress size={18} />}
+      </Stack>
+
+      <AccuracyStrip accuracy={accuracy} />
+
+      {/* ── Filters ──────────────────────────────────────────────────────── */}
+      <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ gap: 0.75, mb: 2 }}>
+        {CONF_FILTERS.map(f => (
+          <Chip
+            key={f.value}
+            label={f.label}
+            size="small"
+            onClick={() => setMinConf(f.value)}
+            color={minConf === f.value ? 'primary' : 'default'}
+            variant={minConf === f.value ? 'filled' : 'outlined'}
+            sx={{ fontWeight: 600 }}
+          />
+        ))}
+
+        {marketsPresent.length > 1 && <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />}
+
+        {marketsPresent.length > 1 && marketsPresent.map(market => {
+          const { Icon, color, label } = META(market);
+          const active = marketSel === market;
+          return (
+            <Chip
+              key={market}
+              size="small"
+              icon={<Icon sx={{ fontSize: 15, color: active ? 'inherit' : `${color} !important` }} />}
+              label={label}
+              onClick={() => setMarketSel(active ? null : market)}
+              color={active ? 'primary' : 'default'}
+              variant={active ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 600 }}
+            />
+          );
+        })}
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {data && (
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {data.fixtures_analyzed} partido{data.fixtures_analyzed !== 1 ? 's' : ''} analizados
-            · {data.suggestions.length} con picks confiables
-          </Typography>
-
+        <>
           <ParlayCard parlay={data.parlay_suggestion} />
 
-          {data.suggestions.length === 0 ? (
+          {filtered.length === 0 ? (
             <Alert severity="info">
-              No se encontraron tendencias con suficiente confianza para esta fecha.
-              Prueba con otra fecha o verifica que haya datos históricos en BD.
+              {allPicks.length === 0
+                ? 'No hay picks para esta fecha.'
+                : `Ningún pick supera el filtro (${allPicks.length} disponibles con menor confianza).`}
             </Alert>
           ) : (
-            <Stack spacing={2}>
-              {data.suggestions.map((item) => (
-                <FixtureCard key={item.fixture_id} item={item} />
+            <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, overflow: 'hidden' }}>
+              {upcoming.length === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
+                  Todos los partidos de hoy ya empezaron.
+                </Typography>
+              )}
+
+              {upcoming.map((pick, i) => (
+                <Box key={`${pick.fixture_id}-${pick.market}`}>
+                  {i > 0 && <Divider />}
+                  <PickRow pick={pick} />
+                </Box>
               ))}
-            </Stack>
+
+              {started.length > 0 && (
+                <>
+                  <Divider />
+                  <Stack
+                    direction="row" alignItems="center" spacing={1}
+                    onClick={() => setShowStarted(s => !s)}
+                    sx={{ px: 2, py: 1.25, cursor: 'pointer', bgcolor: 'action.hover' }}
+                  >
+                    <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontWeight: 600 }}>
+                      {started.length} pick{started.length !== 1 ? 's' : ''} de partidos ya iniciados
+                    </Typography>
+                    <IconButton size="small">
+                      {showStarted ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                    </IconButton>
+                  </Stack>
+                  <Collapse in={showStarted}>
+                    {started.map((pick, i) => (
+                      <Box key={`${pick.fixture_id}-${pick.market}`}>
+                        {i > 0 && <Divider />}
+                        <PickRow pick={pick} started />
+                      </Box>
+                    ))}
+                  </Collapse>
+                </>
+              )}
+            </Box>
           )}
-        </Box>
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}>
+            {data.fixtures_analyzed} partidos analizados · {filtered.length} de {allPicks.length} picks mostrados
+          </Typography>
+        </>
       )}
     </Box>
   );

@@ -11,6 +11,7 @@ import {
   Home as HomeIcon,
   LightMode as LightModeIcon,
   Menu as MenuIcon,
+  Radar as RadarIcon,
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
   ShowChart as ShowChartIcon,
@@ -54,6 +55,7 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
   const SECTIONS = [
     { value: 'home',    label: t('tabs.home'),    icon: <HomeIcon fontSize="small" /> },
     { value: 'control', label: t('tabs.control'), icon: <ShowChartIcon fontSize="small" /> },
+    { value: 'radar',   label: t('tabs.radar'),   icon: <RadarIcon fontSize="small" /> },
   ];
 
   const handleRefreshLeagues = () => {

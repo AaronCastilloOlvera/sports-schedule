@@ -6,8 +6,10 @@ import { ThemeModeProvider, useThemeMode } from './context/ThemeContext.jsx';
 import Header from './components/layout/Header.jsx';
 import FutbolDashboard from './views/FutbolDashboard.jsx';
 import Bets from './components/Futbol/Bets.jsx';
+import BetRadarView from './components/Futbol/BetRadarView.jsx';
 
 const SECTION_VIEWS = {
+  radar:   <BetRadarView />,
   home:    <FutbolDashboard />,
   control: <Bets />,
 };
@@ -15,7 +17,7 @@ const SECTION_VIEWS = {
 function AppContent() {
   const { mode } = useThemeMode();
   const theme = useMemo(() => createTheme({ palette: { mode } }), [mode]);
-  const [activeSection, setActiveSection] = useState('home');
+  const [activeSection, setActiveSection] = useState('radar');
 
   return (
     <ThemeProvider theme={theme}>

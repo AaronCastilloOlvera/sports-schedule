@@ -10,7 +10,6 @@ import BetsAnalytics from "./BetsAnalytics";
 import BankrollView from "./BankrollView";
 import BettingRules from "./BettingRules";
 import TicketsSkeleton from "./TicketsSkeleton";
-import BetRadarView from "./BetRadarView";
 
 const toLocalInput = (dt) => {
   if (!dt) return '';
@@ -471,7 +470,6 @@ function Bets() {
         <Tab label="Analytics" />
         <Tab label="Bankroll" />
         <Tab label="Rules" />
-        <Tab label="BetRadar" />
       </Tabs>
 
       {mainTab === 0 && (
@@ -545,7 +543,6 @@ function Bets() {
       {mainTab === 1 && <BetsAnalytics />}
       {mainTab === 2 && <BankrollView />}
       {mainTab === 3 && <BettingRules />}
-      {mainTab === 4 && <BetRadarView />}
 
       <TicketModal
         openModal={openModal}
