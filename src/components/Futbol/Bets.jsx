@@ -33,7 +33,8 @@ const initialStatedata = {
     status: 'pending',
     device_type: '',
     studied: false,
-    comments: ''
+    comments: '',
+    legs: null,
 }
 
 const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
@@ -282,6 +283,7 @@ function Bets() {
         device_type: ticketToEdit.device_type ?? '',
         studied: ticketToEdit.studied ?? false,
         comments: ticketToEdit.comments ?? '',
+        legs: ticketToEdit.legs ?? null,
       });
       setEditId(ticket_id);
       setOpenModal(true);

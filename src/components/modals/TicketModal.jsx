@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControlLabel, InputAdornment, MenuItem, Stack, Tab, Tabs, TextField, Typography,
+  Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper,
+  Stack, Tab, Tabs, TextField, Tooltip, Typography,
 } from "@mui/material";
+import { Add, AttachMoney, Cancel, CheckCircle, CompareArrows, Delete, Flag, HelpOutline, RadioButtonUnchecked, SportsSoccer, Square } from "@mui/icons-material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES } from "../../utils/consts.jsx";
 import { apiClient } from "../../api/api.js";
 import PropTypes from "prop-types";
 
+// ---------------------------------------------------------------------------
+// Odds helpers
+// ---------------------------------------------------------------------------
 const americanToDecimal = (val) => {
   const v = parseFloat(val);
   if (!val || isNaN(v) || v === 0) return null;
@@ -23,6 +28,62 @@ const decimalToAmerican = (val) => {
     : String(Math.round(-100 / (d - 1)));
 };
 
+// ---------------------------------------------------------------------------
+// Legs constants
+// ---------------------------------------------------------------------------
+const MARKET_OPTIONS = [
+  { value: 'goals',     label: 'Goals' },
+  { value: 'corners',   label: 'Corners' },
+  { value: 'cards',     label: 'Cards' },
+  { value: 'btts',      label: 'BTTS' },
+  { value: 'moneyline', label: 'Moneyline' },
+  { value: 'other',     label: 'Other' },
+];
+
+const SIDE_BY_MARKET = {
+  goals:     ['over', 'under'],
+  corners:   ['over', 'under'],
+  cards:     ['over', 'under'],
+  btts:      ['yes', 'no'],
+  moneyline: ['home', 'away'],
+  other:     ['over', 'under', 'yes', 'no', 'home', 'away'],
+};
+
+const SIDE_LABEL = { over: 'Over', under: 'Under', yes: 'Yes', no: 'No', home: 'Home', away: 'Away' };
+const MARKET_LABEL = { goals: 'Goals', corners: 'Corners', cards: 'Cards', btts: 'BTTS', moneyline: 'Moneyline', other: 'Other' };
+
+const HAS_LINE = (market) => !['btts', 'moneyline'].includes(market);
+
+const MARKET_ICON = {
+  goals:     <SportsSoccer sx={{ fontSize: 18, color: '#4caf50' }} />,
+  corners:   <Flag         sx={{ fontSize: 18, color: '#2196f3' }} />,
+  cards:     <Square       sx={{ fontSize: 18, color: '#ffc107' }} />,
+  btts:      <CompareArrows sx={{ fontSize: 18, color: '#9c27b0' }} />,
+  moneyline: <AttachMoney  sx={{ fontSize: 18, color: '#00bcd4' }} />,
+  other:     <HelpOutline  sx={{ fontSize: 18, color: '#9e9e9e' }} />,
+};
+
+const buildPick = (leg) => {
+  const m = MARKET_LABEL[leg.market] || leg.market || '';
+  const s = SIDE_LABEL[leg.side] || leg.side || '';
+  const l = leg.line_used != null ? String(leg.line_used) : '';
+  return [m, s, l].filter(Boolean).join(' ');
+};
+
+const defaultLeg = (ticket) => ({
+  match_name: ticket.match_name || '',
+  league: ticket.league || '',
+  market: 'goals',
+  side: 'over',
+  line_used: null,
+  pick: '',
+  odd: null,
+  outcome: null,
+});
+
+// ---------------------------------------------------------------------------
+// CurrencyField
+// ---------------------------------------------------------------------------
 function CurrencyField({ label, name, value, onChange }) {
   const [focused, setFocused] = useState(false);
   const numValue = parseFloat(value);
@@ -52,18 +113,168 @@ CurrencyField.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
+// ---------------------------------------------------------------------------
+// LegRow
+// ---------------------------------------------------------------------------
+function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
+  const sides = SIDE_BY_MARKET[leg.market] || SIDE_BY_MARKET.other;
+  const [rawOdds, setRawOdds] = useState('');
+  const [oddsFocused, setOddsFocused] = useState(false);
+
+  const handleOddsFocus = () => {
+    setOddsFocused(true);
+    setRawOdds(leg.odd != null ? String(leg.odd) : '');
+  };
+  const handleOddsChange = (e) => setRawOdds(e.target.value);
+  const handleOddsBlur = () => {
+    setOddsFocused(false);
+    const v = parseFloat(rawOdds);
+    if (isNaN(v) || v === 0) { onUpdate(index, 'odd', null); return; }
+    const isAmerican = Math.abs(v) >= 100 && Number.isInteger(v);
+    const decimal = parseFloat((isAmerican ? parseFloat(americanToDecimal(v)) : v).toFixed(2));
+    onUpdate(index, 'odd', decimal);
+  };
+  const oddsDisplay = oddsFocused ? rawOdds : (leg.odd != null ? leg.odd.toFixed(2) : '');
+
+  const cycleOutcome = () => {
+    const next = leg.outcome === null ? true : leg.outcome === true ? false : null;
+    onUpdate(index, 'outcome', next);
+  };
+
+  const handleMarketChange = (e) => {
+    const market = e.target.value;
+    const validSides = SIDE_BY_MARKET[market];
+    const side = validSides.includes(leg.side) ? leg.side : validSides[0];
+    onUpdate(index, 'market', market);
+    onUpdate(index, 'side', side);
+    if (!HAS_LINE(market)) onUpdate(index, 'line_used', null);
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ p: 1.5, bgcolor: 'action.hover', borderColor: 'divider' }}
+    >
+      {isParlay && (
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+          <TextField
+            size="small" sx={{ flex: 1 }} label="Match" value={leg.match_name || ''}
+            onChange={(e) => onUpdate(index, 'match_name', e.target.value)}
+          />
+          <TextField
+            size="small" label="Odds" value={oddsDisplay}
+            onChange={handleOddsChange} onFocus={handleOddsFocus} onBlur={handleOddsBlur}
+            sx={{ width: 86 }} placeholder="2.50"
+          />
+        </Stack>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {MARKET_ICON[leg.market] || MARKET_ICON.other}
+        </Box>
+        <TextField
+          select size="small" label="Market" value={leg.market || 'goals'}
+          onChange={handleMarketChange} sx={{ flex: 2 }}
+        >
+          {MARKET_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+        </TextField>
+
+        <TextField
+          select size="small" label="Side" value={leg.side || sides[0]}
+          onChange={(e) => onUpdate(index, 'side', e.target.value)} sx={{ flex: 1.5 }}
+        >
+          {sides.map(s => <MenuItem key={s} value={s}>{SIDE_LABEL[s]}</MenuItem>)}
+        </TextField>
+
+        {HAS_LINE(leg.market) && (
+          <TextField
+            size="small" label="Line" type="number" value={leg.line_used ?? ''}
+            onChange={(e) => onUpdate(index, 'line_used', e.target.value ? parseFloat(e.target.value) : null)}
+            sx={{ width: 76 }}
+          />
+        )}
+
+
+        <Tooltip title={leg.outcome === true ? 'Won' : leg.outcome === false ? 'Lost' : 'Pending'}>
+          <IconButton size="small" onClick={cycleOutcome}
+            sx={{ color: leg.outcome === true ? 'success.main' : leg.outcome === false ? 'error.main' : 'text.disabled' }}
+          >
+            {leg.outcome === true
+              ? <CheckCircle fontSize="small" />
+              : leg.outcome === false
+                ? <Cancel fontSize="small" />
+                : <RadioButtonUnchecked fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+
+        <IconButton size="small" color="error" onClick={() => onDelete(index)}>
+          <Delete fontSize="small" />
+        </IconButton>
+      </Stack>
+    </Paper>
+  );
+}
+
+LegRow.propTypes = {
+  leg: PropTypes.object.isRequired,
+  index: PropTypes.number.isRequired,
+  isParlay: PropTypes.bool.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
+// ---------------------------------------------------------------------------
+// TicketModal
+// ---------------------------------------------------------------------------
 function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
   const [tab, setTab] = useState(0);
   const [leagueOptions, setLeagueOptions] = useState([]);
   const [americanOdds, setAmericanOdds] = useState('');
+  const [legs, setLegs] = useState([]);
   const isEdit = Boolean(currentTicket.ticket_id);
+  const hasLegs = ['parlay', 'crear_apuesta'].includes(currentTicket.bet_type);
 
+  // Sync legs from parent when modal opens or ticket changes
   useEffect(() => {
     if (openModal) {
       setTab(0);
       setAmericanOdds(decimalToAmerican(currentTicket.odds));
+      setLegs(Array.isArray(currentTicket.legs) ? currentTicket.legs : []);
     }
   }, [openModal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Push legs to parent + rebuild pick and match_name whenever legs change
+  useEffect(() => {
+    if (!hasLegs) return;
+    const normalized = legs.map(leg => ({ ...leg, pick: buildPick(leg) }));
+    const value = normalized.length > 0 ? normalized : null;
+    handleChange({ target: { name: 'legs', value } });
+    if (normalized.length > 0) {
+      handleChange({ target: { name: 'pick', value: normalized.map(l => l.pick).join(' + ') } });
+      if (currentTicket.bet_type === 'parlay') {
+        const matchNames = [...new Set(normalized.map(l => l.match_name).filter(Boolean))];
+        if (matchNames.length > 0)
+          handleChange({ target: { name: 'match_name', value: matchNames.join(' | ') } });
+      }
+    }
+  }, [legs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear legs when switching away from parlay/crear_apuesta
+  useEffect(() => {
+    if (!hasLegs) {
+      setLegs([]);
+      handleChange({ target: { name: 'legs', value: null } });
+    }
+  }, [currentTicket.bet_type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateLeg = (i, field, value) =>
+    setLegs(prev => prev.map((l, j) => j === i ? { ...l, [field]: value } : l));
+
+  const deleteLeg = (i) =>
+    setLegs(prev => prev.filter((_, j) => j !== i));
+
+  const addLeg = () =>
+    setLegs(prev => [...prev, defaultLeg(currentTicket)]);
 
   const handleOddsChange = (e) => {
     handleChange(e);
@@ -123,18 +334,9 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
             </Stack>
             <Stack direction="row" spacing={2}>
               <Autocomplete
-                freeSolo
-                options={leagueOptions}
-                value={currentTicket.league ?? ''}
-                onChange={(_, newValue) =>
-                  handleChange({ target: { name: 'league', value: newValue ?? '' } })
-                }
-                onInputChange={(_, newValue, reason) => {
-                  if (reason === 'input')
-                    handleChange({ target: { name: 'league', value: newValue } });
-                }}
-                fullWidth
-                size="small"
+                freeSolo options={leagueOptions} value={currentTicket.league ?? ''} fullWidth size="small"
+                onChange={(_, v) => handleChange({ target: { name: 'league', value: v ?? '' } })}
+                onInputChange={(_, v, reason) => { if (reason === 'input') handleChange({ target: { name: 'league', value: v } }); }}
                 renderInput={(params) => <TextField {...params} label="League" size="small" />}
               />
               <TextField
@@ -143,35 +345,63 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
                 onChange={handleChange} InputLabelProps={{ shrink: true }}
               />
             </Stack>
-            <TextField label="Match Name" name="match_name" value={currentTicket.match_name} placeholder="Chivas vs América" fullWidth size="small" onChange={handleChange} />
-            <TextField label="Pick" name="pick" value={currentTicket.pick} placeholder="Over 2.5, Chivas gana..." fullWidth size="small" onChange={handleChange} />
+            <TextField
+              label="Match Name" name="match_name" value={currentTicket.match_name}
+              placeholder="Chivas vs América" fullWidth size="small" onChange={handleChange}
+              helperText={currentTicket.bet_type === 'parlay' && legs.length > 0 ? 'Auto-generated from picks below' : undefined}
+              slotProps={{ input: { readOnly: currentTicket.bet_type === 'parlay' && legs.length > 0 } }}
+              sx={currentTicket.bet_type === 'parlay' && legs.length > 0 ? { '& .MuiInputBase-input': { color: 'text.secondary' } } : {}}
+            />
+            <TextField
+              label="Pick" name="pick" value={currentTicket.pick}
+              placeholder="Over 2.5, Chivas gana..." fullWidth size="small"
+              onChange={handleChange}
+              helperText={hasLegs && legs.length > 0 ? 'Auto-generated from picks below' : undefined}
+              slotProps={{ input: { readOnly: hasLegs && legs.length > 0 } }}
+              sx={hasLegs && legs.length > 0 ? { '& .MuiInputBase-input': { color: 'text.secondary' } } : {}}
+            />
+
+            {/* Legs section */}
+            {hasLegs && (
+              <Box>
+                <Divider sx={{ mb: 1.5 }} />
+                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                  <Typography variant="caption" fontWeight={700} textTransform="uppercase" letterSpacing={0.8} color="text.secondary">
+                    Picks ({legs.length})
+                  </Typography>
+                  <Button size="small" startIcon={<Add />} onClick={addLeg}>Add pick</Button>
+                </Stack>
+                {legs.length === 0
+                  ? <Typography variant="caption" color="text.disabled" sx={{ pl: 0.5 }}>No picks yet — click Add pick</Typography>
+                  : (
+                    <Stack spacing={1}>
+                      {legs.map((leg, i) => (
+                        <LegRow
+                          key={i}
+                          leg={leg}
+                          index={i}
+                          isParlay={currentTicket.bet_type === 'parlay'}
+                          onUpdate={updateLeg}
+                          onDelete={deleteLeg}
+                        />
+                      ))}
+                    </Stack>
+                  )}
+              </Box>
+            )}
           </Stack>
         )}
 
         {tab === 1 && (
           <Stack spacing={2}>
             <Stack direction="row" spacing={2}>
+              <TextField label="Decimal" name="odds" type="number" value={currentTicket.odds} fullWidth size="small" onChange={handleOddsChange} />
               <TextField
-                label="Decimal"
-                name="odds"
-                type="number"
-                value={currentTicket.odds}
-                fullWidth
-                size="small"
-                onChange={handleOddsChange}
-              />
-              <TextField
-                label="Americano"
-                value={americanOdds}
-                fullWidth
-                size="small"
-                placeholder="+110"
+                label="Americano" value={americanOdds} fullWidth size="small" placeholder="+110"
                 onChange={handleAmericanChange}
                 sx={{
                   '& .MuiInputLabel-root:not(.Mui-focused)': { color: 'text.disabled' },
-                  '& .MuiOutlinedInput-root:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
-                    borderStyle: 'dashed',
-                  },
+                  '& .MuiOutlinedInput-root:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': { borderStyle: 'dashed' },
                 }}
               />
             </Stack>
