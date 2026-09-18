@@ -9,7 +9,20 @@ const pulseAnimation = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
 `;
 
-export default function LiveStatusChip({ fixture }) {
+// One live-label formatter per sport — add a sport by adding an entry here.
+const LIVE_LABEL = {
+  futbol: ({ short, elapsed, extra }) =>
+    short === 'HT' ? 'HT'
+      : extra > 0  ? `${elapsed} + ${extra}'`
+      : `${elapsed}'`,
+
+  // Pre-formatted string from normalizeBaseball, e.g. "Alta 4° · 2 outs".
+  baseball: ({ short, elapsed }) => elapsed || short,
+};
+
+const liveLabel = (sport, status) => (LIVE_LABEL[sport] ?? LIVE_LABEL.futbol)(status);
+
+export default function LiveStatusChip({ fixture, sport = 'futbol' }) {
   const { status, date } = fixture;
   const shortStatus = status.short;
   const isLive = statusPriority[shortStatus] === 1;
@@ -27,16 +40,9 @@ export default function LiveStatusChip({ fixture }) {
 
   // Case 2. Live matches show the elapsed time or status in a red chip with pulse animation
   if (isLive) {
-    const { elapsed, extra } = status;
-    // Soccer passes `elapsed` as a number of minutes (formatted with a trailing
-    // apostrophe below). Other sports (e.g. baseball's "Alta 4° · 2 outs") pass
-    // an already-formatted string label instead — show it as-is, no minute math.
-    const displayLabel = typeof elapsed === 'number' && shortStatus !== 'HT'
-      ? (extra > 0 ? `${elapsed} + ${extra}'` : `${elapsed}'`)
-      : (elapsed || shortStatus);
     return (
       <Chip
-        label={displayLabel}
+        label={liveLabel(sport, status)}
         size='small'
         color={'error'}
         sx={{ 
@@ -67,5 +73,6 @@ export default function LiveStatusChip({ fixture }) {
 }
 
 LiveStatusChip.propTypes = {
-  fixture: PropTypes.object.isRequired
+  fixture: PropTypes.object.isRequired,
+  sport: PropTypes.oneOf(Object.keys(LIVE_LABEL)),
 };

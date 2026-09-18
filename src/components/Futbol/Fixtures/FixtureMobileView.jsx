@@ -31,7 +31,7 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
           })()}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LiveStatusChip fixture={match.fixture} />
+          <LiveStatusChip fixture={match.fixture} sport={match.sport} />
         </Box>
       </Box>
 

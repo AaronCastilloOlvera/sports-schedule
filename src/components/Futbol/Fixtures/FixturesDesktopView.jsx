@@ -63,7 +63,7 @@ function MatchRow({ match, handleOpenH2HModal }) {
       </TableCell>
       <TableCell align="center" sx={{ width: 96 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <LiveStatusChip fixture={match.fixture} />
+          <LiveStatusChip fixture={match.fixture} sport={match.sport} />
         </Box>
       </TableCell>
       <TableCell align="right">
