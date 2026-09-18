@@ -80,17 +80,23 @@ const SAMPLE_LABEL = {
 function flattenPicks(data) {
   if (!data?.suggestions) return [];
   return data.suggestions
-    .flatMap((s, si) => (s.top_picks || []).map((p, pi) => ({
-      ...p,
-      key: `${s.game_pk ?? s.fixture_id ?? si}-${pi}`,
-      home: s.home_team?.name ?? '',
-      away: s.away_team?.name ?? '',
-      kickoff: s.date,
-      // fútbol shows the referee here; MLB shows the announced starters
-      context: s.home_pitcher || s.away_pitcher
-        ? [s.away_pitcher?.name, s.home_pitcher?.name].filter(Boolean).join(' vs ')
-        : s.referee,
-    })))
+    .flatMap((s, si) => (s.top_picks || []).map((p, pi) => {
+      // MLB puts the first pitch in `game_date` and only the calendar day in
+      // `date`; fútbol puts the full kickoff timestamp in `date`. Reading the
+      // day-only string would parse as midnight and file every pick as already
+      // started.
+      const kickoff = s.game_date || s.date;
+      const pitchers = [s.away_team?.pitcher?.name, s.home_team?.pitcher?.name].filter(Boolean);
+      return {
+        ...p,
+        key: `${s.game_pk ?? s.fixture_id ?? si}-${pi}`,
+        home: s.home_team?.name ?? '',
+        away: s.away_team?.name ?? '',
+        kickoff,
+        // fútbol shows the referee here; MLB shows the announced starters
+        context: pitchers.length ? pitchers.join(' vs ') : s.referee,
+      };
+    }))
     .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 }
 
