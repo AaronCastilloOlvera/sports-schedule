@@ -1,27 +1,64 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Chip, CircularProgress, Collapse, Divider,
-  IconButton, Stack, TextField, Tooltip, Typography,
+  IconButton, Stack, Tab, Tabs, TextField, Tooltip, Typography,
 } from '@mui/material';
 import {
-  CompareArrows, ExpandLess, ExpandMore, Flag,
-  HelpOutline, SportsSoccer, Square,
+  AttachMoney, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
+  HelpOutline, LooksOne, SportsBaseball, SportsSoccer, Square,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
 
 // ---------------------------------------------------------------------------
-// Market identity — mirrors TicketModal so a pick reads the same on both screens
+// Sports. Each one names its markets and how to reach its endpoints; the rest
+// of the view is shape-agnostic because both backends emit the same pick object.
 // ---------------------------------------------------------------------------
 const MARKET_META = {
-  goals:        { Icon: SportsSoccer,  color: '#4caf50', label: 'Goals'   },
-  corners:      { Icon: Flag,          color: '#2196f3', label: 'Corners' },
-  yellow_cards: { Icon: Square,        color: '#ffc107', label: 'Cards'   },
-  btts:         { Icon: CompareArrows, color: '#9c27b0', label: 'BTTS'    },
+  // fútbol
+  goals:        { Icon: SportsSoccer,   color: '#4caf50', label: 'Goles'     },
+  corners:      { Icon: Flag,           color: '#2196f3', label: 'Córners'   },
+  yellow_cards: { Icon: Square,         color: '#ffc107', label: 'Tarjetas'  },
+  btts:         { Icon: CompareArrows,  color: '#9c27b0', label: 'BTTS'      },
+  // MLB
+  total:        { Icon: SportsBaseball, color: '#4caf50', label: 'Carreras'  },
+  moneyline:    { Icon: AttachMoney,    color: '#00bcd4', label: 'Ganador'   },
+  nrfi:         { Icon: LooksOne,       color: '#9c27b0', label: '1ª entrada'},
+  hits:         { Icon: Bolt,           color: '#ff9800', label: 'Hits'      },
 };
 
-const META = (market) => MARKET_META[market] || { Icon: HelpOutline, color: '#9e9e9e', label: market };
+const META = (market) =>
+  MARKET_META[market] || { Icon: HelpOutline, color: '#9e9e9e', label: market };
+
+const SPORTS = [
+  {
+    key: 'futbol',
+    label: 'Fútbol',
+    markets: ['goals', 'corners', 'yellow_cards', 'btts'],
+    cached:      (date) => apiClient.fetchBetRadarCached(date),
+    suggestions: (date) => apiClient.fetchBetRadarSuggestions(date),
+    accuracy:    () => apiClient.fetchBetRadarAccuracy(7, 70),
+  },
+  {
+    key: 'mlb',
+    label: 'MLB',
+    markets: ['total', 'moneyline', 'nrfi', 'hits'],
+    experimental: true,
+    cached:      (date) => apiClient.fetchMLBRadarCached(date, 'mlb'),
+    suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'mlb'),
+    accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'mlb'),
+  },
+  {
+    key: 'lmb',
+    label: 'LMB',
+    markets: ['total', 'moneyline', 'nrfi', 'hits'],
+    experimental: true,
+    cached:      (date) => apiClient.fetchMLBRadarCached(date, 'lmb'),
+    suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'lmb'),
+    accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'lmb'),
+  },
+];
 
 // MUI palette keys so both themes resolve correctly
 const confTone = (c) => (c >= 75 ? 'success' : c >= 68 ? 'warning' : 'info');
@@ -32,13 +69,38 @@ const CONF_FILTERS = [
   { value: 0,  label: 'Todos' },
 ];
 
+const SAMPLE_LABEL = {
+  h2h: 'H2H', referee: 'Árb', home: 'Casa', away: 'Vis.',
+  home_team: 'Local', away_team: 'Visita',
+  home_pitcher: 'P. local', away_pitcher: 'P. visita',
+  home_vs: 'Local vs', away_vs: 'Visita vs', total: 'Total',
+};
+
+/** Both backends emit the same pick object; only the wrapper differs. */
+function flattenPicks(data) {
+  if (!data?.suggestions) return [];
+  return data.suggestions
+    .flatMap((s, si) => (s.top_picks || []).map((p, pi) => ({
+      ...p,
+      key: `${s.game_pk ?? s.fixture_id ?? si}-${pi}`,
+      home: s.home_team?.name ?? '',
+      away: s.away_team?.name ?? '',
+      kickoff: s.date,
+      // fútbol shows the referee here; MLB shows the announced starters
+      context: s.home_pitcher || s.away_pitcher
+        ? [s.away_pitcher?.name, s.home_pitcher?.name].filter(Boolean).join(' vs ')
+        : s.referee,
+    })))
+    .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+}
+
 // ---------------------------------------------------------------------------
-// Accuracy strip — the 7-day track record, shown where the decision is made
+// AccuracyStrip — the trailing track record, shown where the decision is made
 // ---------------------------------------------------------------------------
 function AccuracyStrip({ accuracy }) {
   if (!accuracy?.settled) return null;
 
-  const markets = Object.entries(accuracy.by_market)
+  const markets = Object.entries(accuracy.by_market || {})
     .sort(([, a], [, b]) => b.accuracy - a.accuracy);
 
   return (
@@ -60,17 +122,14 @@ function AccuracyStrip({ accuracy }) {
 
         <Box sx={{ flex: 1 }} />
 
-        <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
           {markets.map(([market, stat]) => {
             const { Icon, color, label } = META(market);
             return (
               <Tooltip key={market} title={`${label}: ${stat.wins}/${stat.total}`} placement="top">
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   <Icon sx={{ fontSize: 15, color }} />
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
-                  >
+                  <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                     {stat.accuracy}%
                   </Typography>
                 </Stack>
@@ -90,12 +149,14 @@ function AccuracyStrip({ accuracy }) {
 AccuracyStrip.propTypes = { accuracy: PropTypes.object };
 
 // ---------------------------------------------------------------------------
-// PickRow — one row per pick, not per fixture. The pick is the decision unit.
+// PickRow — one row per pick. The pick, not the game, is the decision unit.
 // ---------------------------------------------------------------------------
 function PickRow({ pick, started }) {
   const [open, setOpen] = useState(false);
   const { Icon, color } = META(pick.market);
-  const odd = pick.best_odd;
+  const odd = pick.best_odd || pick.odd;
+  const oddValue = typeof odd === 'object' && odd !== null ? odd.odd : odd;
+  const oddBook = typeof odd === 'object' && odd !== null ? odd.bookmaker : null;
 
   return (
     <Box sx={{ opacity: started ? 0.5 : 1 }}>
@@ -122,7 +183,7 @@ function PickRow({ pick, started }) {
             {pick.label}
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-            {pick.home} vs {pick.away}
+            {pick.away} @ {pick.home}
           </Typography>
         </Box>
 
@@ -133,15 +194,15 @@ function PickRow({ pick, started }) {
           sx={{ fontWeight: 700, minWidth: 50, height: 24 }}
         />
 
-        <Tooltip title={odd ? odd.bookmaker : 'Sin momio disponible'} placement="top">
+        <Tooltip title={oddBook || 'Sin momio disponible'} placement="top">
           <Chip
             size="small"
-            label={odd ? odd.odd.toFixed(2) : '—'}
-            variant={odd ? 'filled' : 'outlined'}
+            label={oddValue ? Number(oddValue).toFixed(2) : '—'}
+            variant={oddValue ? 'filled' : 'outlined'}
             sx={{
               minWidth: 52, height: 24, fontWeight: 700,
               fontVariantNumeric: 'tabular-nums',
-              ...(odd ? {} : { color: 'text.disabled' }),
+              ...(oddValue ? {} : { color: 'text.disabled' }),
             }}
           />
         </Tooltip>
@@ -156,9 +217,9 @@ function PickRow({ pick, started }) {
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
             {pick.note}
           </Typography>
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ gap: 0.5 }}>
-            {pick.referee && (
-              <Chip size="small" variant="outlined" label={`Árb. ${pick.referee}`} sx={{ fontSize: 10, height: 20 }} />
+          <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.5 }}>
+            {pick.context && (
+              <Chip size="small" variant="outlined" label={pick.context} sx={{ fontSize: 10, height: 20 }} />
             )}
             {Object.entries(pick.samples || {})
               .filter(([, n]) => n > 0)
@@ -167,7 +228,7 @@ function PickRow({ pick, started }) {
                   key={k}
                   size="small"
                   variant="outlined"
-                  label={`${{ h2h: 'H2H', referee: 'Árb', home: 'Casa', away: 'Vis.' }[k] || k} ${n}p`}
+                  label={`${SAMPLE_LABEL[k] || k} ${n}`}
                   sx={{ fontSize: 10, height: 20 }}
                 />
               ))}
@@ -187,12 +248,12 @@ PickRow.propTypes = {
 // ParlayCard
 // ---------------------------------------------------------------------------
 function ParlayCard({ parlay }) {
-  if (!parlay) return null;
+  if (!parlay?.picks?.length) return null;
   return (
     <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2, px: 2, py: 1.5, mb: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7 }}>
-          Parlay del día
+          Combinada del día
         </Typography>
         <Chip
           size="small"
@@ -209,7 +270,7 @@ function ParlayCard({ parlay }) {
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{pick.label}</Typography>
                 <Typography variant="caption" sx={{ opacity: 0.8, display: 'block' }} noWrap>
-                  {pick.fixture}
+                  {pick.fixture || pick.game}
                 </Typography>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 700 }}>{pick.confidence}%</Typography>
@@ -227,58 +288,52 @@ ParlayCard.propTypes = { parlay: PropTypes.object };
 // BetRadarView
 // ---------------------------------------------------------------------------
 export default function BetRadarView() {
-  const todayStr = dayjs().format('YYYY-MM-DD');
-
-  const [date, setDate]             = useState(todayStr);
-  const [loading, setLoading]       = useState(false);
-  const [data, setData]             = useState(null);
-  const [accuracy, setAccuracy]     = useState(null);
-  const [error, setError]           = useState(null);
-  const [minConf, setMinConf]       = useState(70);
-  const [marketSel, setMarketSel]   = useState(null);
+  const [sportIdx, setSportIdx] = useState(0);
+  const [date, setDate]         = useState(dayjs().format('YYYY-MM-DD'));
+  const [loading, setLoading]   = useState(false);
+  const [data, setData]         = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
+  const [error, setError]       = useState(null);
+  const [minConf, setMinConf]   = useState(70);
+  const [marketSel, setMarketSel]     = useState(null);
   const [showStarted, setShowStarted] = useState(false);
 
-  useEffect(() => { load(date); }, [date]);
+  const sport = SPORTS[sportIdx];
 
   useEffect(() => {
-    apiClient.fetchBetRadarAccuracy(7, 70).then(setAccuracy).catch(() => setAccuracy(null));
-  }, []);
-
-  const load = (selectedDate) => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setData(null);
+    setMarketSel(null);
 
-    apiClient.fetchBetRadarCached(selectedDate)
-      .then(setData)
+    sport.cached(date)
       .catch((err) => {
-        if (err?.response?.status === 404) {
-          return apiClient.fetchBetRadarSuggestions(selectedDate).then(setData);
-        }
+        if (err?.response?.status === 404) return sport.suggestions(date);
         throw err;
       })
+      .then((d) => { if (!cancelled) setData(d); })
       .catch((err) => {
+        if (cancelled) return;
         const detail = err?.response?.data?.detail || err?.message || 'error desconocido';
         const status = err?.response?.status;
         setError(status ? `Error ${status}: ${detail}` : `No se pudo conectar al backend: ${detail}`);
       })
-      .finally(() => setLoading(false));
-  };
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-  // Flatten fixture-grouped suggestions into a chronological pick feed
-  const allPicks = useMemo(() => {
-    if (!data?.suggestions) return [];
-    return data.suggestions
-      .flatMap(s => (s.top_picks || []).map(p => ({
-        ...p,
-        fixture_id: s.fixture_id,
-        home: s.home_team.name,
-        away: s.away_team.name,
-        kickoff: s.date,
-        referee: s.referee,
-      })))
-      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
-  }, [data]);
+    return () => { cancelled = true; };
+  }, [date, sportIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+    setAccuracy(null);
+    sport.accuracy()
+      .then((a) => { if (!cancelled) setAccuracy(a); })
+      .catch(() => { if (!cancelled) setAccuracy(null); });
+    return () => { cancelled = true; };
+  }, [sportIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const allPicks = useMemo(() => flattenPicks(data), [data]);
 
   const filtered = useMemo(
     () => allPicks.filter(p =>
@@ -292,14 +347,16 @@ export default function BetRadarView() {
   const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
 
   const marketsPresent = useMemo(
-    () => [...new Set(allPicks.map(p => p.market))],
-    [allPicks],
+    () => sport.markets.filter(m => allPicks.some(p => p.market === m)),
+    [allPicks, sport],
   );
+
+  const analyzed = data?.games_analyzed ?? data?.fixtures_analyzed ?? 0;
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
         <Typography variant="h5" sx={{ fontWeight: 700, flex: 1 }}>
           Radar
         </Typography>
@@ -314,10 +371,26 @@ export default function BetRadarView() {
         {loading && <CircularProgress size={18} />}
       </Stack>
 
+      <Tabs
+        value={sportIdx}
+        onChange={(_, v) => setSportIdx(v)}
+        sx={{ mb: 2, minHeight: 38, borderBottom: 1, borderColor: 'divider' }}
+      >
+        {SPORTS.map(s => (
+          <Tab key={s.key} label={s.label} sx={{ minHeight: 38, py: 0, textTransform: 'none', fontWeight: 600 }} />
+        ))}
+      </Tabs>
+
+      {sport.experimental && (
+        <Alert severity="warning" sx={{ mb: 2, py: 0.25 }}>
+          Experimental — el backtest no encontró ventaja sobre apostar el lado obvio. Úsalo como referencia, no como recomendación.
+        </Alert>
+      )}
+
       <AccuracyStrip accuracy={accuracy} />
 
       {/* ── Filters ──────────────────────────────────────────────────────── */}
-      <Stack direction="row" spacing={0.75} flexWrap="wrap" sx={{ gap: 0.75, mb: 2 }}>
+      <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75, mb: 2 }}>
         {CONF_FILTERS.map(f => (
           <Chip
             key={f.value}
@@ -366,12 +439,12 @@ export default function BetRadarView() {
             <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, overflow: 'hidden' }}>
               {upcoming.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
-                  Todos los partidos de hoy ya empezaron.
+                  Todos los juegos de esta fecha ya empezaron.
                 </Typography>
               )}
 
               {upcoming.map((pick, i) => (
-                <Box key={`${pick.fixture_id}-${pick.market}`}>
+                <Box key={pick.key}>
                   {i > 0 && <Divider />}
                   <PickRow pick={pick} />
                 </Box>
@@ -386,7 +459,7 @@ export default function BetRadarView() {
                     sx={{ px: 2, py: 1.25, cursor: 'pointer', bgcolor: 'action.hover' }}
                   >
                     <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontWeight: 600 }}>
-                      {started.length} pick{started.length !== 1 ? 's' : ''} de partidos ya iniciados
+                      {started.length} pick{started.length !== 1 ? 's' : ''} de juegos ya iniciados
                     </Typography>
                     <IconButton size="small">
                       {showStarted ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
@@ -394,7 +467,7 @@ export default function BetRadarView() {
                   </Stack>
                   <Collapse in={showStarted}>
                     {started.map((pick, i) => (
-                      <Box key={`${pick.fixture_id}-${pick.market}`}>
+                      <Box key={pick.key}>
                         {i > 0 && <Divider />}
                         <PickRow pick={pick} started />
                       </Box>
@@ -406,7 +479,7 @@ export default function BetRadarView() {
           )}
 
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}>
-            {data.fixtures_analyzed} partidos analizados · {filtered.length} de {allPicks.length} picks mostrados
+            {analyzed} juegos analizados · {filtered.length} de {allPicks.length} picks mostrados
           </Typography>
         </>
       )}

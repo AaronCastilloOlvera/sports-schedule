@@ -138,6 +138,28 @@ class ApiClient {
     return response.data;
   }
 
+  // MLB Radar
+  async fetchMLBRadarCached(date, league = 'mlb') {
+    const response = await this.client.get(`/mlb-radar/cached?date=${date}&league=${league}`);
+    return response.data;
+  }
+
+  async fetchMLBRadarSuggestions(date, league = 'mlb') {
+    const response = await this.client.get(
+      `/mlb-radar/suggestions?date=${date}&league=${league}`,
+      { timeout: 45000 },
+    );
+    return response.data;
+  }
+
+  async fetchMLBRadarAccuracy(days = 7, minConfidence = 70, league = 'mlb') {
+    const response = await this.client.get(
+      `/mlb-radar/accuracy?days=${days}&min_confidence=${minConfidence}&league=${league}`,
+      { timeout: 20000 },
+    );
+    return response.data;
+  }
+
   async updateTicket(ticketId, formData) {
     const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
     return response.data;
