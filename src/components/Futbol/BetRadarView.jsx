@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Chip, CircularProgress, Collapse, Divider,
-  IconButton, Stack, Tab, Tabs, TextField, Tooltip, Typography,
+  IconButton, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
 import {
   AttachMoney, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
@@ -21,7 +21,7 @@ const MARKET_META = {
   corners:      { Icon: Flag,           color: '#2196f3', label: 'Córners'   },
   yellow_cards: { Icon: Square,         color: '#ffc107', label: 'Tarjetas'  },
   btts:         { Icon: CompareArrows,  color: '#9c27b0', label: 'BTTS'      },
-  // MLB
+  // MLB / LMB
   total:        { Icon: SportsBaseball, color: '#4caf50', label: 'Carreras'  },
   moneyline:    { Icon: AttachMoney,    color: '#00bcd4', label: 'Ganador'   },
   nrfi:         { Icon: LooksOne,       color: '#9c27b0', label: '1ª entrada'},
@@ -30,6 +30,14 @@ const MARKET_META = {
 
 const META = (market) =>
   MARKET_META[market] || { Icon: HelpOutline, color: '#9e9e9e', label: market };
+
+// Same icon family as the market to stay visually consistent; the color is
+// what actually tells MLB and LMB apart at a glance since both play baseball.
+const SPORT_META = {
+  futbol: { Icon: SportsSoccer,   color: '#2e7d32', label: 'Fútbol' },
+  mlb:    { Icon: SportsBaseball, color: '#c62828', label: 'MLB'    },
+  lmb:    { Icon: SportsBaseball, color: '#f9a825', label: 'LMB'    },
+};
 
 const SPORTS = [
   {
@@ -100,59 +108,81 @@ function flattenPicks(data) {
     .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 }
 
-// ---------------------------------------------------------------------------
-// AccuracyStrip — the trailing track record, shown where the decision is made
-// ---------------------------------------------------------------------------
-function AccuracyStrip({ accuracy }) {
-  if (!accuracy?.settled) return null;
+/** One combined, chronologically sorted feed — each pick tagged with its sport. */
+function flattenAllPicks(dataBySport) {
+  return SPORTS
+    .flatMap(s => flattenPicks(dataBySport[s.key]).map(p => ({ ...p, sport: s.key })))
+    .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+}
 
-  const markets = Object.entries(accuracy.by_market || {})
-    .sort(([, a], [, b]) => b.accuracy - a.accuracy);
+// ---------------------------------------------------------------------------
+// SportBadge — the "icon to tell them apart in the table"
+// ---------------------------------------------------------------------------
+function SportBadge({ sport, size = 16 }) {
+  const meta = SPORT_META[sport] || SPORT_META.futbol;
+  return (
+    <Tooltip title={meta.label} placement="top">
+      <meta.Icon sx={{ fontSize: size, color: meta.color, flexShrink: 0 }} />
+    </Tooltip>
+  );
+}
+
+SportBadge.propTypes = { sport: PropTypes.string.isRequired, size: PropTypes.number };
+
+// ---------------------------------------------------------------------------
+// AccuracyStrip — trailing track record, one line per sport with settled picks
+// ---------------------------------------------------------------------------
+function AccuracyStrip({ accuracyBySport }) {
+  const entries = SPORTS
+    .map(s => [s, accuracyBySport[s.key]])
+    .filter(([, acc]) => acc?.settled);
+
+  if (!entries.length) return null;
 
   return (
     <Box sx={{ bgcolor: 'action.hover', borderRadius: 2, px: 1.75, py: 1.25, mb: 2 }}>
-      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1 }}>
-        <Typography
-          variant="caption"
-          sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7, color: 'text.secondary' }}
-        >
-          Efectividad {accuracy.days}d
-        </Typography>
+      <Stack spacing={1}>
+        {entries.map(([sport, acc]) => {
+          const markets = Object.entries(acc.by_market || {}).sort(([, a], [, b]) => b.accuracy - a.accuracy);
+          return (
+            <Stack key={sport.key} direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 1 }}>
+              <SportBadge sport={sport.key} />
+              <Chip
+                size="small"
+                label={`${acc.accuracy}%`}
+                color={confTone(acc.accuracy)}
+                sx={{ fontWeight: 700, height: 22 }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {acc.wins}/{acc.settled} · {acc.days}d
+              </Typography>
 
-        <Chip
-          size="small"
-          label={`${accuracy.accuracy}%`}
-          color={confTone(accuracy.accuracy)}
-          sx={{ fontWeight: 700, height: 22 }}
-        />
+              <Box sx={{ flex: 1 }} />
 
-        <Box sx={{ flex: 1 }} />
-
-        <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
-          {markets.map(([market, stat]) => {
-            const { Icon, color, label } = META(market);
-            return (
-              <Tooltip key={market} title={`${label}: ${stat.wins}/${stat.total}`} placement="top">
-                <Stack direction="row" spacing={0.5} alignItems="center">
-                  <Icon sx={{ fontSize: 15, color }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                    {stat.accuracy}%
-                  </Typography>
-                </Stack>
-              </Tooltip>
-            );
-          })}
-        </Stack>
+              <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
+                {markets.map(([market, stat]) => {
+                  const { Icon, color, label } = META(market);
+                  return (
+                    <Tooltip key={market} title={`${label}: ${stat.wins}/${stat.total}`} placement="top">
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Icon sx={{ fontSize: 15, color }} />
+                        <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                          {stat.accuracy}%
+                        </Typography>
+                      </Stack>
+                    </Tooltip>
+                  );
+                })}
+              </Stack>
+            </Stack>
+          );
+        })}
       </Stack>
-
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-        {accuracy.wins}/{accuracy.settled} picks ganados con confianza ≥{accuracy.min_confidence}%
-      </Typography>
     </Box>
   );
 }
 
-AccuracyStrip.propTypes = { accuracy: PropTypes.object };
+AccuracyStrip.propTypes = { accuracyBySport: PropTypes.object.isRequired };
 
 // ---------------------------------------------------------------------------
 // PickRow — one row per pick. The pick, not the game, is the decision unit.
@@ -171,6 +201,8 @@ function PickRow({ pick, started }) {
         sx={{ px: 1.5, py: 1.25, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
         onClick={() => setOpen(o => !o)}
       >
+        <SportBadge sport={pick.sport} />
+
         <Typography
           variant="body2"
           sx={{
@@ -219,7 +251,7 @@ function PickRow({ pick, started }) {
       </Stack>
 
       <Collapse in={open}>
-        <Box sx={{ px: 2, pb: 1.5, pl: 7 }}>
+        <Box sx={{ px: 2, pb: 1.5, pl: 7.5 }}>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
             {pick.note}
           </Typography>
@@ -253,14 +285,17 @@ PickRow.propTypes = {
 // ---------------------------------------------------------------------------
 // ParlayCard
 // ---------------------------------------------------------------------------
-function ParlayCard({ parlay }) {
+function ParlayCard({ parlay, sport }) {
   if (!parlay?.picks?.length) return null;
   return (
     <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2, px: 2, py: 1.5, mb: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7 }}>
-          Combinada del día
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <SportBadge sport={sport} size={15} />
+          <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.7 }}>
+            Combinada del día
+          </Typography>
+        </Stack>
         <Chip
           size="small"
           label={`~${parlay.combined_probability}%`}
@@ -288,76 +323,97 @@ function ParlayCard({ parlay }) {
   );
 }
 
-ParlayCard.propTypes = { parlay: PropTypes.object };
+ParlayCard.propTypes = { parlay: PropTypes.object, sport: PropTypes.string.isRequired };
 
 // ---------------------------------------------------------------------------
 // BetRadarView
 // ---------------------------------------------------------------------------
 export default function BetRadarView() {
-  const [sportIdx, setSportIdx] = useState(0);
-  const [date, setDate]         = useState(dayjs().format('YYYY-MM-DD'));
-  const [loading, setLoading]   = useState(false);
-  const [data, setData]         = useState(null);
-  const [accuracy, setAccuracy] = useState(null);
-  const [error, setError]       = useState(null);
-  const [minConf, setMinConf]   = useState(70);
-  const [marketSel, setMarketSel]     = useState(null);
-  const [showStarted, setShowStarted] = useState(false);
+  const [date, setDate]                 = useState(dayjs().format('YYYY-MM-DD'));
+  const [loading, setLoading]           = useState(false);
+  const [dataBySport, setDataBySport]   = useState({});
+  const [accuracyBySport, setAccuracyBySport] = useState({});
+  const [error, setError]               = useState(null);
+  const [minConf, setMinConf]           = useState(70);
+  const [marketSel, setMarketSel]       = useState(null);
+  const [activeSports, setActiveSports] = useState(() => new Set(SPORTS.map(s => s.key)));
+  const [showStarted, setShowStarted]   = useState(false);
 
-  const sport = SPORTS[sportIdx];
-
+  // Every sport for the selected date, fetched in parallel — one slow or
+  // failing sport no longer blocks the others from showing up.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setData(null);
+    setDataBySport({});
     setMarketSel(null);
 
-    sport.cached(date)
-      .catch((err) => {
-        if (err?.response?.status === 404) return sport.suggestions(date);
+    Promise.allSettled(
+      SPORTS.map(s => s.cached(date).catch((err) => {
+        if (err?.response?.status === 404) return s.suggestions(date);
         throw err;
-      })
-      .then((d) => { if (!cancelled) setData(d); })
-      .catch((err) => {
-        if (cancelled) return;
-        const detail = err?.response?.data?.detail || err?.message || 'error desconocido';
-        const status = err?.response?.status;
-        setError(status ? `Error ${status}: ${detail}` : `No se pudo conectar al backend: ${detail}`);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      })),
+    ).then((results) => {
+      if (cancelled) return;
+      const next = {};
+      let anyOk = false;
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') { next[SPORTS[i].key] = r.value; anyOk = true; }
+      });
+      setDataBySport(next);
+      if (!anyOk) setError('No se pudo conectar al backend.');
+    }).finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [date, sportIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [date]);
 
   useEffect(() => {
     let cancelled = false;
-    setAccuracy(null);
-    sport.accuracy()
-      .then((a) => { if (!cancelled) setAccuracy(a); })
-      .catch(() => { if (!cancelled) setAccuracy(null); });
+    Promise.allSettled(SPORTS.map(s => s.accuracy())).then((results) => {
+      if (cancelled) return;
+      const next = {};
+      results.forEach((r, i) => { if (r.status === 'fulfilled') next[SPORTS[i].key] = r.value; });
+      setAccuracyBySport(next);
+    });
     return () => { cancelled = true; };
-  }, [sportIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  const allPicks = useMemo(() => flattenPicks(data), [data]);
+  const toggleSport = (key) => {
+    setActiveSports(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const allPicks = useMemo(() => flattenAllPicks(dataBySport), [dataBySport]);
 
   const filtered = useMemo(
     () => allPicks.filter(p =>
-      p.confidence >= minConf && (marketSel === null || p.market === marketSel),
+      activeSports.has(p.sport) &&
+      p.confidence >= minConf &&
+      (marketSel === null || p.market === marketSel),
     ),
-    [allPicks, minConf, marketSel],
+    [allPicks, activeSports, minConf, marketSel],
   );
 
   const now = dayjs();
   const upcoming = filtered.filter(p => dayjs(p.kickoff).isAfter(now));
   const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
 
-  const marketsPresent = useMemo(
-    () => sport.markets.filter(m => allPicks.some(p => p.market === m)),
-    [allPicks, sport],
-  );
+  const marketsPresent = useMemo(() => {
+    const present = new Set(allPicks.filter(p => activeSports.has(p.sport)).map(p => p.market));
+    const order = SPORTS.flatMap(s => s.markets);
+    return order.filter((m, i) => present.has(m) && order.indexOf(m) === i);
+  }, [allPicks, activeSports]);
 
-  const analyzed = data?.games_analyzed ?? data?.fixtures_analyzed ?? 0;
+  const hasExperimental = SPORTS.some(s => s.experimental && activeSports.has(s.key) && dataBySport[s.key]);
+
+  const analyzed = SPORTS.reduce((sum, s) => {
+    if (!activeSports.has(s.key)) return sum;
+    const d = dataBySport[s.key];
+    return sum + (d?.games_analyzed ?? d?.fixtures_analyzed ?? 0);
+  }, 0);
 
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
@@ -377,23 +433,33 @@ export default function BetRadarView() {
         {loading && <CircularProgress size={18} />}
       </Stack>
 
-      <Tabs
-        value={sportIdx}
-        onChange={(_, v) => setSportIdx(v)}
-        sx={{ mb: 2, minHeight: 38, borderBottom: 1, borderColor: 'divider' }}
-      >
-        {SPORTS.map(s => (
-          <Tab key={s.key} label={s.label} sx={{ minHeight: 38, py: 0, textTransform: 'none', fontWeight: 600 }} />
-        ))}
-      </Tabs>
+      {/* ── Sport filter — the toggle that replaced the old tabs ────────────── */}
+      <Stack direction="row" spacing={0.75} sx={{ mb: 1.5 }}>
+        {SPORTS.map(s => {
+          const meta = SPORT_META[s.key];
+          const active = activeSports.has(s.key);
+          return (
+            <Chip
+              key={s.key}
+              size="small"
+              icon={<meta.Icon sx={{ fontSize: 15, color: active ? 'inherit' : `${meta.color} !important` }} />}
+              label={s.label}
+              onClick={() => toggleSport(s.key)}
+              color={active ? 'primary' : 'default'}
+              variant={active ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 600 }}
+            />
+          );
+        })}
+      </Stack>
 
-      {sport.experimental && (
+      {hasExperimental && (
         <Alert severity="warning" sx={{ mb: 2, py: 0.25 }}>
-          Experimental — el backtest no encontró ventaja sobre apostar el lado obvio. Úsalo como referencia, no como recomendación.
+          MLB/LMB son experimentales — el backtest no encontró ventaja sobre apostar el lado obvio. Úsalos como referencia, no como recomendación.
         </Alert>
       )}
 
-      <AccuracyStrip accuracy={accuracy} />
+      <AccuracyStrip accuracyBySport={accuracyBySport} />
 
       {/* ── Filters ──────────────────────────────────────────────────────── */}
       <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75, mb: 2 }}>
@@ -431,64 +497,64 @@ export default function BetRadarView() {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {data && (
-        <>
-          <ParlayCard parlay={data.parlay_suggestion} />
+      {SPORTS.map(s => (
+        activeSports.has(s.key)
+          ? <ParlayCard key={s.key} sport={s.key} parlay={dataBySport[s.key]?.parlay_suggestion} />
+          : null
+      ))}
 
-          {filtered.length === 0 ? (
-            <Alert severity="info">
-              {allPicks.length === 0
-                ? 'No hay picks para esta fecha.'
-                : `Ningún pick supera el filtro (${allPicks.length} disponibles con menor confianza).`}
-            </Alert>
-          ) : (
-            <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, overflow: 'hidden' }}>
-              {upcoming.length === 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
-                  Todos los juegos de esta fecha ya empezaron.
-                </Typography>
-              )}
-
-              {upcoming.map((pick, i) => (
-                <Box key={pick.key}>
-                  {i > 0 && <Divider />}
-                  <PickRow pick={pick} />
-                </Box>
-              ))}
-
-              {started.length > 0 && (
-                <>
-                  <Divider />
-                  <Stack
-                    direction="row" alignItems="center" spacing={1}
-                    onClick={() => setShowStarted(s => !s)}
-                    sx={{ px: 2, py: 1.25, cursor: 'pointer', bgcolor: 'action.hover' }}
-                  >
-                    <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontWeight: 600 }}>
-                      {started.length} pick{started.length !== 1 ? 's' : ''} de juegos ya iniciados
-                    </Typography>
-                    <IconButton size="small">
-                      {showStarted ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-                    </IconButton>
-                  </Stack>
-                  <Collapse in={showStarted}>
-                    {started.map((pick, i) => (
-                      <Box key={pick.key}>
-                        {i > 0 && <Divider />}
-                        <PickRow pick={pick} started />
-                      </Box>
-                    ))}
-                  </Collapse>
-                </>
-              )}
-            </Box>
+      {filtered.length === 0 ? (
+        <Alert severity="info">
+          {allPicks.length === 0
+            ? 'No hay picks para esta fecha.'
+            : `Ningún pick supera el filtro (${allPicks.length} disponibles con otros filtros).`}
+        </Alert>
+      ) : (
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1, overflow: 'hidden' }}>
+          {upcoming.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 2 }}>
+              Todos los juegos de esta fecha ya empezaron.
+            </Typography>
           )}
 
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}>
-            {analyzed} juegos analizados · {filtered.length} de {allPicks.length} picks mostrados
-          </Typography>
-        </>
+          {upcoming.map((pick, i) => (
+            <Box key={pick.key}>
+              {i > 0 && <Divider />}
+              <PickRow pick={pick} />
+            </Box>
+          ))}
+
+          {started.length > 0 && (
+            <>
+              <Divider />
+              <Stack
+                direction="row" alignItems="center" spacing={1}
+                onClick={() => setShowStarted(s => !s)}
+                sx={{ px: 2, py: 1.25, cursor: 'pointer', bgcolor: 'action.hover' }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontWeight: 600 }}>
+                  {started.length} pick{started.length !== 1 ? 's' : ''} de juegos ya iniciados
+                </Typography>
+                <IconButton size="small">
+                  {showStarted ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                </IconButton>
+              </Stack>
+              <Collapse in={showStarted}>
+                {started.map((pick, i) => (
+                  <Box key={pick.key}>
+                    {i > 0 && <Divider />}
+                    <PickRow pick={pick} started />
+                  </Box>
+                ))}
+              </Collapse>
+            </>
+          )}
+        </Box>
       )}
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}>
+        {analyzed} juegos analizados · {filtered.length} de {allPicks.length} picks mostrados
+      </Typography>
     </Box>
   );
 }
