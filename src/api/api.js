@@ -160,6 +160,30 @@ class ApiClient {
     return response.data;
   }
 
+  // NFL — schedule (short TTL, for the Partidos view) + Radar (picks)
+  async fetchNFLSchedule(date) {
+    const response = await this.client.get(`/nfl-radar/schedule?date=${date}`);
+    return response.data;
+  }
+
+  async fetchNFLRadarCached(date) {
+    const response = await this.client.get(`/nfl-radar/cached?date=${date}`);
+    return response.data;
+  }
+
+  async fetchNFLRadarSuggestions(date) {
+    const response = await this.client.get(`/nfl-radar/suggestions?date=${date}`, { timeout: 45000 });
+    return response.data;
+  }
+
+  async fetchNFLRadarAccuracy(days = 7, minConfidence = 70) {
+    const response = await this.client.get(
+      `/nfl-radar/accuracy?days=${days}&min_confidence=${minConfidence}`,
+      { timeout: 20000 },
+    );
+    return response.data;
+  }
+
   async updateTicket(ticketId, formData) {
     const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
     return response.data;

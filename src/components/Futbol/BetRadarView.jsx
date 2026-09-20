@@ -4,39 +4,42 @@ import {
   IconButton, Stack, TextField, Tooltip, Typography,
 } from '@mui/material';
 import {
-  AttachMoney, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
-  HelpOutline, LooksOne, SportsBaseball, SportsSoccer, Square,
+  AttachMoney, Balance, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
+  HelpOutline, LooksOne, SportsBaseball, SportsFootball, SportsSoccer, Square,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
 
-// ---------------------------------------------------------------------------
-// Sports. Each one names its markets and how to reach its endpoints; the rest
-// of the view is shape-agnostic because both backends emit the same pick object.
-// ---------------------------------------------------------------------------
 const MARKET_META = {
   // fútbol
   goals:        { Icon: SportsSoccer,   color: '#4caf50', label: 'Goles'     },
   corners:      { Icon: Flag,           color: '#2196f3', label: 'Córners'   },
   yellow_cards: { Icon: Square,         color: '#ffc107', label: 'Tarjetas'  },
   btts:         { Icon: CompareArrows,  color: '#9c27b0', label: 'BTTS'      },
-  // MLB / LMB
+  // MLB / LMB (moneyline y total también los usa NFL — ver override abajo)
   total:        { Icon: SportsBaseball, color: '#4caf50', label: 'Carreras'  },
   moneyline:    { Icon: AttachMoney,    color: '#00bcd4', label: 'Ganador'   },
   nrfi:         { Icon: LooksOne,       color: '#9c27b0', label: '1ª entrada'},
   hits:         { Icon: Bolt,           color: '#ff9800', label: 'Hits'      },
+  // NFL
+  spread:       { Icon: Balance,        color: '#795548', label: 'Hándicap' },
 };
 
-const META = (market) =>
-  MARKET_META[market] || { Icon: HelpOutline, color: '#9e9e9e', label: market };
+// 'total' significa runs en MLB/LMB pero puntos en NFL — mismo key, override.
+const MARKET_META_OVERRIDE = {
+  nfl: { total: { Icon: SportsFootball, color: '#4caf50', label: 'Puntos' } },
+};
 
-// Same icon family as the market to stay visually consistent; the color is
-// what actually tells MLB and LMB apart at a glance since both play baseball.
+const META = (market, sport) =>
+  MARKET_META_OVERRIDE[sport]?.[market] || MARKET_META[market]
+  || { Icon: HelpOutline, color: '#9e9e9e', label: market };
+
 const SPORT_META = {
   futbol: { Icon: SportsSoccer,   color: '#2e7d32', label: 'Fútbol' },
   mlb:    { Icon: SportsBaseball, color: '#c62828', label: 'MLB'    },
   lmb:    { Icon: SportsBaseball, color: '#f9a825', label: 'LMB'    },
+  nfl:    { Icon: SportsFootball, color: '#6d4c41', label: 'NFL'    },
 };
 
 const SPORTS = [
@@ -52,7 +55,6 @@ const SPORTS = [
     key: 'mlb',
     label: 'MLB',
     markets: ['total', 'moneyline', 'nrfi', 'hits'],
-    experimental: true,
     cached:      (date) => apiClient.fetchMLBRadarCached(date, 'mlb'),
     suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'mlb'),
     accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'mlb'),
@@ -61,10 +63,18 @@ const SPORTS = [
     key: 'lmb',
     label: 'LMB',
     markets: ['total', 'moneyline', 'nrfi', 'hits'],
-    experimental: true,
     cached:      (date) => apiClient.fetchMLBRadarCached(date, 'lmb'),
     suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'lmb'),
     accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'lmb'),
+  },
+  {
+    key: 'nfl',
+    label: 'NFL',
+    markets: ['moneyline', 'spread', 'total'],
+    experimental: true, // backtest: solo 6 semanas con momios reales, ningun mercado significativo aun
+    cached:      (date) => apiClient.fetchNFLRadarCached(date),
+    suggestions: (date) => apiClient.fetchNFLRadarSuggestions(date),
+    accuracy:    () => apiClient.fetchNFLRadarAccuracy(7, 70),
   },
 ];
 
@@ -89,10 +99,7 @@ function flattenPicks(data) {
   if (!data?.suggestions) return [];
   return data.suggestions
     .flatMap((s, si) => (s.top_picks || []).map((p, pi) => {
-      // MLB puts the first pitch in `game_date` and only the calendar day in
-      // `date`; fútbol puts the full kickoff timestamp in `date`. Reading the
-      // day-only string would parse as midnight and file every pick as already
-      // started.
+      // MLB's `date` is day-only (would parse as midnight); game_date has the time.
       const kickoff = s.game_date || s.date;
       const pitchers = [s.away_team?.pitcher?.name, s.home_team?.pitcher?.name].filter(Boolean);
       return {
@@ -161,7 +168,7 @@ function AccuracyStrip({ accuracyBySport }) {
 
               <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: 0.75 }}>
                 {markets.map(([market, stat]) => {
-                  const { Icon, color, label } = META(market);
+                  const { Icon, color, label } = META(market, sport.key);
                   return (
                     <Tooltip key={market} title={`${label}: ${stat.wins}/${stat.total}`} placement="top">
                       <Stack direction="row" spacing={0.5} alignItems="center">
@@ -189,7 +196,7 @@ AccuracyStrip.propTypes = { accuracyBySport: PropTypes.object.isRequired };
 // ---------------------------------------------------------------------------
 function PickRow({ pick, started }) {
   const [open, setOpen] = useState(false);
-  const { Icon, color } = META(pick.market);
+  const { Icon, color } = META(pick.market, pick.sport);
   const odd = pick.best_odd || pick.odd;
   const oddValue = typeof odd === 'object' && odd !== null ? odd.odd : odd;
   const oddBook = typeof odd === 'object' && odd !== null ? odd.bookmaker : null;
@@ -304,7 +311,7 @@ function ParlayCard({ parlay, sport }) {
       </Stack>
       <Stack spacing={0.75}>
         {parlay.picks.map((pick, i) => {
-          const { Icon } = META(pick.market);
+          const { Icon } = META(pick.market, sport);
           return (
             <Stack key={i} direction="row" spacing={1} alignItems="center">
               <Icon sx={{ fontSize: 17, opacity: 0.9 }} />
@@ -339,8 +346,7 @@ export default function BetRadarView() {
   const [activeSports, setActiveSports] = useState(() => new Set(SPORTS.map(s => s.key)));
   const [showStarted, setShowStarted]   = useState(false);
 
-  // Every sport for the selected date, fetched in parallel — one slow or
-  // failing sport no longer blocks the others from showing up.
+  // Fetched in parallel — one failing sport doesn't block the others.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -401,10 +407,23 @@ export default function BetRadarView() {
   const upcoming = filtered.filter(p => dayjs(p.kickoff).isAfter(now));
   const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
 
+  // {market, sport} pairs — 'sport' resolves the total/Carreras-vs-Puntos
+  // override; stays null (generic label) when multiple sports share a market.
   const marketsPresent = useMemo(() => {
-    const present = new Set(allPicks.filter(p => activeSports.has(p.sport)).map(p => p.market));
+    const bySport = new Map();
+    allPicks.forEach(p => {
+      if (!activeSports.has(p.sport)) return;
+      if (!bySport.has(p.market)) bySport.set(p.market, new Set());
+      bySport.get(p.market).add(p.sport);
+    });
     const order = SPORTS.flatMap(s => s.markets);
-    return order.filter((m, i) => present.has(m) && order.indexOf(m) === i);
+    const uniqueOrder = order.filter((m, i) => order.indexOf(m) === i);
+    return uniqueOrder
+      .filter(m => bySport.has(m))
+      .map(m => {
+        const sports = bySport.get(m);
+        return { market: m, sport: sports.size === 1 ? [...sports][0] : null };
+      });
   }, [allPicks, activeSports]);
 
   const hasExperimental = SPORTS.some(s => s.experimental && activeSports.has(s.key) && dataBySport[s.key]);
@@ -455,7 +474,7 @@ export default function BetRadarView() {
 
       {hasExperimental && (
         <Alert severity="warning" sx={{ mb: 2, py: 0.25 }}>
-          MLB/LMB son experimentales — el backtest no encontró ventaja sobre apostar el lado obvio. Úsalos como referencia, no como recomendación.
+          NFL: spread y moneyline muestran ROI positivo contra la línea de DraftKings pero sin significancia estadística (solo 6 semanas con momios reales); total va en negativo. Trátalo como referencia, no como recomendación.
         </Alert>
       )}
 
@@ -477,8 +496,8 @@ export default function BetRadarView() {
 
         {marketsPresent.length > 1 && <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />}
 
-        {marketsPresent.length > 1 && marketsPresent.map(market => {
-          const { Icon, color, label } = META(market);
+        {marketsPresent.length > 1 && marketsPresent.map(({ market, sport }) => {
+          const { Icon, color, label } = META(market, sport);
           const active = marketSel === market;
           return (
             <Chip

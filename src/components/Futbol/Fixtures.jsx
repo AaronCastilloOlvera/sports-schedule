@@ -19,18 +19,19 @@ import FixturesSkeleton from './Fixtures/FixturesSkeleton';
 import SimultaneousChart from './Fixtures/SimultaneousChart';
 import { statusPriority } from './Fixtures/consts';
 import { normalizeBaseballGames } from '../../utils/normalizeBaseball';
+import { normalizeNFLGames } from '../../utils/normalizeNFL';
 
 const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT']);
 
-// Basketball/Football have no data source yet — the chips still show so the
-// filter row communicates "more sports are coming", they just never add rows.
+// Basketball has no data source yet — the chip still shows so the filter row
+// communicates "more sports are coming", it just never adds rows.
 const SPORTS = [
   { id: 'futbol',     label: 'Soccer',     icon: '⚽', available: true },
   { id: 'baseball',   label: 'Baseball',   icon: '⚾', available: true },
+  { id: 'nfl',        label: 'NFL',        icon: '🏈', available: true },
   { id: 'basketball', label: 'Basketball', icon: '🏀', available: false },
-  { id: 'football',   label: 'Football',   icon: '🏈', available: false },
 ];
 
 const Fixtures = ({ selectedDate, searchTerm }) => {
@@ -39,7 +40,9 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const [loadingSoccer, setLoadingSoccer] = useState(true);
   const [baseballGames, setBaseballGames] = useState([]);
   const [loadingBaseball, setLoadingBaseball] = useState(true);
-  const [activeSports, setActiveSports] = useState(['futbol', 'baseball']);
+  const [nflGames, setNflGames] = useState([]);
+  const [loadingNFL, setLoadingNFL] = useState(true);
+  const [activeSports, setActiveSports] = useState(['futbol', 'baseball', 'nfl']);
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
@@ -103,6 +106,22 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       });
   }, [selectedDate]);
 
+  const loadNFLData = useCallback((showLoading = true) => {
+    if (showLoading) setLoadingNFL(true);
+
+    const dateStr = selectedDate.format('YYYY-MM-DD');
+
+    apiClient.fetchNFLSchedule(dateStr)
+      .then(res => {
+        setNflGames(normalizeNFLGames(res.data));
+        setLoadingNFL(false);
+      })
+      .catch((error) => {
+        console.error('Error loading NFL games:', error);
+        setLoadingNFL(false);
+      });
+  }, [selectedDate]);
+
   // Cached only — never trigger the heavy on-demand analysis just to show a
   // badge; if this date hasn't been prewarmed yet, simply show no indicators.
   const loadBetRadarData = useCallback(() => {
@@ -119,26 +138,29 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   useEffect(() => {
     loadMatchesData(false, true);
     loadBaseballData(true);
+    loadNFLData(true);
     loadBetRadarData();
 
     const interval = setInterval(() => {
       loadMatchesData(false, false);
       loadBaseballData(false);
+      loadNFLData(false);
     }, POLLING_TIME);
 
     return () => clearInterval(interval);
 
-  }, [selectedDate, loadMatchesData, loadBaseballData, loadBetRadarData]);
+  }, [selectedDate, loadMatchesData, loadBaseballData, loadNFLData, loadBetRadarData]);
 
-  // Both sports are always fetched — chips only filter what's displayed, so
+  // All sports are always fetched — chips only filter what's displayed, so
   // toggling a sport on/off is instant instead of waiting on a new request.
   const allMatches = useMemo(() => {
     const soccer = activeSports.includes('futbol')
       ? (fixtures ?? []).map(m => ({ ...m, betRadar: betRadarByFixture[m.fixture.id] ?? null }))
       : [];
     const baseball = activeSports.includes('baseball') ? baseballGames : [];
-    return [...soccer, ...baseball];
-  }, [fixtures, baseballGames, activeSports, betRadarByFixture]);
+    const nfl = activeSports.includes('nfl') ? nflGames : [];
+    return [...soccer, ...baseball, ...nfl];
+  }, [fixtures, baseballGames, nflGames, activeSports, betRadarByFixture]);
 
   const processedFixtures = useMemo(() => {
 
@@ -180,7 +202,8 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const liveBySport = useMemo(() => ({
     futbol:   fixtures      ? fixtures.some(m => LIVE_STATUSES.has(m.fixture.status.short))      : false,
     baseball: baseballGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
-  }), [fixtures, baseballGames]);
+    nfl:      nflGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
+  }), [fixtures, baseballGames, nflGames]);
 
   // Re-derived on every poll so the modal always receives the freshest fixture data.
   const activeMatch = useMemo(
@@ -209,7 +232,9 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   }, [loadMatchesData]);
 
   // Soccer opens the rich H2H/Stats/Odds modal; baseball has no such data yet,
-  // so the same "Insights" action opens its boxscore instead.
+  // so the same "Insights" action opens its boxscore instead. NFL has neither
+  // yet — its team ids come from ESPN, not API-Football, so it can't reuse the
+  // soccer modal either; no-op until an NFL-specific view exists.
   const handleOpenH2HModal = (team1Id, team2Id, fixtureId) => {
     const match = allMatches.find(m => m.fixture.id === fixtureId);
     if (match?.sport === 'baseball') {
@@ -217,6 +242,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       setBoxscoreLeague(match.league.id);
       return;
     }
+    if (match?.sport === 'nfl') return;
     setSelectedTeams({ team1: team1Id, team2: team2Id });
     setSelectedMatchId(fixtureId ?? null);
     setH2hModalOpen(true);
@@ -243,7 +269,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   }, {});
 
   const summaryArray = Object.values(leaguesSummary);
-  const loading = loadingSoccer || loadingBaseball;
+  const loading = loadingSoccer || loadingBaseball || loadingNFL;
   const onlyComingSoonSelected = activeSports.length > 0 && activeSports.every(id => !SPORTS.find(s => s.id === id)?.available);
 
   return (
