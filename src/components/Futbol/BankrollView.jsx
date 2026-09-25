@@ -21,10 +21,12 @@ const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits
 const GOAL = 50000;
 const NU_PURPLE = '#7b1fa2';
 
+const toLocalInput = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+
 const initialTx = {
   type: 'deposit',
   amount: '',
-  date: new Date().toISOString().substring(0, 10),
+  date: toLocalInput(new Date()),
   notes: '',
 };
 
@@ -35,7 +37,7 @@ function TransactionCard({ row, onEdit, onDelete }) {
   const amountColor = borderColor;
   const sign = isDeposit ? '-' : '+';
   const amountFormatted = `${sign}$${Number(row.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-  const dateFormatted = new Date(`${row.date}T00:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const dateFormatted = new Date(row.date).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const chipLabel = isDeposit ? 'Deposit' : isNuExpense ? 'NU Expense' : 'Withdrawal';
   const chipSx = isNuExpense ? { bgcolor: NU_PURPLE, color: '#fff' } : {};
@@ -202,7 +204,7 @@ export default function BankrollView() {
     setCurrent({
       type: row.type,
       amount: row.amount,
-      date: row.date.substring(0, 10),
+      date: row.date.substring(0, 16),
       notes: row.notes ?? '',
     });
     setEditId(row.id);
@@ -250,8 +252,12 @@ export default function BankrollView() {
       },
     },
     {
-      field: 'date', headerName: 'Date', width: 120, align: 'center', headerAlign: 'center',
-      valueGetter: (value) => new Date(`${value}T00:00:00`).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      field: 'date', headerName: 'Date', width: 155, align: 'center', headerAlign: 'center',
+      type: 'dateTime',
+      valueGetter: (value) => value ? new Date(value) : null,
+      valueFormatter: (value) => value
+        ? value.toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '',
     },
     { field: 'notes', headerName: 'Notes', flex: 1 },
     {
@@ -512,7 +518,7 @@ export default function BankrollView() {
               <MenuItem value="nu_expense">NU Expense</MenuItem>
             </TextField>
             <TextField label="Amount (MXN)" type="number" value={current.amount} onChange={(e) => setCurrent(p => ({ ...p, amount: e.target.value }))} fullWidth />
-            <TextField label="Date" type="date" value={current.date} onChange={(e) => setCurrent(p => ({ ...p, date: e.target.value }))} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField label="Date" type="datetime-local" value={current.date} onChange={(e) => setCurrent(p => ({ ...p, date: e.target.value }))} fullWidth InputLabelProps={{ shrink: true }} />
             <TextField label="Notes" value={current.notes} onChange={(e) => setCurrent(p => ({ ...p, notes: e.target.value }))} fullWidth multiline rows={2} />
           </Stack>
         </DialogContent>

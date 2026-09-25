@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Chip, CircularProgress, Collapse, Divider,
-  IconButton, Stack, TextField, Tooltip, Typography,
+  IconButton, Stack, TextField, Tooltip, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
   AttachMoney, Balance, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
@@ -17,7 +17,7 @@ const MARKET_META = {
   corners:      { Icon: Flag,           color: '#2196f3', label: 'Córners'   },
   yellow_cards: { Icon: Square,         color: '#ffc107', label: 'Tarjetas'  },
   btts:         { Icon: CompareArrows,  color: '#9c27b0', label: 'BTTS'      },
-  // MLB / LMB (moneyline y total también los usa NFL — ver override abajo)
+  // MLB / LMB (NFL también usa moneyline/total — ver override abajo)
   total:        { Icon: SportsBaseball, color: '#4caf50', label: 'Carreras'  },
   moneyline:    { Icon: AttachMoney,    color: '#00bcd4', label: 'Ganador'   },
   nrfi:         { Icon: LooksOne,       color: '#9c27b0', label: '1ª entrada'},
@@ -137,7 +137,7 @@ function SportBadge({ sport, size = 16 }) {
 SportBadge.propTypes = { sport: PropTypes.string.isRequired, size: PropTypes.number };
 
 // ---------------------------------------------------------------------------
-// AccuracyStrip — trailing track record, one line per sport with settled picks
+// AccuracyStrip — one line per sport with settled picks
 // ---------------------------------------------------------------------------
 function AccuracyStrip({ accuracyBySport }) {
   const entries = SPORTS
@@ -192,14 +192,108 @@ function AccuracyStrip({ accuracyBySport }) {
 AccuracyStrip.propTypes = { accuracyBySport: PropTypes.object.isRequired };
 
 // ---------------------------------------------------------------------------
-// PickRow — one row per pick. The pick, not the game, is the decision unit.
+// PickRow — one row per pick, not per game
 // ---------------------------------------------------------------------------
+// Shared by both layouts — only the collapsed row differs
+function PickDetail({ pick, indent }) {
+  return (
+    <Box sx={{ px: 2, pb: 1.5, pl: indent }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+        {pick.note}
+      </Typography>
+      <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.5 }}>
+        {pick.context && (
+          <Chip size="small" variant="outlined" label={pick.context} sx={{ fontSize: 10, height: 20 }} />
+        )}
+        {Object.entries(pick.samples || {})
+          .filter(([, n]) => n > 0)
+          .map(([k, n]) => (
+            <Chip
+              key={k}
+              size="small"
+              variant="outlined"
+              label={`${SAMPLE_LABEL[k] || k} ${n}`}
+              sx={{ fontSize: 10, height: 20 }}
+            />
+          ))}
+      </Stack>
+    </Box>
+  );
+}
+
+PickDetail.propTypes = { pick: PropTypes.object.isRequired, indent: PropTypes.number.isRequired };
+
+function OddChip({ oddValue, oddBook, sx }) {
+  return (
+    <Tooltip title={oddBook || 'Sin momio disponible'} placement="top">
+      <Chip
+        size="small"
+        label={oddValue ? Number(oddValue).toFixed(2) : '—'}
+        variant={oddValue ? 'filled' : 'outlined'}
+        sx={{
+          fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+          ...(oddValue ? {} : { color: 'text.disabled' }),
+          ...sx,
+        }}
+      />
+    </Tooltip>
+  );
+}
+
+OddChip.propTypes = { oddValue: PropTypes.number, oddBook: PropTypes.string, sx: PropTypes.object };
+
 function PickRow({ pick, started }) {
   const [open, setOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { Icon, color } = META(pick.market, pick.sport);
   const odd = pick.best_odd || pick.odd;
   const oddValue = typeof odd === 'object' && odd !== null ? odd.odd : odd;
   const oddBook = typeof odd === 'object' && odd !== null ? odd.bookmaker : null;
+  const time = dayjs(pick.kickoff).format('HH:mm');
+
+  // Mobile: pick label gets its own line instead of being squeezed and truncated.
+  if (isMobile) {
+    return (
+      <Box sx={{ opacity: started ? 0.5 : 1 }}>
+        <Stack
+          spacing={0.5} onClick={() => setOpen(o => !o)}
+          sx={{ px: 1.5, py: 1, cursor: 'pointer', '&:active': { bgcolor: 'action.hover' } }}
+        >
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: started ? 'text.disabled' : 'text.secondary' }}
+            >
+              {time}
+            </Typography>
+            <SportBadge sport={pick.sport} size={13} />
+            <Icon sx={{ fontSize: 15, color, flexShrink: 0 }} />
+            <Box sx={{ flex: 1 }} />
+            <Chip
+              size="small" label={`${pick.confidence}%`} color={confTone(pick.confidence)}
+              sx={{ fontWeight: 700, height: 20, fontSize: 11, '& .MuiChip-label': { px: 0.75 } }}
+            />
+          </Stack>
+
+          <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
+            {pick.label}
+          </Typography>
+
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ flex: 1, minWidth: 0 }}>
+              {pick.away} @ {pick.home}
+            </Typography>
+            <OddChip oddValue={oddValue} oddBook={oddBook} sx={{ height: 20, fontSize: 11, '& .MuiChip-label': { px: 0.75 } }} />
+          </Stack>
+        </Stack>
+
+        <Collapse in={open}>
+          <PickDetail pick={pick} indent={2} />
+        </Collapse>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ opacity: started ? 0.5 : 1 }}>
@@ -218,7 +312,7 @@ function PickRow({ pick, started }) {
             color: started ? 'text.disabled' : 'text.primary',
           }}
         >
-          {dayjs(pick.kickoff).format('HH:mm')}
+          {time}
         </Typography>
 
         <Icon sx={{ fontSize: 20, color, flexShrink: 0 }} />
@@ -239,18 +333,7 @@ function PickRow({ pick, started }) {
           sx={{ fontWeight: 700, minWidth: 50, height: 24 }}
         />
 
-        <Tooltip title={oddBook || 'Sin momio disponible'} placement="top">
-          <Chip
-            size="small"
-            label={oddValue ? Number(oddValue).toFixed(2) : '—'}
-            variant={oddValue ? 'filled' : 'outlined'}
-            sx={{
-              minWidth: 52, height: 24, fontWeight: 700,
-              fontVariantNumeric: 'tabular-nums',
-              ...(oddValue ? {} : { color: 'text.disabled' }),
-            }}
-          />
-        </Tooltip>
+        <OddChip oddValue={oddValue} oddBook={oddBook} sx={{ minWidth: 52, height: 24 }} />
 
         <IconButton size="small" sx={{ flexShrink: 0 }}>
           {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
@@ -258,27 +341,7 @@ function PickRow({ pick, started }) {
       </Stack>
 
       <Collapse in={open}>
-        <Box sx={{ px: 2, pb: 1.5, pl: 7.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-            {pick.note}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.5 }}>
-            {pick.context && (
-              <Chip size="small" variant="outlined" label={pick.context} sx={{ fontSize: 10, height: 20 }} />
-            )}
-            {Object.entries(pick.samples || {})
-              .filter(([, n]) => n > 0)
-              .map(([k, n]) => (
-                <Chip
-                  key={k}
-                  size="small"
-                  variant="outlined"
-                  label={`${SAMPLE_LABEL[k] || k} ${n}`}
-                  sx={{ fontSize: 10, height: 20 }}
-                />
-              ))}
-          </Stack>
-        </Box>
+        <PickDetail pick={pick} indent={7.5} />
       </Collapse>
     </Box>
   );
@@ -407,8 +470,7 @@ export default function BetRadarView() {
   const upcoming = filtered.filter(p => dayjs(p.kickoff).isAfter(now));
   const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
 
-  // {market, sport} pairs — 'sport' resolves the total/Carreras-vs-Puntos
-  // override; stays null (generic label) when multiple sports share a market.
+  // {market, sport} pairs — sport resolves the total label override, null if shared
   const marketsPresent = useMemo(() => {
     const bySport = new Map();
     allPicks.forEach(p => {

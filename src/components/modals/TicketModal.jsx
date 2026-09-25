@@ -4,14 +4,11 @@ import {
   Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper,
   Stack, Tab, Tabs, TextField, Tooltip, Typography,
 } from "@mui/material";
-import { Add, AttachMoney, Cancel, CheckCircle, CompareArrows, Delete, Flag, HelpOutline, RadioButtonUnchecked, SportsSoccer, Square } from "@mui/icons-material";
+import { Add, AttachMoney, Cancel, CheckCircle, CompareArrows, Delete, Flag, HelpOutline, RadioButtonUnchecked, SportsBaseball, SportsSoccer, Square } from "@mui/icons-material";
 import { BET_TYPES, SPORT_TYPES, STATUS, DEVICE_TYPES } from "../../utils/consts.jsx";
 import { apiClient } from "../../api/api.js";
 import PropTypes from "prop-types";
 
-// ---------------------------------------------------------------------------
-// Odds helpers
-// ---------------------------------------------------------------------------
 const americanToDecimal = (val) => {
   const v = parseFloat(val);
   if (!val || isNaN(v) || v === 0) return null;
@@ -28,14 +25,12 @@ const decimalToAmerican = (val) => {
     : String(Math.round(-100 / (d - 1)));
 };
 
-// ---------------------------------------------------------------------------
-// Legs constants
-// ---------------------------------------------------------------------------
 const MARKET_OPTIONS = [
   { value: 'goals',     label: 'Goals' },
   { value: 'corners',   label: 'Corners' },
   { value: 'cards',     label: 'Cards' },
   { value: 'btts',      label: 'BTTS' },
+  { value: 'runs',      label: 'Runs' },
   { value: 'moneyline', label: 'Moneyline' },
   { value: 'other',     label: 'Other' },
 ];
@@ -45,12 +40,13 @@ const SIDE_BY_MARKET = {
   corners:   ['over', 'under'],
   cards:     ['over', 'under'],
   btts:      ['yes', 'no'],
+  runs:      ['over', 'under'],
   moneyline: ['home', 'away'],
   other:     ['over', 'under', 'yes', 'no', 'home', 'away'],
 };
 
 const SIDE_LABEL = { over: 'Over', under: 'Under', yes: 'Yes', no: 'No', home: 'Home', away: 'Away' };
-const MARKET_LABEL = { goals: 'Goals', corners: 'Corners', cards: 'Cards', btts: 'BTTS', moneyline: 'Moneyline', other: 'Other' };
+const MARKET_LABEL = { goals: 'Goals', corners: 'Corners', cards: 'Cards', btts: 'BTTS', runs: 'Runs', moneyline: 'Moneyline', other: 'Other' };
 
 const HAS_LINE = (market) => !['btts', 'moneyline'].includes(market);
 
@@ -59,6 +55,7 @@ const MARKET_ICON = {
   corners:   <Flag         sx={{ fontSize: 18, color: '#2196f3' }} />,
   cards:     <Square       sx={{ fontSize: 18, color: '#ffc107' }} />,
   btts:      <CompareArrows sx={{ fontSize: 18, color: '#9c27b0' }} />,
+  runs:      <SportsBaseball sx={{ fontSize: 18, color: '#1976d2' }} />,
   moneyline: <AttachMoney  sx={{ fontSize: 18, color: '#00bcd4' }} />,
   other:     <HelpOutline  sx={{ fontSize: 18, color: '#9e9e9e' }} />,
 };
@@ -81,9 +78,6 @@ const defaultLeg = (ticket) => ({
   outcome: null,
 });
 
-// ---------------------------------------------------------------------------
-// CurrencyField
-// ---------------------------------------------------------------------------
 function CurrencyField({ label, name, value, onChange }) {
   const [focused, setFocused] = useState(false);
   const numValue = parseFloat(value);
@@ -113,9 +107,6 @@ CurrencyField.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
-// ---------------------------------------------------------------------------
-// LegRow
-// ---------------------------------------------------------------------------
 function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
   const sides = SIDE_BY_MARKET[leg.market] || SIDE_BY_MARKET.other;
   const [rawOdds, setRawOdds] = useState('');
@@ -174,14 +165,14 @@ function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
         </Box>
         <TextField
           select size="small" label="Market" value={leg.market || 'goals'}
-          onChange={handleMarketChange} sx={{ flex: 2 }}
+          onChange={handleMarketChange} sx={{ flex: 1.5 }}
         >
           {MARKET_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
         </TextField>
 
         <TextField
           select size="small" label="Side" value={leg.side || sides[0]}
-          onChange={(e) => onUpdate(index, 'side', e.target.value)} sx={{ flex: 1.5 }}
+          onChange={(e) => onUpdate(index, 'side', e.target.value)} sx={{ flex: 1.2 }}
         >
           {sides.map(s => <MenuItem key={s} value={s}>{SIDE_LABEL[s]}</MenuItem>)}
         </TextField>
@@ -190,7 +181,7 @@ function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
           <TextField
             size="small" label="Line" type="number" value={leg.line_used ?? ''}
             onChange={(e) => onUpdate(index, 'line_used', e.target.value ? parseFloat(e.target.value) : null)}
-            sx={{ width: 76 }}
+            sx={{ width: 96 }}
           />
         )}
 
@@ -223,9 +214,6 @@ LegRow.propTypes = {
   onDelete: PropTypes.func.isRequired,
 };
 
-// ---------------------------------------------------------------------------
-// TicketModal
-// ---------------------------------------------------------------------------
 function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
   const [tab, setTab] = useState(0);
   const [leagueOptions, setLeagueOptions] = useState([]);
@@ -234,7 +222,6 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
   const isEdit = Boolean(currentTicket.ticket_id);
   const hasLegs = ['parlay', 'crear_apuesta'].includes(currentTicket.bet_type);
 
-  // Sync legs from parent when modal opens or ticket changes
   useEffect(() => {
     if (openModal) {
       setTab(0);
@@ -243,7 +230,6 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
     }
   }, [openModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Push legs to parent + rebuild pick and match_name whenever legs change
   useEffect(() => {
     if (!hasLegs) return;
     const normalized = legs.map(leg => ({ ...leg, pick: buildPick(leg) }));
@@ -259,7 +245,6 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
     }
   }, [legs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear legs when switching away from parlay/crear_apuesta
   useEffect(() => {
     if (!hasLegs) {
       setLegs([]);
@@ -361,7 +346,19 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
               sx={hasLegs && legs.length > 0 ? { '& .MuiInputBase-input': { color: 'text.secondary' } } : {}}
             />
 
-            {/* Legs section */}
+            {!hasLegs && (
+              <Button
+                size="small" startIcon={<Add />} color="inherit"
+                onClick={() => {
+                  handleChange({ target: { name: 'bet_type', value: 'crear_apuesta' } });
+                  setLegs([defaultLeg(currentTicket)]);
+                }}
+                sx={{ alignSelf: 'flex-start', fontSize: 12, color: 'text.secondary' }}
+              >
+                Add picks
+              </Button>
+            )}
+
             {hasLegs && (
               <Box>
                 <Divider sx={{ mb: 1.5 }} />
