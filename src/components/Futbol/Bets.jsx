@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fab, IconButton, InputAdornment, Paper, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, InputAdornment, Paper, Snackbar, Stack, Tab, Tabs, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { Add, CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
+import { CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
 import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
 import PlaydoitImportModal from "./../modals/PlaydoitImportModal";
@@ -238,12 +238,6 @@ function Bets() {
     }
   };
 
-  const handleAdd = () => {
-    setCurrentTicket(initialStatedata);
-    setEditId(null);
-    setOpenModal(true);
-  }
-
   const handleDelete = (ticket_id) => {
     setConfirmDelete({ open: true, ticketId: ticket_id });
   };
@@ -461,13 +455,10 @@ function Bets() {
               sx={{ width: { xs: 130, sm: 180 } }}
             />
             <Tooltip title="Importar de Playdoit">
-              <IconButton size="small" onClick={() => setOpenPlaydoitModal(true)}>
-                <CloudDownload fontSize="small" />
+              <IconButton color="primary" onClick={() => setOpenPlaydoitModal(true)}>
+                <CloudDownload fontSize="large" />
               </IconButton>
             </Tooltip>
-            <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
-              <Add />
-            </Fab>
           </Stack>
         )}
       </Stack>
