@@ -3,9 +3,10 @@ import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, Dial
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { Add, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
+import { Add, CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
 import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
+import PlaydoitImportModal from "./../modals/PlaydoitImportModal";
 import BetsAnalytics from "./BetsAnalytics";
 import BankrollView from "./BankrollView";
 import BettingRules from "./BettingRules";
@@ -133,6 +134,7 @@ function Bets() {
   const [stats, setStats] = useState(null);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [openPlaydoitModal, setOpenPlaydoitModal] = useState(false);
   const [file, setFile] = useState(null);
   const [currentTicket, setCurrentTicket] = useState(initialStatedata);
   const [editId, setEditId] = useState(null);
@@ -458,6 +460,11 @@ function Bets() {
               }}
               sx={{ width: { xs: 130, sm: 180 } }}
             />
+            <Tooltip title="Importar de Playdoit">
+              <IconButton size="small" onClick={() => setOpenPlaydoitModal(true)}>
+                <CloudDownload fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Fab size="small" color="primary" aria-label="add" onClick={handleAdd}>
               <Add />
             </Fab>
@@ -552,6 +559,12 @@ function Bets() {
         handleSubmit={handleSubmit}
         setFile={setFile}
         file={file}
+      />
+
+      <PlaydoitImportModal
+        open={openPlaydoitModal}
+        onClose={() => setOpenPlaydoitModal(false)}
+        onImported={() => { loadTickets(ticketsPage, searchId.trim()); loadStats(); }}
       />
 
       <Dialog open={confirmDelete.open} onClose={() => setConfirmDelete({ open: false, ticketId: null })}>

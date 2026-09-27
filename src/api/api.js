@@ -47,6 +47,20 @@ class ApiClient {
     return response.data;
   }
 
+  async associatePlaydoitChamp(leagueId, playdoitChampId) {
+    const response = await this.client.put(
+      `/leagues/associate-playdoit-champ?league_id=${leagueId}&playdoit_champ_id=${playdoitChampId}`
+    );
+    return response.data;
+  }
+
+  async importPlaydoit(token, dateFrom, dateTo, dryRun = false) {
+    const response = await this.client.post(
+      `/playdoit/import?token=${encodeURIComponent(token)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&dry_run=${dryRun}`
+    );
+    return response.data;
+  }
+
   // Matches 
   async fetchFixtures(date='2025-12-14') {
     const response = await this.client.get(`/matches/by-date?date=${date}`);

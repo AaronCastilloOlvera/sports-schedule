@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle,
   Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper,
@@ -15,14 +15,6 @@ const americanToDecimal = (val) => {
   return v > 0
     ? ((v / 100) + 1).toFixed(2)
     : ((100 / Math.abs(v)) + 1).toFixed(2);
-};
-
-const decimalToAmerican = (val) => {
-  const d = parseFloat(val);
-  if (!d || isNaN(d) || d <= 1) return '';
-  return d >= 2
-    ? '+' + Math.round((d - 1) * 100)
-    : String(Math.round(-100 / (d - 1)));
 };
 
 const MARKET_OPTIONS = [
@@ -61,6 +53,7 @@ const MARKET_ICON = {
 };
 
 const buildPick = (leg) => {
+  if (!leg.market) return leg.pick || '';
   const m = MARKET_LABEL[leg.market] || leg.market || '';
   const s = SIDE_LABEL[leg.side] || leg.side || '';
   const l = leg.line_used != null ? String(leg.line_used) : '';
@@ -107,7 +100,95 @@ CurrencyField.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
-function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
+function LeagueChampPicker({ leg, index, catalogLeagues, onAssociate }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handlePick = async (_, league) => {
+    if (!league) return;
+    setSaving(true);
+    setError('');
+    try {
+      await onAssociate(index, leg, league);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'No se pudo asociar la liga.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Stack spacing={0.5} sx={{ mb: 1 }}>
+      <Autocomplete
+        size="small" options={catalogLeagues}
+        getOptionLabel={(o) => o.country?.name ? `${o.name} (${o.country.name})` : o.name}
+        loading={saving} disabled={saving}
+        onChange={handlePick}
+        renderInput={(params) => (
+          <TextField {...params} label="¿Qué liga es?" size="small" />
+        )}
+      />
+      {error && <Typography variant="caption" color="error">{error}</Typography>}
+    </Stack>
+  );
+}
+
+LeagueChampPicker.propTypes = {
+  leg: PropTypes.object.isRequired,
+  index: PropTypes.number.isRequired,
+  catalogLeagues: PropTypes.array.isRequired,
+  onAssociate: PropTypes.func.isRequired,
+};
+
+const formatEventDate = (iso) => {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('es-MX', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+      timeZone: 'America/Mexico_City',
+    });
+  } catch {
+    return null;
+  }
+};
+
+function PlaydoitLegView({ leg }) {
+  const outcomeColor = leg.outcome === true ? 'success.main' : leg.outcome === false ? 'error.main' : 'text.disabled';
+  const outcomeIcon = leg.outcome === true
+    ? <CheckCircle fontSize="small" />
+    : leg.outcome === false
+      ? <Cancel fontSize="small" />
+      : <RadioButtonUnchecked fontSize="small" />;
+  const eventDate = formatEventDate(leg.event_date);
+
+  return (
+    <Stack spacing={0.5}>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+        <Typography variant="body2" fontWeight={600}>{leg.match_name}</Typography>
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
+          {leg.odd != null && <Typography variant="body2" color="text.secondary">{leg.odd.toFixed(2)}</Typography>}
+          <Tooltip title={leg.outcome === true ? 'Ganado' : leg.outcome === false ? 'Perdido' : 'Pendiente'}>
+            <Box sx={{ color: outcomeColor, display: 'flex' }}>{outcomeIcon}</Box>
+          </Tooltip>
+        </Stack>
+      </Stack>
+      <Typography variant="body2">{leg.pick}</Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        {leg.market_name_raw && (
+          <Typography variant="caption" color="text.secondary">{leg.market_name_raw}</Typography>
+        )}
+        {eventDate && <Typography variant="caption" color="text.disabled">· {eventDate}</Typography>}
+      </Stack>
+    </Stack>
+  );
+}
+
+PlaydoitLegView.propTypes = {
+  leg: PropTypes.object.isRequired,
+};
+
+function LegRow({ leg, index, isParlay, onUpdate, onDelete, catalogLeagues, onAssociateChamp }) {
+  const isPlaydoit = leg.market_type_id !== undefined;
   const sides = SIDE_BY_MARKET[leg.market] || SIDE_BY_MARKET.other;
   const [rawOdds, setRawOdds] = useState('');
   const [oddsFocused, setOddsFocused] = useState(false);
@@ -141,11 +222,29 @@ function LegRow({ leg, index, isParlay, onUpdate, onDelete }) {
     if (!HAS_LINE(market)) onUpdate(index, 'line_used', null);
   };
 
+  if (isPlaydoit) {
+    return (
+      <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover', borderColor: 'divider' }}>
+        {!leg.league && leg.champ_id && (
+          <LeagueChampPicker
+            leg={leg} index={index} catalogLeagues={catalogLeagues} onAssociate={onAssociateChamp}
+          />
+        )}
+        <PlaydoitLegView leg={leg} />
+      </Paper>
+    );
+  }
+
   return (
     <Paper
       variant="outlined"
       sx={{ p: 1.5, bgcolor: 'action.hover', borderColor: 'divider' }}
     >
+      {!leg.league && leg.champ_id && (
+        <LeagueChampPicker
+          leg={leg} index={index} catalogLeagues={catalogLeagues} onAssociate={onAssociateChamp}
+        />
+      )}
       {isParlay && (
         <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
           <TextField
@@ -212,26 +311,30 @@ LegRow.propTypes = {
   isParlay: PropTypes.bool.isRequired,
   onUpdate: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  catalogLeagues: PropTypes.array.isRequired,
+  onAssociateChamp: PropTypes.func.isRequired,
 };
 
-function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit, setFile, file }) {
+function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, handleSubmit }) {
   const [tab, setTab] = useState(0);
   const [leagueOptions, setLeagueOptions] = useState([]);
-  const [americanOdds, setAmericanOdds] = useState('');
+  const [catalogLeagues, setCatalogLeagues] = useState([]);
   const [legs, setLegs] = useState([]);
   const isEdit = Boolean(currentTicket.ticket_id);
   const hasLegs = ['parlay', 'crear_apuesta'].includes(currentTicket.bet_type);
+  const isPlaydoitTicket = Array.isArray(currentTicket.legs) && currentTicket.legs.length > 0
+    && currentTicket.legs[0].market_type_id !== undefined;
+  const showLegsSection = hasLegs || isPlaydoitTicket;
 
   useEffect(() => {
     if (openModal) {
       setTab(0);
-      setAmericanOdds(decimalToAmerican(currentTicket.odds));
       setLegs(Array.isArray(currentTicket.legs) ? currentTicket.legs : []);
     }
   }, [openModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!hasLegs) return;
+    if (!showLegsSection) return;
     const normalized = legs.map(leg => ({ ...leg, pick: buildPick(leg) }));
     const value = normalized.length > 0 ? normalized : null;
     handleChange({ target: { name: 'legs', value } });
@@ -246,7 +349,7 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
   }, [legs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!hasLegs) {
+    if (!hasLegs && !isPlaydoitTicket) {
       setLegs([]);
       handleChange({ target: { name: 'legs', value: null } });
     }
@@ -261,17 +364,11 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
   const addLeg = () =>
     setLegs(prev => [...prev, defaultLeg(currentTicket)]);
 
-  const handleOddsChange = (e) => {
-    handleChange(e);
-    setAmericanOdds(decimalToAmerican(e.target.value));
+  const handleAssociateChamp = async (index, leg, league) => {
+    await apiClient.associatePlaydoitChamp(league.id, leg.champ_id);
+    updateLeg(index, 'league', league.name);
   };
 
-  const handleAmericanChange = (e) => {
-    const val = e.target.value;
-    setAmericanOdds(val);
-    const decimal = americanToDecimal(val);
-    if (decimal) handleChange({ target: { name: 'odds', value: decimal } });
-  };
 
   useEffect(() => {
     if (!openModal || !currentTicket.sport) return;
@@ -280,21 +377,15 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
       .catch(() => setLeagueOptions([]));
   }, [currentTicket.sport, openModal]);
 
-  const handlePaste = useCallback((event) => {
-    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        const blob = item.getAsFile();
-        setFile(new File([blob], "pasted-image.png", { type: blob.type }));
-        break;
-      }
-    }
-  }, [setFile]);
-
   useEffect(() => {
-    if (openModal) window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [openModal, handlePaste]);
+    if (!openModal || !currentTicket.sport) return;
+    apiClient.fetchLeagues()
+      .then(all => setCatalogLeagues(
+        all.filter(l => l.sport === currentTicket.sport && (l.is_favorite || l.sport !== 'futbol'))
+      ))
+      .catch(() => setCatalogLeagues([]));
+  }, [currentTicket.sport, openModal]);
+
 
   return (
     <Dialog open={openModal} onClose={() => setOpenModal(false)} fullWidth maxWidth="sm">
@@ -341,12 +432,12 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
               label="Pick" name="pick" value={currentTicket.pick}
               placeholder="Over 2.5, Chivas gana..." fullWidth size="small"
               onChange={handleChange}
-              helperText={hasLegs && legs.length > 0 ? 'Auto-generated from picks below' : undefined}
-              slotProps={{ input: { readOnly: hasLegs && legs.length > 0 } }}
-              sx={hasLegs && legs.length > 0 ? { '& .MuiInputBase-input': { color: 'text.secondary' } } : {}}
+              helperText={showLegsSection && legs.length > 0 ? 'Auto-generated from picks below' : undefined}
+              slotProps={{ input: { readOnly: showLegsSection && legs.length > 0 } }}
+              sx={showLegsSection && legs.length > 0 ? { '& .MuiInputBase-input': { color: 'text.secondary' } } : {}}
             />
 
-            {!hasLegs && (
+            {!showLegsSection && (
               <Button
                 size="small" startIcon={<Add />} color="inherit"
                 onClick={() => {
@@ -359,14 +450,16 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
               </Button>
             )}
 
-            {hasLegs && (
+            {showLegsSection && (
               <Box>
                 <Divider sx={{ mb: 1.5 }} />
                 <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                   <Typography variant="caption" fontWeight={700} textTransform="uppercase" letterSpacing={0.8} color="text.secondary">
                     Picks ({legs.length})
                   </Typography>
-                  <Button size="small" startIcon={<Add />} onClick={addLeg}>Add pick</Button>
+                  {!isPlaydoitTicket && (
+                    <Button size="small" startIcon={<Add />} onClick={addLeg}>Add pick</Button>
+                  )}
                 </Stack>
                 {legs.length === 0
                   ? <Typography variant="caption" color="text.disabled" sx={{ pl: 0.5 }}>No picks yet — click Add pick</Typography>
@@ -380,6 +473,8 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
                           isParlay={currentTicket.bet_type === 'parlay'}
                           onUpdate={updateLeg}
                           onDelete={deleteLeg}
+                          catalogLeagues={catalogLeagues}
+                          onAssociateChamp={handleAssociateChamp}
                         />
                       ))}
                     </Stack>
@@ -391,17 +486,7 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
 
         {tab === 1 && (
           <Stack spacing={2}>
-            <Stack direction="row" spacing={2}>
-              <TextField label="Decimal" name="odds" type="number" value={currentTicket.odds} fullWidth size="small" onChange={handleOddsChange} />
-              <TextField
-                label="Americano" value={americanOdds} fullWidth size="small" placeholder="+110"
-                onChange={handleAmericanChange}
-                sx={{
-                  '& .MuiInputLabel-root:not(.Mui-focused)': { color: 'text.disabled' },
-                  '& .MuiOutlinedInput-root:not(.Mui-focused) .MuiOutlinedInput-notchedOutline': { borderStyle: 'dashed' },
-                }}
-              />
-            </Stack>
+            <TextField label="Odds" name="odds" type="number" value={currentTicket.odds} fullWidth size="small" onChange={handleChange} />
             <Stack direction="row" spacing={1.5}>
               <CurrencyField label="Stake" name="stake" value={currentTicket.stake} onChange={handleChange} />
               <CurrencyField label="Payout" name="payout" value={currentTicket.payout} onChange={handleChange} />
@@ -424,18 +509,6 @@ function TicketModal({ openModal, setOpenModal, currentTicket, handleChange, han
               label="Studied"
             />
             <TextField label="Comments" name="comments" multiline rows={3} value={currentTicket.comments} fullWidth size="small" onChange={handleChange} />
-            <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1 }}>
-              <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>TICKET IMAGE</Typography>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                Paste from clipboard or select a file
-              </Typography>
-              <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files[0])} />
-              {file && (
-                <Typography variant="caption" color="primary" display="block" sx={{ mt: 1 }}>
-                  ✓ {file.name}
-                </Typography>
-              )}
-            </Box>
           </Stack>
         )}
       </DialogContent>
@@ -456,8 +529,6 @@ TicketModal.propTypes = {
   currentTicket: PropTypes.object.isRequired,
   handleChange: PropTypes.func.isRequired,
   handleSubmit: PropTypes.func.isRequired,
-  setFile: PropTypes.func.isRequired,
-  file: PropTypes.object,
 };
 
 export default TicketModal;
