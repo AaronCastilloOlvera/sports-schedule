@@ -219,8 +219,11 @@ class ApiClient {
     return response.data;
   }
 
-  async fetchTransactions(page = 0, limit = 10) {
-    const response = await this.client.get(`/bankroll/transactions?page=${page}&limit=${limit}`);
+  async fetchTransactions(page = 0, limit = 10, types = null) {
+    const typesQs = types && types.length
+      ? '&' + types.map(t => `types=${encodeURIComponent(t)}`).join('&')
+      : '';
+    const response = await this.client.get(`/bankroll/transactions?page=${page}&limit=${limit}${typesQs}`);
     return response.data;
   }
 

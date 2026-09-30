@@ -21,6 +21,12 @@ const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits
 const GOAL = 50000;
 const NU_PURPLE = '#7b1fa2';
 
+const TX_TYPE_OPTIONS = [
+  { value: 'deposit', label: 'Deposit', color: 'error' },
+  { value: 'withdrawal', label: 'Withdrawal', color: 'success' },
+  { value: 'nu_expense', label: 'NU Expense', sx: { bgcolor: NU_PURPLE, color: '#fff' } },
+];
+
 const toLocalInput = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().substring(0, 16);
 
 const initialTx = {
@@ -130,6 +136,7 @@ export default function BankrollView() {
   const [transactions, setTransactions] = useState([]);
   const [txTotal, setTxTotal] = useState(0);
   const [txPage, setTxPage] = useState(0);
+  const [selectedTypes, setSelectedTypes] = useState(TX_TYPE_OPTIONS.map(o => o.value));
   const [summary, setSummary] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [loadingInit, setLoadingInit] = useState(true);
@@ -140,11 +147,20 @@ export default function BankrollView() {
 
   const showToast = (message, severity = 'success') => setToast({ open: true, message, severity });
 
-  const loadTransactions = (page = 0) =>
-    apiClient.fetchTransactions(page, 10).then(res => {
+  const loadTransactions = (page = 0, types = selectedTypes) =>
+    apiClient.fetchTransactions(page, 10, types).then(res => {
       setTransactions(res.data);
       setTxTotal(res.total);
     });
+
+  const toggleType = (value) => {
+    const next = selectedTypes.includes(value)
+      ? selectedTypes.filter(v => v !== value)
+      : [...selectedTypes, value];
+    setSelectedTypes(next);
+    setTxPage(0);
+    loadTransactions(0, next);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -154,7 +170,7 @@ export default function BankrollView() {
     ])
       .catch(() => showToast('Error al cargar datos.', 'error'))
       .finally(() => setLoadingInit(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshAll = (page = txPage) => {
     Promise.all([
@@ -454,11 +470,40 @@ export default function BankrollView() {
       )}
 
       {/* Table */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Transactions</Typography>
         <Button variant="contained" startIcon={<Add />} size="small" onClick={() => { setCurrent(initialTx); setEditId(null); setOpenModal(true); }}>
           Add
         </Button>
+      </Stack>
+
+      <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+        <Stack
+          direction="row" spacing={1} alignItems="center" flexWrap="wrap"
+          sx={{
+            gap: 1, px: 1.5, py: 1, borderRadius: 2,
+            border: theme => `1px solid ${theme.palette.divider}`,
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mr: 0.5 }}>
+            Filter:
+          </Typography>
+          {TX_TYPE_OPTIONS.map(opt => {
+            const active = selectedTypes.includes(opt.value);
+            return (
+              <Chip
+                key={opt.value}
+                label={opt.label}
+                size="small"
+                onClick={() => toggleType(opt.value)}
+                color={active && opt.color ? opt.color : 'default'}
+                variant={active ? 'filled' : 'outlined'}
+                sx={active ? opt.sx : { opacity: 0.5 }}
+              />
+            );
+          })}
+        </Stack>
       </Stack>
 
       {isMobile ? (
