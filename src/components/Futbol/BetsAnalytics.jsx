@@ -93,7 +93,8 @@ export default function BetsAnalytics() {
   const betTypePie = betTypeData.map((d, i) => ({ name: d.betType, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
   const oddsBucketPie = analytics.odds_bucket_data.map((d, i) => ({ name: d.range, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
-  const studiedPie    = analytics.studied_data.map(d => ({ name: d.label, value: d.count, fill: d.label === 'Studied' ? BLUE : '#757575' }));
+  const marketPie     = analytics.market_data.map((d, i) => ({ name: d.market, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
+  const devicePie     = analytics.device_data.map(d => ({ name: d.label, value: d.count, fill: d.label === 'Mobile' ? BLUE : '#757575' }));
   const dayOfWeekPie  = analytics.day_of_week_data.map((d, i) => ({ name: d.day, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
   const timeOfDayPie  = analytics.time_of_day_data.map((d, i) => ({ name: d.time, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
 
@@ -122,7 +123,8 @@ export default function BetsAnalytics() {
         <Tab label="By League" />
         <Tab label="By Bet Type" />
         <Tab label="By Odds" />
-        <Tab label="Studied" />
+        <Tab label="By Market" />
+        <Tab label="By Device" />
         <Tab label="Timing" />
       </Tabs>
 
@@ -250,17 +252,15 @@ export default function BetsAnalytics() {
             <ResponsiveContainer width="100%" height={Math.max(300, analytics.league_data.length * 28)}>
               <BarChart data={analytics.league_data} layout="vertical" margin={{ left: 10, right: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tickFormatter={usd} tick={{ fontSize: 12 }} />
+                <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="league" width={150} tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
-                <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
-                  {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
-                </Bar>
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Bar dataKey="winRate" fill={BLUE} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard title="Tickets by League">
+          <ChartCard title="Picks by League">
             <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie data={leaguePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
@@ -269,20 +269,6 @@ export default function BetsAnalytics() {
                 <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(leaguePie)} />
                 <Legend />
               </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="ROI % by League">
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={analytics.league_data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="league" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-                <YAxis unit="%" tick={{ fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'ROI']} />
-                <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
-                  {analytics.league_data.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
-                </Bar>
-              </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Box>
@@ -408,37 +394,69 @@ export default function BetsAnalytics() {
 
       {tab === 5 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Por pick individual (mismo criterio que By League) — top 15 mercados por cantidad de picks.
+          </Typography>
+
+          <ChartCard title="Win Rate by Market">
+            <ResponsiveContainer width="100%" height={Math.max(300, analytics.market_data.length * 28)}>
+              <BarChart data={analytics.market_data} layout="vertical" margin={{ left: 10, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="market" width={170} tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Win Rate']} />
+                <Bar dataKey="winRate" fill={BLUE} radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard title="Picks by Market">
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie data={marketPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={110}>
+                  {marketPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(marketPie)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Box>
+      )}
+
+      {tab === 6 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-            <ChartCard title="Profit — Studied vs Not" sx={{ flex: 2 }}>
+            <ChartCard title="Profit — Mobile vs Desktop" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={analytics.studied_data}>
+                <BarChart data={analytics.device_data}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [usd(v), 'Profit']} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
-                    {analytics.studied_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
+                    {analytics.device_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Tickets — Studied vs Not" sx={{ flex: 1 }}>
+            <ChartCard title="Tickets — Mobile vs Desktop" sx={{ flex: 1 }}>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={studiedPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
-                    {studiedPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  <Pie data={devicePie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
+                    {devicePie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(studiedPie)} />
+                  <Tooltip contentStyle={tooltipStyle} {...renderPieTooltip(devicePie)} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </ChartCard>
           </Stack>
 
-          <ChartCard title="Win Rate — Studied vs Not">
+          <ChartCard title="Win Rate — Mobile vs Desktop">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={analytics.studied_data}>
+              <BarChart data={analytics.device_data}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
@@ -450,7 +468,7 @@ export default function BetsAnalytics() {
         </Box>
       )}
 
-      {tab === 6 && (
+      {tab === 7 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Day of Week" sx={{ flex: 2 }}>
