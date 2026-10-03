@@ -4,6 +4,9 @@ import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
 import { CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import PropTypes from 'prop-types';
 import TicketModal from "./../modals/TicketModal";
 import PlaydoitImportModal from "./../modals/PlaydoitImportModal";
@@ -133,6 +136,7 @@ function Bets() {
   const [ticketsPage, setTicketsPage] = useState(0);
   const [stats, setStats] = useState(null);
   const [loadingTickets, setLoadingTickets] = useState(true);
+  const [hasLoadedTickets, setHasLoadedTickets] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [openPlaydoitModal, setOpenPlaydoitModal] = useState(false);
   const [file, setFile] = useState(null);
@@ -144,24 +148,27 @@ function Bets() {
   const [searchId, setSearchId] = useState('');
   const [leagueFilter, setLeagueFilter] = useState(null);
   const [leagueOptions, setLeagueOptions] = useState([]);
+  const [dateFilter, setDateFilter] = useState(null); // dayjs object for one specific event date, or null (all)
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const skipSearchEffect = useRef(true);
+
+  // 17 de Sep OK
 
   const showToast = (message, severity = 'success') => {
     setToast({ open: true, message, severity });
   };
 
-  const loadTickets = (page, search, league = leagueFilter) => {
+  const loadTickets = (page, search, league = leagueFilter, date = dateFilter) => {
     setLoadingTickets(true);
-    return apiClient.fetchTickets(page, 10, search, league || '')
+    return apiClient.fetchTickets(page, 10, search, league || '', date ? date.format('YYYY-MM-DD') : null)
       .then(res => { setTickets(res.data); setTicketsTotal(res.total); })
       .catch(() => showToast(t('bets.error_load'), 'error'))
-      .finally(() => setLoadingTickets(false));
+      .finally(() => { setLoadingTickets(false); setHasLoadedTickets(true); });
   };
 
-  const loadStats = (league = leagueFilter) =>
-    apiClient.fetchBetsStats(league || '').then(setStats).catch(() => {});
+  const loadStats = (league = leagueFilter, date = dateFilter) =>
+    apiClient.fetchBetsStats(league || '', date ? date.format('YYYY-MM-DD') : null).then(setStats).catch(() => {});
 
   useEffect(() => {
     loadStats();
@@ -181,9 +188,9 @@ function Bets() {
 
   useEffect(() => {
     setTicketsPage(0);
-    loadTickets(0, searchId.trim(), leagueFilter);
-    loadStats(leagueFilter);
-  }, [leagueFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadTickets(0, searchId.trim(), leagueFilter, dateFilter);
+    loadStats(leagueFilter, dateFilter);
+  }, [leagueFilter, dateFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -417,6 +424,7 @@ function Bets() {
   ];
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
     <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>Bets Log</Typography>
@@ -437,6 +445,16 @@ function Bets() {
                   slotProps={{ inputLabel: { shrink: true } }}
                 />
               )}
+            />
+            <DatePicker
+              label="Fecha"
+              value={dateFilter}
+              onChange={setDateFilter}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: { size: 'small', sx: { width: { xs: 140, sm: 170 } } },
+                field: { clearable: true, onClear: () => setDateFilter(null) },
+              }}
             />
             <TextField
               size="small"
@@ -471,7 +489,7 @@ function Bets() {
       </Tabs>
 
       {mainTab === 0 && (
-        loadingTickets ? (
+        loadingTickets && !hasLoadedTickets ? (
           <TicketsSkeleton isMobile={isMobile} />
         ) : (
         <Box>
@@ -490,7 +508,7 @@ function Bets() {
             ))}
           </Box>
           {isMobile ? (
-            <Box>
+            <Box sx={{ opacity: loadingTickets ? 0.5 : 1, transition: 'opacity 0.15s', pointerEvents: loadingTickets ? 'none' : 'auto' }}>
               {tickets.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
                   <Typography>{ticketsTotal === 0 ? 'No tickets yet. Tap + to add your first bet.' : 'No tickets match that ID.'}</Typography>
@@ -517,6 +535,7 @@ function Bets() {
                 columns={columns}
                 getRowId={(row) => row.ticket_id}
                 rowCount={ticketsTotal}
+                loading={loadingTickets}
                 paginationMode="server"
                 paginationModel={{ page: ticketsPage, pageSize: 10 }}
                 onPaginationModelChange={(model) => {
@@ -582,6 +601,7 @@ function Bets() {
         </Alert>
       </Snackbar>
     </Box>
+    </LocalizationProvider>
   );
 }
 
