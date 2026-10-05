@@ -111,7 +111,7 @@ function SummaryCard({ label, value, color, sx }) {
     <Card sx={{ flex: 1, boxShadow: 2, ...sx }}>
       <CardContent>
         <Typography variant="body2" color="text.secondary">{label}</Typography>
-        <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', color }}>${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
       </CardContent>
     </Card>
   );
