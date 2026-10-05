@@ -71,7 +71,6 @@ const SPORTS = [
     key: 'nfl',
     label: 'NFL',
     markets: ['moneyline', 'spread', 'total'],
-    experimental: true, // backtest: solo 6 semanas con momios reales, ningun mercado significativo aun
     cached:      (date) => apiClient.fetchNFLRadarCached(date),
     suggestions: (date) => apiClient.fetchNFLRadarSuggestions(date),
     accuracy:    () => apiClient.fetchNFLRadarAccuracy(7, 70),
@@ -488,8 +487,6 @@ export default function BetRadarView() {
       });
   }, [allPicks, activeSports]);
 
-  const hasExperimental = SPORTS.some(s => s.experimental && activeSports.has(s.key) && dataBySport[s.key]);
-
   const analyzed = SPORTS.reduce((sum, s) => {
     if (!activeSports.has(s.key)) return sum;
     const d = dataBySport[s.key];
@@ -533,12 +530,6 @@ export default function BetRadarView() {
           );
         })}
       </Stack>
-
-      {hasExperimental && (
-        <Alert severity="warning" sx={{ mb: 2, py: 0.25 }}>
-          NFL: spread y moneyline muestran ROI positivo contra la línea de DraftKings pero sin significancia estadística (solo 6 semanas con momios reales); total va en negativo. Trátalo como referencia, no como recomendación.
-        </Alert>
-      )}
 
       <AccuracyStrip accuracyBySport={accuracyBySport} />
 
