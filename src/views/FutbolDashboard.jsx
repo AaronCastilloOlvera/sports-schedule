@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, IconButton, InputAdornment, TextField } from '@mui/material';
+import { Box, Button, IconButton, InputAdornment, TextField } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -84,6 +84,11 @@ export default function FutbolDashboard() {
             <IconButton onClick={handleNextDay} size="small" color="primary">
               <ChevronRight />
             </IconButton>
+            {!selectedDate.isSame(dayjs(), 'day') && (
+              <Button onClick={() => setManualDate(dayjs())} size="small" sx={{ whiteSpace: 'nowrap' }}>
+                {t('fixtures.today')}
+              </Button>
+            )}
           </Box>
 
           {/* Search — far RIGHT (expandable) */}
@@ -101,7 +106,7 @@ export default function FutbolDashboard() {
               <TextField
                 autoFocus
                 size="small"
-                placeholder="Search teams…"
+                placeholder={t('fixtures.searchTeamsPlaceholder')}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 slotProps={{

@@ -1,4 +1,4 @@
-import { Chip, Typography } from '@mui/material';
+import { Chip } from '@mui/material';
 import { keyframes } from '@mui/system';
 import PropTypes from "prop-types";
 import { statusPriority } from './consts';
@@ -31,13 +31,17 @@ export default function LiveStatusChip({ fixture, sport = 'futbol' }) {
   const isLive = statusPriority[shortStatus] === 1;
   const isFinished = statusPriority[shortStatus] === 3;
 
-  // Case 1. Not started matches show the scheduled time
+  // Case 1. Not started matches show the scheduled time — same Chip shape as
   if (shortStatus === 'NS' || shortStatus === 'TBD') {
     const localTime = new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return (
-      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-        {localTime}
-      </Typography>
+      <Chip
+        label={localTime}
+        size="small"
+        variant="outlined"
+        color="primary"
+        sx={{ height: 22, fontSize: '0.775rem', fontWeight: 'bold', borderRadius: '4px' }}
+      />
     );
   }
 
@@ -49,8 +53,8 @@ export default function LiveStatusChip({ fixture, sport = 'futbol' }) {
         size='small'
         color={'error'}
         sx={{ 
-            height: 20, 
-            fontSize: '0.65rem',
+            height: 22, 
+            fontSize: '0.775rem',
             fontWeight: isLive ? 'bold' : 'normal',
             animation: isLive ? `${pulseAnimation} 2s infinite` : 'none',
             borderRadius: '4px'
@@ -65,10 +69,10 @@ export default function LiveStatusChip({ fixture, sport = 'futbol' }) {
       label={shortStatus}
       size="small"
       sx={{
-        height: 18,
-        fontSize: '0.65rem',
-        backgroundColor: isFinished ? 'action.selected' : 'warning.light',
-        color: isFinished ? 'text.secondary' : 'warning.dark',
+        height: 22,
+        fontSize: '0.775rem',
+        backgroundColor: isFinished ? 'action.selected' : 'warning.main',
+        color: isFinished ? 'text.secondary' : 'warning.contrastText',
         borderRadius: 1
       }}
     />

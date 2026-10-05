@@ -178,14 +178,15 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
           <Stack alignItems="center" sx={{ gap: '6px', flex: 2, px: { xs: '6px', sm: '12px' }, flexShrink: 0, minWidth: 0 }}>
             {hasScore ? (
               <>
-                {/* Score row with events flanking */}
-                <Stack direction="row" alignItems="flex-start" sx={{ width: '100%', gap: 0 }}>
+                {/* Score row with events flanking — centered against the score
+                    box regardless of how many scorer lines either side has. */}
+                <Stack direction="row" alignItems="center" sx={{ width: '100%', gap: 0 }}>
 
                   {/* Home events — right-aligned, flanking score left */}
                   <Box sx={{
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                    alignItems: 'flex-end', gap: '4px',
-                    pt: '9px', pr: '6px', minWidth: 0,
+                    flex: 1, alignSelf: 'stretch', display: 'flex', flexDirection: 'column',
+                    alignItems: 'flex-end', justifyContent: 'center', gap: '5px',
+                    pr: '8px', minWidth: 0,
                   }}>
                     {homeEvents.map((event, i) => (
                       <EventRow key={i} event={event} isRight={true} textPrimary={textPrimary} textDisabled={textDisabled} />
@@ -236,9 +237,9 @@ export default function MatchHeader({ teamHome, teamAway, nextMatch, currentMatc
 
                   {/* Away events — left-aligned, flanking score right */}
                   <Box sx={{
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                    alignItems: 'flex-start', gap: '4px',
-                    pt: '9px', pl: '6px', minWidth: 0,
+                    flex: 1, alignSelf: 'stretch', display: 'flex', flexDirection: 'column',
+                    alignItems: 'flex-start', justifyContent: 'center', gap: '5px',
+                    pl: '8px', minWidth: 0,
                   }}>
                     {awayEvents.map((event, i) => (
                       <EventRow key={i} event={event} isRight={false} textPrimary={textPrimary} textDisabled={textDisabled} />

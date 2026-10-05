@@ -1,15 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Avatar, Box, Chip, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import { Avatar, Box, Chip, Stack, Tooltip, useMediaQuery } from '@mui/material';
 import { Waves } from '@mui/icons-material';
-const PULSE_DOT = (
-  <Box sx={{
-    width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
-    animation: 'livePulse 1.5s ease-in-out infinite',
-    '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
-  }} />
-);
 import dayjs from 'dayjs';
+
+function LivePulseDot() {
+  return (
+    <Box sx={{
+      width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
+      animation: 'livePulse 1.5s ease-in-out infinite',
+      '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+    }} />
+  );
+}
+
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../api/api';
 import MatchDetailsModal from '../modals/MatchDetails';
 import BoxscoreModal from '../Baseball/BoxscoreModal';
@@ -17,6 +22,7 @@ import FixtureMobileView from './Fixtures/FixtureMobileView';
 import FixturesDesktopView from './Fixtures/FixturesDesktopView';
 import FixturesSkeleton from './Fixtures/FixturesSkeleton';
 import SimultaneousChart from './Fixtures/SimultaneousChart';
+import EmptyState from './Fixtures/EmptyState';
 import { statusPriority } from './Fixtures/consts';
 import { normalizeBaseballGames } from '../../utils/normalizeBaseball';
 import { normalizeNFLGames } from '../../utils/normalizeNFL';
@@ -35,8 +41,10 @@ const SPORTS = [
 ];
 
 const Fixtures = ({ selectedDate, searchTerm }) => {
+  const { t } = useTranslation();
 
   const [fixtures, setFixtures] = useState(null);
+  const [hasError, setHasError] = useState(false);
   const [loadingSoccer, setLoadingSoccer] = useState(true);
   const [baseballGames, setBaseballGames] = useState([]);
   const [loadingBaseball, setLoadingBaseball] = useState(true);
@@ -76,10 +84,12 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
         });
 
         setFixtures(trueLocalFixtures);
+        setHasError(false);
         setLoadingSoccer(false);
       })
       .catch((error) => {
         console.error('Error loading matches:', error);
+        setHasError(true);
         setLoadingSoccer(false);
       });
   }, [selectedDate]);
@@ -289,13 +299,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
                     key={sport.id}
                     label={
                       <Stack direction="row" alignItems="center" spacing={0.75}>
-                        {isLiveNow && (
-                          <Box sx={{
-                            width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
-                            animation: 'livePulse 1.5s ease-in-out infinite',
-                            '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
-                          }} />
-                        )}
+                        {isLiveNow && <LivePulseDot />}
                         <span>{sport.icon} {sport.label}</span>
                       </Stack>
                     }
@@ -318,20 +322,32 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
                 clickable
                 sx={{ fontWeight: onlyLive ? 600 : 400 }}
               />
-              <Tooltip title="Partidos simultáneos por hora">
+              <Tooltip title={t('fixtures.hourlyDensityTooltip')}>
                 <Chip
                   icon={<Waves fontSize="small" />}
-                  label="Schedule"
+                  label={t('fixtures.hourlyDensity')}
                   onClick={() => setShowWaveChart(true)}
+                  color="info"
                   variant="outlined"
                   clickable
-                  sx={{ fontWeight: 400 }}
+                  sx={{ fontWeight: 500 }}
                 />
               </Tooltip>
             </Stack>
           </Stack>
 
-          {/* League filter chips — reflects whichever sports are currently active */}
+          {/* League filter chips — reflects whichever sports are currently active.
+              The ::after fade hints that the row keeps scrolling on mobile. */}
+          <Box sx={{
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute', top: 0, right: 0, bottom: 8,
+              width: 28, pointerEvents: 'none',
+              display: { xs: summaryArray.length > 2 ? 'block' : 'none', md: 'none' },
+              background: (theme) => `linear-gradient(to right, transparent, ${theme.palette.background.default})`,
+            },
+          }}>
           <Stack
             direction="row"
             sx={{ flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' }, gap: 1, pb: 2 }}
@@ -388,14 +404,19 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
               );
             })}
           </Stack>
+          </Box>
 
           {onlyComingSoonSelected ? (
-            <Box sx={{ py: 6, textAlign: 'center' }}>
-              <Typography sx={{ fontSize: 40 }}>🚧</Typography>
-              <Typography color="text.secondary" mt={1}>Próximamente.</Typography>
-            </Box>
+            <EmptyState icon="🚧" title={t('fixtures.comingSoon')} />
+          ) : hasError ? (
+            <EmptyState
+              icon="⚠️"
+              title={t('fixtures.errorTitle')}
+              actionLabel={t('fixtures.retry')}
+              onAction={() => loadMatchesData(false, true)}
+            />
           ) : processedFixtures.length === 0 ? (
-            <Typography>No hay partidos disponibles para esta fecha.</Typography>
+            <EmptyState icon="📭" title={t('fixtures.noMatches')} subtitle={t('fixtures.noMatchesSubtitle')} />
           ) : isMobile ? (
             <FixtureMobileView
               processedFixtures={processedFixtures}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Box, IconButton, Skeleton, Typography, useMediaQuery } from '@mui/material';
+import { Modal, Box, IconButton, Skeleton, Tab, Tabs, Typography, useMediaQuery } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -268,28 +268,30 @@ const MatchDetailsModal = ({ open, onClose, team1Id, team2Id, currentMatch }) =>
             </ErrorBoundary>
 
             {/* ── Tab bar ── */}
-            <Box sx={{ display: 'flex', bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_, value) => setActiveTab(value)}
+              variant="fullWidth"
+              sx={{
+                bgcolor: 'background.paper',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                minHeight: 0,
+                '& .MuiTab-root': {
+                  minHeight: 0, py: '11px',
+                  fontSize: 13, fontWeight: 400,
+                  color: 'text.secondary',
+                  fontFamily: FONT, letterSpacing: '-0.1px',
+                  textTransform: 'none',
+                },
+                '& .Mui-selected': { color: 'primary.main !important', fontWeight: 600 },
+                '& .MuiTabs-indicator': { height: 2, bgcolor: 'primary.main' },
+              }}
+            >
               {TABS.map(tab => (
-                <Box
-                  key={tab.value}
-                  component="button"
-                  onClick={() => setActiveTab(tab.value)}
-                  sx={{
-                    flex: 1, py: '11px',
-                    border: 'none', outline: 'none', cursor: 'pointer',
-                    bgcolor: 'transparent',
-                    borderBottom: '2px solid',
-                    borderColor: activeTab === tab.value ? 'primary.main' : 'transparent',
-                    fontSize: 13, fontWeight: activeTab === tab.value ? 600 : 400,
-                    color: activeTab === tab.value ? 'primary.main' : 'text.secondary',
-                    fontFamily: FONT, letterSpacing: '-0.1px',
-                    transition: 'color 0.2s ease, border-color 0.2s ease',
-                  }}
-                >
-                  {tab.label}
-                </Box>
+                <Tab key={tab.value} value={tab.value} label={tab.label} />
               ))}
-            </Box>
+            </Tabs>
 
             {/* ── Tab content ── */}
             <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

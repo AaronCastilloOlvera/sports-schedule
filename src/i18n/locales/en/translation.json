@@ -24,7 +24,15 @@
     "selectDate": "Select Date",
     "refreshLeagues": "Refresh Leagues",
     "noMatches": "No matches available for this date.",
-    "stadiumTBD": "Stadium TBD"
+    "noMatchesSubtitle": "Try another date or clear a filter.",
+    "stadiumTBD": "Stadium TBD",
+    "comingSoon": "Coming soon.",
+    "errorTitle": "Couldn't load matches.",
+    "retry": "Retry",
+    "today": "Today",
+    "searchTeamsPlaceholder": "Search teams…",
+    "hourlyDensity": "Hourly density",
+    "hourlyDensityTooltip": "Simultaneous matches per hour"
   },
   "leagues": {
     "searchPlaceholder": "Search league or type (Cup, League)...",

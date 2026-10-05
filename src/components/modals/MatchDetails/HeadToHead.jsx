@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
@@ -18,32 +18,29 @@ const CARD_ICON_COLOR = {
 
 function SegmentedControl({ options, value, onChange }) {
   return (
-    <Box sx={{ display: 'inline-flex', bgcolor: 'action.hover', borderRadius: '9px', p: '2px' }}>
+    <ToggleButtonGroup
+      value={value}
+      exclusive
+      onChange={(_, next) => next && onChange(next)}
+      sx={{
+        bgcolor: 'action.hover', borderRadius: '9px', p: '2px', gap: '2px',
+        '& .MuiToggleButton-root': {
+          border: 'none', borderRadius: '7px !important',
+          px: { xs: '10px', sm: '14px' }, py: { xs: '4px', sm: '5px' },
+          fontSize: { xs: 12, sm: 13 }, fontWeight: 400, textTransform: 'none',
+          color: 'text.disabled', letterSpacing: '-0.1px', fontFamily: FONT, whiteSpace: 'nowrap',
+          transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        },
+        '& .Mui-selected': {
+          bgcolor: 'background.paper !important', color: 'text.primary !important', fontWeight: 600,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)',
+        },
+      }}
+    >
       {options.map(opt => (
-        <Box
-          key={opt.value}
-          component="button"
-          onClick={() => onChange(opt.value)}
-          sx={{
-            bgcolor: value === opt.value ? 'background.paper' : 'transparent',
-            border: 'none', outline: 'none', cursor: 'pointer',
-            borderRadius: '7px',
-            px: { xs: '10px', sm: '14px' },
-            py: { xs: '4px', sm: '5px' },
-            fontSize: { xs: 12, sm: 13 },
-            fontWeight: value === opt.value ? 600 : 400,
-            color: value === opt.value ? 'text.primary' : 'text.disabled',
-            transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-            boxShadow: value === opt.value ? '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-            letterSpacing: '-0.1px',
-            fontFamily: FONT,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {opt.label}
-        </Box>
+        <ToggleButton key={opt.value} value={opt.value}>{opt.label}</ToggleButton>
       ))}
-    </Box>
+    </ToggleButtonGroup>
   );
 }
 

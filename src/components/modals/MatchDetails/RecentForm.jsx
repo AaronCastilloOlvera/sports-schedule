@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 
@@ -211,25 +211,29 @@ function TeamToggle({ teamHome, teamAway, value, onChange }) {
     { key: 'away', team: teamAway },
   ];
   return (
-    <Box sx={{ display: 'inline-flex', bgcolor: 'action.hover', borderRadius: '10px', p: '3px' }}>
+    <ToggleButtonGroup
+      value={value}
+      exclusive
+      onChange={(_, next) => next && onChange(next)}
+      sx={{
+        bgcolor: 'action.hover', borderRadius: '10px', p: '3px', gap: 0,
+        '& .MuiToggleButton-root': {
+          display: 'flex', alignItems: 'center', gap: '6px',
+          border: 'none', borderRadius: '8px !important',
+          px: { xs: '10px', sm: '14px' }, py: '5px',
+          textTransform: 'none', maxWidth: { xs: 120, sm: 160 },
+          transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        },
+        '& .Mui-selected': {
+          bgcolor: 'background.paper !important',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)',
+        },
+      }}
+    >
       {teams.map(({ key, team }) => {
         const active = value === key;
         return (
-          <Box
-            key={key}
-            component="button"
-            onClick={() => onChange(key)}
-            sx={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              px: { xs: '10px', sm: '14px' }, py: '5px',
-              borderRadius: '8px',
-              bgcolor: active ? 'background.paper' : 'transparent',
-              border: 'none', outline: 'none', cursor: 'pointer',
-              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-              maxWidth: { xs: 120, sm: 160 },
-            }}
-          >
+          <ToggleButton key={key} value={key}>
             {team?.logo && (
               <Box component="img" src={team.logo} alt={team.name}
                 sx={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }} />
@@ -243,10 +247,10 @@ function TeamToggle({ teamHome, teamAway, value, onChange }) {
             }}>
               {team?.name ?? '—'}
             </Typography>
-          </Box>
+          </ToggleButton>
         );
       })}
-    </Box>
+    </ToggleButtonGroup>
   );
 }
 
@@ -265,34 +269,29 @@ function VenueToggle({ value, onChange }) {
     { key: 'away', label: t('h2h.filters.away') },
   ];
   return (
-    <Box sx={{ display: 'inline-flex', bgcolor: 'action.hover', borderRadius: '9px', p: '2px' }}>
-      {options.map(({ key, label }) => {
-        const active = value === key;
-        return (
-          <Box
-            key={key}
-            component="button"
-            onClick={() => onChange(key)}
-            sx={{
-              bgcolor: active ? 'background.paper' : 'transparent',
-              border: 'none', outline: 'none', cursor: 'pointer',
-              borderRadius: '7px',
-              px: { xs: '10px', sm: '14px' }, py: { xs: '4px', sm: '5px' },
-              fontSize: { xs: 12, sm: 13 },
-              fontWeight: active ? 600 : 400,
-              color: active ? 'text.primary' : 'text.disabled',
-              transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-              boxShadow: active ? '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)' : 'none',
-              letterSpacing: '-0.1px',
-              fontFamily: FONT,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {label}
-          </Box>
-        );
-      })}
-    </Box>
+    <ToggleButtonGroup
+      value={value}
+      exclusive
+      onChange={(_, next) => next && onChange(next)}
+      sx={{
+        bgcolor: 'action.hover', borderRadius: '9px', p: '2px', gap: '2px',
+        '& .MuiToggleButton-root': {
+          border: 'none', borderRadius: '7px !important',
+          px: { xs: '10px', sm: '14px' }, py: { xs: '4px', sm: '5px' },
+          fontSize: { xs: 12, sm: 13 }, fontWeight: 400, textTransform: 'none',
+          color: 'text.disabled', letterSpacing: '-0.1px', fontFamily: FONT, whiteSpace: 'nowrap',
+          transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+        },
+        '& .Mui-selected': {
+          bgcolor: 'background.paper !important', color: 'text.primary !important', fontWeight: 600,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.06)',
+        },
+      }}
+    >
+      {options.map(({ key, label }) => (
+        <ToggleButton key={key} value={key}>{label}</ToggleButton>
+      ))}
+    </ToggleButtonGroup>
   );
 }
 

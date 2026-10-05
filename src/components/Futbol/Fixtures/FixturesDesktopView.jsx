@@ -2,52 +2,28 @@ import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
 import PropTypes from "prop-types";
 import LiveStatusChip from './LiveStatusChip';
 import { Insights, Radar } from '@mui/icons-material';
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
-import { keyframes } from '@mui/system';
 import { useTranslation } from 'react-i18next';
 import { statusPriority } from './consts';
 import { CONF_COLOR } from '../betRadarShared';
-
-// Gol animation keyframes
-const goalFlash = keyframes`
-  0% { background-color: transparent; transform: scale(1); }
-  10% { background-color: rgba(255, 215, 0, 0.8); transform: scale(1.15); font-weight: 900; color: #d32f2f; }
-  50% { background-color: rgba(255, 215, 0, 0.3); transform: scale(1.05); color: inherit; }
-  100% { background-color: transparent; transform: scale(1); font-weight: bold; }
-`;
+import { goalFlash, useGoalFlash } from './useGoalFlash';
 
 // Match row component for desktop view, showing matches in a table format
 function MatchRow({ match, handleOpenH2HModal }) {
   const { t } = useTranslation();
-  const prevHomeGoals = useRef(match.goals.home);
-  const prevAwayGoals = useRef(match.goals.away);
-  const [goalEvent, setGoalEvent] = useState(null);
-
-  useEffect(() => {
-    let timeoutId;
-
-    // Home team goal
-    if (match.goals.home !== null && prevHomeGoals.current !== null && match.goals.home > prevHomeGoals.current) {
-      setGoalEvent('home');
-      timeoutId = setTimeout(() => setGoalEvent(null), 3000);
-    } 
-    // Away team goal
-    else if (match.goals.away !== null && prevAwayGoals.current !== null && match.goals.away > prevAwayGoals.current) {
-      setGoalEvent('away');
-      timeoutId = setTimeout(() => setGoalEvent(null), 3000);
-    }
-
-    prevHomeGoals.current = match.goals.home;
-    prevAwayGoals.current = match.goals.away;
-
-    return () => clearTimeout(timeoutId);
-  }, [match.goals.home, match.goals.away]);
+  const goalEvent = useGoalFlash(match.goals.home, match.goals.away);
 
   const isFinished = statusPriority[match.fixture.status.short] === 3;
 
   return (
-    <TableRow sx={{ opacity: isFinished ? 0.55 : 1, transition: 'opacity 0.2s' }}>
+    <TableRow
+      sx={{
+        opacity: isFinished ? 0.55 : 1,
+        transition: 'opacity 0.2s, background-color 0.15s ease',
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
       <TableCell>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           {match.league.logo && (
@@ -137,7 +113,10 @@ function MatchRow({ match, handleOpenH2HModal }) {
             );
           })()}
           <Tooltip title={t('fixtures.headToHead')}>
-            <IconButton onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}>
+            <IconButton
+              aria-label={t('fixtures.headToHead')}
+              onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}
+            >
               <Insights />
             </IconButton>
           </Tooltip>

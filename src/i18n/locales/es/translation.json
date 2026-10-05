@@ -24,7 +24,15 @@
     "selectDate": "Seleccionar Fecha",
     "refreshLeagues": "Refrescar Ligas",
     "noMatches": "No hay partidos disponibles para esta fecha.",
-    "stadiumTBD": "Estadio por definir"
+    "noMatchesSubtitle": "Prueba con otra fecha o quita algún filtro.",
+    "stadiumTBD": "Estadio por definir",
+    "comingSoon": "Próximamente.",
+    "errorTitle": "No se pudieron cargar los partidos.",
+    "retry": "Reintentar",
+    "today": "Hoy",
+    "searchTeamsPlaceholder": "Buscar equipos…",
+    "hourlyDensity": "Densidad horaria",
+    "hourlyDensityTooltip": "Partidos simultáneos por hora"
   },
   "leagues": {
     "searchPlaceholder": "Buscar liga o tipo (Cup, League)...",

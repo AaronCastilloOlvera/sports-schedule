@@ -3,13 +3,17 @@ import { Insights, Radar } from '@mui/icons-material';
 import LiveStatusChip from './LiveStatusChip';
 import PropTypes from "prop-types";
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { statusPriority } from './consts';
 import { CONF_COLOR } from '../betRadarShared';
+import { goalFlash, useGoalFlash } from './useGoalFlash';
 
 // Component rendered for mobile view, showing matches in a card format
 const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
+  const { t } = useTranslation();
   const isFinished = statusPriority[match.fixture.status.short] === 3;
+  const goalEvent = useGoalFlash(match.goals.home, match.goals.away);
   return (
   <Card key={match.fixture.id} elevation={2} sx={{ borderRadius: 2, opacity: isFinished ? 0.55 : 1, transition: 'opacity 0.2s' }}>
     <CardContent sx={{ pb: '16px !important' }}>
@@ -48,7 +52,19 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
           <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'inline-block' }}>
             {match.fixture.status.elapsed !== null ? (
               <Typography variant="h5" fontWeight="bold">
-                {match.goals.home} - {match.goals.away}
+                <Box
+                  component="span"
+                  sx={{ display: 'inline-block', px: '2px', borderRadius: '4px', animation: goalEvent === 'home' ? `${goalFlash} 3s ease-out` : 'none' }}
+                >
+                  {match.goals.home}
+                </Box>
+                {' - '}
+                <Box
+                  component="span"
+                  sx={{ display: 'inline-block', px: '2px', borderRadius: '4px', animation: goalEvent === 'away' ? `${goalFlash} 3s ease-out` : 'none' }}
+                >
+                  {match.goals.away}
+                </Box>
               </Typography>
             ) : (
               <Typography fontWeight="bold">VS</Typography>
@@ -67,9 +83,14 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="caption" color="textSecondary" sx={{ maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          🏟️ {match.fixture.venue.name || 'Estadio por definir'}
+          🏟️ {match.fixture.venue.name || t('fixtures.stadiumTBD')}
         </Typography>
-        <IconButton size="small" onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)} color="primary">
+        <IconButton
+          size="small"
+          aria-label={t('fixtures.headToHead')}
+          onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}
+          color="primary"
+        >
           <Insights fontSize="small" />
         </IconButton>
       </Box>
