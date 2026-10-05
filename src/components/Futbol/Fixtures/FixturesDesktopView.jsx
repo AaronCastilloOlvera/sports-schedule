@@ -1,7 +1,7 @@
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, Tooltip } from '@mui/material';
 import PropTypes from "prop-types";
 import LiveStatusChip from './LiveStatusChip';
-import { Insights, Radar } from '@mui/icons-material';
+import { Insights } from '@mui/icons-material';
 import React from 'react';
 import { areRowsEqual, matchPropTypes } from '../../../utils/matchComparisons';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,9 @@ import { goalFlash, useGoalFlash } from './useGoalFlash';
 function MatchRow({ match, handleOpenH2HModal }) {
   const { t } = useTranslation();
   const goalEvent = useGoalFlash(match.goals.home, match.goals.away);
+  const maxConfidence = match.betRadar
+    ? Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0)
+    : null;
 
   const isFinished = statusPriority[match.fixture.status.short] === 3;
 
@@ -104,20 +107,18 @@ function MatchRow({ match, handleOpenH2HModal }) {
       </TableCell>
       <TableCell>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {match.betRadar && (() => {
-            const maxConf = Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0);
-            return (
-              <Tooltip title={`BetRadar · mejor pick: ${maxConf}%`}>
-                <Radar fontSize="small" sx={{ mr: 0.5, color: CONF_COLOR(maxConf) }} />
-              </Tooltip>
-            );
-          })()}
-          <Tooltip title={t('fixtures.headToHead')}>
+          {/* NOTE: tints the H2H icon by BetRadar confidence instead of a
+              separate badge, one icon doing two jobs. BetRadar is a betting
+              signal though -- once auth/roles land, normal users should see
+              this icon in its plain default color always (or the tint
+              dropped entirely for them); only an admin should see the real
+              confidence color. */}
+          <Tooltip title={match.betRadar ? `${t('fixtures.headToHead')} · BetRadar ${maxConfidence}%` : t('fixtures.headToHead')}>
             <IconButton
               aria-label={t('fixtures.headToHead')}
               onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}
             >
-              <Insights />
+              <Insights sx={{ color: match.betRadar ? CONF_COLOR(maxConfidence) : undefined }} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -148,7 +149,7 @@ export default function FixturesDesktopView({ processedFixtures, handleOpenH2HMo
             <TableCell align="center">{t('fixtures.table.score')}</TableCell>
             <TableCell align="left">{t('fixtures.table.away')}</TableCell>
             <TableCell>{t('fixtures.table.stadium')}</TableCell>
-            <TableCell>{t('fixtures.table.actions')}</TableCell>
+            <TableCell>{t('fixtures.table.insights')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

@@ -1,5 +1,5 @@
 import { Box, Card, CardContent, Tooltip, Typography, IconButton } from '@mui/material';
-import { Insights, Radar } from '@mui/icons-material';
+import { Insights } from '@mui/icons-material';
 import LiveStatusChip from './LiveStatusChip';
 import PropTypes from "prop-types";
 import React from 'react';
@@ -14,6 +14,9 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
   const { t } = useTranslation();
   const isFinished = statusPriority[match.fixture.status.short] === 3;
   const goalEvent = useGoalFlash(match.goals.home, match.goals.away);
+  const maxConfidence = match.betRadar
+    ? Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0)
+    : null;
   return (
   <Card key={match.fixture.id} elevation={2} sx={{ borderRadius: 2, opacity: isFinished ? 0.55 : 1, transition: 'opacity 0.2s' }}>
     <CardContent sx={{ pb: '16px !important' }}>
@@ -25,14 +28,6 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
           <Typography variant="caption" color="textSecondary">
             {match.league.name}
           </Typography>
-          {match.betRadar && (() => {
-            const maxConf = Math.max(...(match.betRadar.top_picks ?? []).map(p => p.confidence ?? 0), 0);
-            return (
-              <Tooltip title={`BetRadar · mejor pick: ${maxConf}%`}>
-                <Radar fontSize="small" sx={{ color: CONF_COLOR(maxConf) }} />
-              </Tooltip>
-            );
-          })()}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LiveStatusChip fixture={match.fixture} sport={match.sport} />
@@ -85,14 +80,22 @@ const MatchMobileCard = React.memo(({ match, handleOpenH2HModal }) => {
         <Typography variant="caption" color="textSecondary" sx={{ maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           🏟️ {match.fixture.venue.name || t('fixtures.stadiumTBD')}
         </Typography>
-        <IconButton
-          size="small"
-          aria-label={t('fixtures.headToHead')}
-          onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}
-          color="primary"
-        >
-          <Insights fontSize="small" />
-        </IconButton>
+        {/* NOTE: tints the H2H icon by BetRadar confidence instead of a
+            separate badge, one icon doing two jobs. BetRadar is a betting
+            signal though -- once auth/roles land, normal users should see
+            this icon in its plain default color always (or the tint dropped
+            entirely for them); only an admin should see the real confidence
+            color. */}
+        <Tooltip title={match.betRadar ? `${t('fixtures.headToHead')} · BetRadar ${maxConfidence}%` : t('fixtures.headToHead')}>
+          <IconButton
+            size="small"
+            aria-label={t('fixtures.headToHead')}
+            onClick={() => handleOpenH2HModal(match.teams.home.id, match.teams.away.id, match.fixture.id)}
+            color={match.betRadar ? undefined : 'primary'}
+          >
+            <Insights fontSize="small" sx={{ color: match.betRadar ? CONF_COLOR(maxConfidence) : undefined }} />
+          </IconButton>
+        </Tooltip>
       </Box>
 
     </CardContent>
