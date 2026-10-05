@@ -36,7 +36,7 @@ export function normalizeNFLGame(game) {
         extra: null,
       },
     },
-    league: { id: 'nfl', logo: '/logos/nfl.webp', name: 'NFL' },
+    league: { id: 'nfl', logo: 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png', name: 'NFL' },
     teams: {
       home: { id: home.id, name: home.name ?? '—', logo: teamLogo(home.abbr) },
       away: { id: away.id, name: away.name ?? '—', logo: teamLogo(away.abbr) },
