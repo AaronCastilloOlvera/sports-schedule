@@ -1,25 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Alert, Avatar, Box, Card, CardActionArea, CardContent, Chip, CircularProgress,
-  Divider, IconButton, Stack, Typography, ToggleButton, ToggleButtonGroup,
+  Divider, IconButton, Stack, Typography,
 } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api';
 import BoxscoreModal from './BoxscoreModal';
 import {
-  fmtTime, inningLabel, outsLabel, isSuspended, isLive, isFinal, isWinner,
-  teamColor, teamLogoUrl, teamInitials,
+  fmtTime, inningDetail, outsLabel, isLive, isFinal, isPostponed, isCanceled, isWinner,
+  getHomeCompetitor, getAwayCompetitor, teamColor, teamLogoUrl, teamInitials,
 } from './baseballHelpers';
 
 // Plain <img>, no colored circle behind it — falls back to the colored
-// initials avatar only if the logo 404s (LMB teams, mostly).
-function TeamLogo({ teamId, teamName }) {
+// initials avatar only if the logo 404s.
+function TeamLogo({ teamId, teamName, abbreviation }) {
   const [failed, setFailed] = useState(false);
-  const logoUrl = teamLogoUrl(teamId);
+  const logoUrl = teamLogoUrl(abbreviation);
 
   if (logoUrl && !failed) {
     return (
@@ -40,12 +41,15 @@ function TeamLogo({ teamId, teamName }) {
   );
 }
 
+TeamLogo.propTypes = {
+  teamId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  teamName: PropTypes.string,
+  abbreviation: PropTypes.string,
+};
+
 // ── StatusChip ────────────────────────────────────────────────────────────────
 
 function StatusChip({ game }) {
-  if (isSuspended(game)) {
-    return <Chip label="Suspendido" size="small" color="warning" variant="outlined" sx={{ fontSize: 11, height: 20 }} />;
-  }
   if (isLive(game)) {
     return (
       <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -64,27 +68,40 @@ function StatusChip({ game }) {
   if (isFinal(game)) {
     return <Chip label="Final" size="small" sx={{ fontSize: 11, height: 20 }} />;
   }
+  if (isPostponed(game) || isCanceled(game)) {
+    return (
+      <Chip
+        label={inningDetail(game) || (isCanceled(game) ? 'Cancelado' : 'Postergado')}
+        size="small" color="warning" variant="outlined" sx={{ fontSize: 11, height: 20 }}
+      />
+    );
+  }
   return (
     <Typography sx={{ fontSize: 11, color: 'text.secondary', fontWeight: 500 }}>
-      {fmtTime(game.gameDate)}
+      {fmtTime(game.date)}
     </Typography>
   );
 }
 
+StatusChip.propTypes = {
+  game: PropTypes.object.isRequired,
+};
+
 // ── GameCard ──────────────────────────────────────────────────────────────────
 
 function GameCard({ game, onClick }) {
-  const ls = game.linescore ?? {};
-  const away = game.teams?.away ?? {};
-  const home = game.teams?.home ?? {};
-  const awayPP = away.probablePitcher?.fullName;
-  const homePP = home.probablePitcher?.fullName;
-  const showScore = isLive(game) || isFinal(game) || isSuspended(game);
+  const away = getAwayCompetitor(game);
+  const home = getHomeCompetitor(game);
+  const awayPP = away.probables?.[0]?.athlete?.fullName;
+  const homePP = home.probables?.[0]?.athlete?.fullName;
+  const live = isLive(game);
+  const final = isFinal(game);
+  const showScore = live || final;
 
   return (
     <Card
       variant="outlined"
-      sx={{ borderLeft: 3, borderLeftColor: isLive(game) ? 'error.main' : isSuspended(game) ? 'warning.main' : 'divider', height: '100%' }}
+      sx={{ borderLeft: 3, borderLeftColor: live ? 'error.main' : 'divider', height: '100%' }}
     >
       <CardActionArea onClick={onClick} sx={{ height: '100%' }}>
         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -92,10 +109,10 @@ function GameCard({ game, onClick }) {
           {/* Header row: status + inning */}
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
             <StatusChip game={game} />
-            {isLive(game) && (
+            {live && (
               <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
-                {inningLabel(ls.inningHalf, ls.currentInning)}
-                {ls.outs != null ? ` · ${outsLabel(ls.outs)}` : ''}
+                {inningDetail(game)}
+                {outsLabel(game) ? ` · ${outsLabel(game)}` : ''}
               </Typography>
             )}
           </Stack>
@@ -103,10 +120,10 @@ function GameCard({ game, onClick }) {
           {/* Teams */}
           {[['away', away], ['home', home]].map(([key, side]) => {
             const teamId = side.team?.id;
-            const winner = isFinal(game) && isWinner(side);
+            const winner = final && isWinner(side);
             return (
               <Stack key={key} direction="row" alignItems="center" spacing={1} mb={0.5}>
-                <TeamLogo teamId={teamId} teamName={side.team?.name} />
+                <TeamLogo teamId={teamId} teamName={side.team?.displayName} abbreviation={side.team?.abbreviation} />
                 {/* Name */}
                 <Typography
                   sx={{
@@ -118,10 +135,10 @@ function GameCard({ game, onClick }) {
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}
-                  title={side.team?.name}
+                  title={side.team?.displayName}
                 >
                   {winner && '★ '}
-                  {side.team?.name ?? '—'}
+                  {side.team?.displayName ?? '—'}
                 </Typography>
                 {/* Score */}
                 {showScore && (
@@ -144,7 +161,7 @@ function GameCard({ game, onClick }) {
             <>
               <Divider sx={{ my: 0.75 }} />
               <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>
-                {isLive(game) || isFinal(game) || isSuspended(game)
+                {live || final
                   ? `SP: ${awayPP ?? '?'}`
                   : `${awayPP ?? '?'} vs ${homePP ?? '?'}`}
               </Typography>
@@ -157,11 +174,15 @@ function GameCard({ game, onClick }) {
   );
 }
 
+GameCard.propTypes = {
+  game: PropTypes.object.isRequired,
+  onClick: PropTypes.func.isRequired,
+};
+
 // ── BaseballSchedule (main) ───────────────────────────────────────────────────
 
 export default function BaseballSchedule() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [league, setLeague]             = useState('lmb');
   const [games, setGames]               = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState(null);
@@ -171,19 +192,18 @@ export default function BaseballSchedule() {
     setLoading(true);
     setError(null);
     const dateStr = selectedDate.format('YYYY-MM-DD');
-    apiClient.fetchBaseballSchedule(dateStr, league)
+    apiClient.fetchBaseballSchedule(dateStr)
       .then(res => setGames(res.data ?? []))
       .catch(() => setError('Error al cargar los partidos.'))
       .finally(() => setLoading(false));
-  }, [selectedDate, league]);
+  }, [selectedDate]);
 
   useEffect(() => { fetchGames(); }, [fetchGames]);
 
-  const live      = games.filter(isLive);
-  const final     = games.filter(isFinal);
-  const suspended = games.filter(isSuspended);
-  const pre       = games.filter(g => !isLive(g) && !isFinal(g) && !isSuspended(g));
-  const ordered = [...live, ...suspended, ...pre, ...final];
+  const live  = games.filter(isLive);
+  const final = games.filter(isFinal);
+  const pre   = games.filter(g => !isLive(g) && !isFinal(g));
+  const ordered = [...live, ...pre, ...final];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -191,22 +211,11 @@ export default function BaseballSchedule() {
         {/* ── Controls ─────────────────────────────────────────────────────── */}
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
+          justifyContent="flex-end"
           alignItems={{ xs: 'stretch', sm: 'center' }}
           spacing={2}
           mb={2}
         >
-          {/* League toggle */}
-          <ToggleButtonGroup
-            value={league}
-            exclusive
-            onChange={(_, v) => v && setLeague(v)}
-            size="small"
-          >
-            <ToggleButton value="lmb" sx={{ px: 2 }}>⚾ LMB</ToggleButton>
-            <ToggleButton value="mlb" sx={{ px: 2 }}>🇺🇸 MLB</ToggleButton>
-          </ToggleButtonGroup>
-
           {/* Date navigator */}
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <IconButton size="small" color="primary" onClick={() => setSelectedDate(d => d.subtract(1, 'day'))}>
@@ -227,10 +236,9 @@ export default function BaseballSchedule() {
         {/* ── Summary counts ───────────────────────────────────────────────── */}
         {!loading && !error && games.length > 0 && (
           <Stack direction="row" spacing={1} mb={2} flexWrap="wrap">
-            {live.length      > 0 && <Chip label={`${live.length} en vivo`}       color="error"   size="small" />}
-            {suspended.length > 0 && <Chip label={`${suspended.length} suspendidos`} color="warning" size="small" variant="outlined" />}
-            {pre.length       > 0 && <Chip label={`${pre.length} por jugar`}      color="default" size="small" />}
-            {final.length     > 0 && <Chip label={`${final.length} finales`}     color="success" size="small" variant="outlined" />}
+            {live.length  > 0 && <Chip label={`${live.length} en vivo`}  color="error"   size="small" />}
+            {pre.length   > 0 && <Chip label={`${pre.length} por jugar`} color="default" size="small" />}
+            {final.length > 0 && <Chip label={`${final.length} finales`} color="success" size="small" variant="outlined" />}
           </Stack>
         )}
 
@@ -253,14 +261,14 @@ export default function BaseballSchedule() {
             gap: 1.5,
           }}>
             {ordered.map(game => (
-              <GameCard key={game.gamePk} game={game} onClick={() => setOpenGame(game)} />
+              <GameCard key={game.id} game={game} onClick={() => setOpenGame(game)} />
             ))}
           </Box>
         )}
 
         {/* ── Box score modal ───────────────────────────────────────────────── */}
         {openGame && (
-          <BoxscoreModal game={openGame} league={league} onClose={() => setOpenGame(null)} />
+          <BoxscoreModal game={openGame} onClose={() => setOpenGame(null)} />
         )}
       </Box>
     </LocalizationProvider>

@@ -21,6 +21,9 @@ const LIVE_LABEL = {
 
   // Pre-formatted string from normalizeNFL, e.g. "Q2 3:53" or "Medio tiempo".
   nfl: ({ short, elapsed }) => elapsed || short,
+
+  // Pre-formatted string from normalizeNBA, e.g. "Q3 5:12" or "Medio tiempo".
+  nba: ({ short, elapsed }) => elapsed || short,
 };
 
 const liveLabel = (sport, status) => (LIVE_LABEL[sport] ?? LIVE_LABEL.futbol)(status);

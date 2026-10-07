@@ -202,6 +202,30 @@ class ApiClient {
     return response.data;
   }
 
+  // NBA — schedule (short TTL, for the Partidos view) + Radar (picks)
+  async fetchNBASchedule(date) {
+    const response = await this.client.get(`/nba-radar/schedule?date=${date}`);
+    return response.data;
+  }
+
+  async fetchNBARadarCached(date) {
+    const response = await this.client.get(`/nba-radar/cached?date=${date}`);
+    return response.data;
+  }
+
+  async fetchNBARadarSuggestions(date) {
+    const response = await this.client.get(`/nba-radar/suggestions?date=${date}`, { timeout: 45000 });
+    return response.data;
+  }
+
+  async fetchNBARadarAccuracy(days = 7, minConfidence = 70) {
+    const response = await this.client.get(
+      `/nba-radar/accuracy?days=${days}&min_confidence=${minConfidence}`,
+      { timeout: 20000 },
+    );
+    return response.data;
+  }
+
   async updateTicket(ticketId, formData) {
     const response = await this.client.put(`/bets/update-ticket?ticket_id=${ticketId}`, formData);
     return response.data;
@@ -246,9 +270,9 @@ class ApiClient {
     return response.data;
   }
 
-  // Baseball
-  async fetchBaseballSchedule(date, league = 'lmb') {
-    const response = await this.client.get(`/baseball/schedule?date=${date}&league=${league}`);
+  // Baseball — MLB only, ESPN-sourced (LMB has no ESPN coverage and was dropped)
+  async fetchBaseballSchedule(date) {
+    const response = await this.client.get(`/baseball/schedule?date=${date}`);
     return response.data;
   }
 
@@ -257,13 +281,13 @@ class ApiClient {
     return response.data;
   }
 
-  async fetchPitcherStats(personId, league = 'lmb') {
-    const response = await this.client.get(`/baseball/pitcher-stats/${personId}?league=${league}`);
+  async fetchPitcherStats(personId) {
+    const response = await this.client.get(`/baseball/pitcher-stats/${personId}`);
     return response.data;
   }
 
-  async fetchPitcherGameLog(personId, league = 'lmb', seasons = 1) {
-    const response = await this.client.get(`/baseball/pitcher-gamelog/${personId}?league=${league}&seasons=${seasons}`);
+  async fetchPitcherGameLog(personId, seasons = 1) {
+    const response = await this.client.get(`/baseball/pitcher-gamelog/${personId}?seasons=${seasons}`);
     return response.data;
   }
 

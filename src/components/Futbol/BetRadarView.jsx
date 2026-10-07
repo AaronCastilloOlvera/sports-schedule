@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import {
   AttachMoney, Balance, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
-  HelpOutline, LooksOne, SportsBaseball, SportsFootball, SportsSoccer, Square,
+  HelpOutline, LooksOne, SportsBaseball, SportsBasketball, SportsFootball, SportsSoccer, Square,
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
@@ -17,7 +17,7 @@ const MARKET_META = {
   corners:      { Icon: Flag,           color: '#2196f3', label: 'Córners'   },
   yellow_cards: { Icon: Square,         color: '#ffc107', label: 'Tarjetas'  },
   btts:         { Icon: CompareArrows,  color: '#9c27b0', label: 'BTTS'      },
-  // MLB / LMB (NFL también usa moneyline/total — ver override abajo)
+  // MLB (NFL también usa moneyline/total — ver override abajo)
   total:        { Icon: SportsBaseball, color: '#4caf50', label: 'Carreras'  },
   moneyline:    { Icon: AttachMoney,    color: '#00bcd4', label: 'Ganador'   },
   nrfi:         { Icon: LooksOne,       color: '#9c27b0', label: '1ª entrada'},
@@ -26,9 +26,10 @@ const MARKET_META = {
   spread:       { Icon: Balance,        color: '#795548', label: 'Hándicap' },
 };
 
-// 'total' significa runs en MLB/LMB pero puntos en NFL — mismo key, override.
+// 'total' significa runs en MLB pero puntos en NFL/NBA — mismo key, override.
 const MARKET_META_OVERRIDE = {
   nfl: { total: { Icon: SportsFootball, color: '#4caf50', label: 'Puntos' } },
+  nba: { total: { Icon: SportsBasketball, color: '#4caf50', label: 'Puntos' } },
 };
 
 const META = (market, sport) =>
@@ -38,8 +39,8 @@ const META = (market, sport) =>
 const SPORT_META = {
   futbol: { Icon: SportsSoccer,   color: '#2e7d32', label: 'Fútbol' },
   mlb:    { Icon: SportsBaseball, color: '#c62828', label: 'MLB'    },
-  lmb:    { Icon: SportsBaseball, color: '#f9a825', label: 'LMB'    },
   nfl:    { Icon: SportsFootball, color: '#6d4c41', label: 'NFL'    },
+  nba:    { Icon: SportsBasketball, color: '#ef6c00', label: 'NBA' },
 };
 
 const SPORTS = [
@@ -60,20 +61,20 @@ const SPORTS = [
     accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'mlb'),
   },
   {
-    key: 'lmb',
-    label: 'LMB',
-    markets: ['total', 'moneyline', 'nrfi', 'hits'],
-    cached:      (date) => apiClient.fetchMLBRadarCached(date, 'lmb'),
-    suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'lmb'),
-    accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'lmb'),
-  },
-  {
     key: 'nfl',
     label: 'NFL',
     markets: ['moneyline', 'spread', 'total'],
     cached:      (date) => apiClient.fetchNFLRadarCached(date),
     suggestions: (date) => apiClient.fetchNFLRadarSuggestions(date),
     accuracy:    () => apiClient.fetchNFLRadarAccuracy(7, 70),
+  },
+  {
+    key: 'nba',
+    label: 'NBA',
+    markets: ['moneyline', 'spread', 'total'],
+    cached:      (date) => apiClient.fetchNBARadarCached(date),
+    suggestions: (date) => apiClient.fetchNBARadarSuggestions(date),
+    accuracy:    () => apiClient.fetchNBARadarAccuracy(7, 70),
   },
 ];
 

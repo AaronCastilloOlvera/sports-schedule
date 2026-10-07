@@ -1,5 +1,8 @@
-// Shared MLB Stats API helpers — used by BaseballSchedule.jsx, BoxscoreModal.jsx,
-// and the fixture-normalizer that feeds baseball games into the unified schedule.
+// Shared ESPN-shaped helpers — used by normalizeBaseball.js, BaseballSchedule.jsx
+// and BoxscoreModal.jsx. `game` here is always a raw ESPN scoreboard event
+// (events[].competitions[0]...), the same shape NFL/NBA already use, just with
+// baseball-specific fields (status.type.shortDetail already reads like
+// "Top 6th", linescores carry hits/errors, competitors carry `probables`).
 
 export const TZ = 'America/Mexico_City';
 
@@ -8,41 +11,55 @@ export const fmtTime = (utcStr) =>
     hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: true,
   });
 
-export const inningLabel = (half, num) => {
-  if (!num) return '';
-  const halves = { Top: 'Alta', Bottom: 'Baja' };
-  return `${halves[half] ?? half} ${num}°`;
-};
+export const getCompetition   = (game) => game?.competitions?.[0] ?? {};
+export const getCompetitors   = (game) => getCompetition(game).competitors ?? [];
+export const getHomeCompetitor = (game) => getCompetitors(game).find((c) => c.homeAway === 'home') ?? {};
+export const getAwayCompetitor = (game) => getCompetitors(game).find((c) => c.homeAway === 'away') ?? {};
 
-export const outsLabel = (outs) => (outs != null ? `${outs} out${outs !== 1 ? 's' : ''}` : '');
+const statusType = (game) => getCompetition(game).status?.type ?? {};
+export const isFinal     = (game) => statusType(game).completed === true;
+export const isLive      = (game) => statusType(game).state === 'in';
+export const isPostponed = (game) => statusType(game).name === 'STATUS_POSTPONED';
+export const isCanceled  = (game) => statusType(game).name === 'STATUS_CANCELED';
+export const isWinner    = (competitor) => competitor?.winner === true;
 
-// MLB Stats API keeps a "Suspended" game's abstractGameState as "Live" forever,
-// even weeks after it stopped — it's not actually in progress, so it needs its
-// own bucket instead of showing a pulsing "EN VIVO" badge for a dead game.
-export const isSuspended = (g) => g?.status?.detailedState === 'Suspended';
-export const isWarmup = (g) => g?.status?.detailedState === 'Warmup';
-export const isLive   = (g) => g?.status?.abstractGameState === 'Live' && !isSuspended(g) && !isWarmup(g);
-export const isFinal  = (g) => g?.status?.abstractGameState === 'Final';
-export const isWinner = (side) => side?.isWinner === true;
+// ESPN already formats this as "Top 6th" / "Bottom 9th" — no half+number
+// reconstruction needed, unlike MLB Stats API's separate fields.
+export const inningDetail = (game) => statusType(game).shortDetail || '';
+export const outsLabel    = (game) => getCompetition(game).outsText || '';
+
+export const teamOverallRecord = (competitor) =>
+  (competitor?.records ?? []).find((r) => r.type === 'total')?.summary;
 
 const AVATAR_COLORS = [
-  '#1565c0','#2e7d32','#b71c1c','#e65100','#6a1b9a',
-  '#00695c','#ad1457','#4527a0','#37474f','#558b2f',
+  '#1565c0', '#2e7d32', '#b71c1c', '#e65100', '#6a1b9a',
+  '#00695c', '#ad1457', '#4527a0', '#37474f', '#558b2f',
 ];
-export const teamColor    = (id) => AVATAR_COLORS[(id ?? 0) % AVATAR_COLORS.length];
-// LMB teams have real logos at this CDN path too, not just MLB franchises.
-export const teamLogoUrl  = (id) => (id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : undefined);
+export const teamColor = (id) => AVATAR_COLORS[(Number(id) || 0) % AVATAR_COLORS.length];
 export const teamInitials = (name = '') => {
   const words = name.split(' ').filter(Boolean);
-  // Use last meaningful word (e.g. "Diablos Rojos del Mexico" → "MEX")
+  // Use last meaningful word (e.g. "Cleveland Guardians" → "GUA")
   return words[words.length - 1]?.substring(0, 3).toUpperCase() ?? '?';
 };
 
-// Public headshot CDN, same "no API key" pattern as team logos. Not every
-// person id has a photo (prospects/rare LMB-only players) — 404s should fall
-// back to a generic avatar wherever this is used.
+// Same CDN family as NFL/NBA's team logos — keyed by lowercase abbreviation,
+// not by a stats-provider numeric id.
+export const teamLogoUrl = (abbr) =>
+  (abbr ? `https://a.espncdn.com/i/teamlogos/mlb/500/${abbr.toLowerCase()}.png` : undefined);
+
+// Public headshot CDN, same "no API key" pattern as team logos (confirmed via
+// probables[].athlete.headshot on the live scoreboard). Not every id has a
+// photo — 404s should fall back to a generic avatar wherever this is used.
 export const playerHeadshotUrl = (id) =>
-  (id ? `https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_100/v1/people/${id}/headshot/67/current.png` : undefined);
+  (id ? `https://a.espncdn.com/i/headshots/mlb/players/full/${id}.png` : undefined);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Pitcher game-log aggregation — consumes the backend's own synthesized
+// "gamelog" contract from /baseball/pitcher-gamelog (opponent/isHome/stat per
+// start). This is a backend-built abstraction independent of the underlying
+// data source (MLB Stats API or ESPN), so its shape doesn't change with the
+// ESPN migration — only the `league` param going away does.
+// ─────────────────────────────────────────────────────────────────────────
 
 // MLB's "IP" string is base-3, not decimal — "4.2" means 4 and 2/3 innings
 // (2 outs into the 5th), not 4.2 innings. Convert to outs to do real math on it.

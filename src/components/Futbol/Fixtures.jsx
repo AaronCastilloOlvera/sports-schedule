@@ -26,18 +26,18 @@ import EmptyState from './Fixtures/EmptyState';
 import { statusPriority } from './Fixtures/consts';
 import { normalizeBaseballGames } from '../../utils/normalizeBaseball';
 import { normalizeNFLGames } from '../../utils/normalizeNFL';
+import { normalizeNBAGames } from '../../utils/normalizeNBA';
+import NBAGameModal from '../modals/NBAGameModal';
 
 const POLLING_TIME = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS, 10) || 60000;
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT']);
 
-// Basketball has no data source yet — the chip still shows so the filter row
-// communicates "more sports are coming", it just never adds rows.
 const SPORTS = [
   { id: 'futbol',     label: 'Soccer',     icon: '⚽', available: true },
   { id: 'baseball',   label: 'Baseball',   icon: '⚾', available: true },
   { id: 'nfl',        label: 'NFL',        icon: '🏈', available: true },
-  { id: 'basketball', label: 'Basketball', icon: '🏀', available: false },
+  { id: 'basketball', label: 'Basketball', icon: '🏀', available: true },
 ];
 
 const Fixtures = ({ selectedDate, searchTerm }) => {
@@ -50,16 +50,19 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   const [loadingBaseball, setLoadingBaseball] = useState(true);
   const [nflGames, setNflGames] = useState([]);
   const [loadingNFL, setLoadingNFL] = useState(true);
-  const [activeSports, setActiveSports] = useState(['futbol', 'baseball', 'nfl']);
+  const [nbaGames, setNbaGames] = useState([]);
+  const [loadingNBA, setLoadingNBA] = useState(true);
+  const [activeSports, setActiveSports] = useState(['futbol', 'baseball', 'nfl', 'basketball']);
   const [selectedLeagues, setSelectedLeagues] = useState([]);
   const [h2hModalOpen, setH2hModalOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState({ team1: null, team2: null });
   const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [boxscoreGame, setBoxscoreGame] = useState(null);
-  const [boxscoreLeague, setBoxscoreLeague] = useState('lmb');
+  const [nbaModalMatchId, setNbaModalMatchId] = useState(null);
   const [showWaveChart, setShowWaveChart] = useState(false);
   const [onlyLive, setOnlyLive] = useState(false);
   const [betRadarByFixture, setBetRadarByFixture] = useState({});
+  const [nbaRadarByFixture, setNbaRadarByFixture] = useState({});
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -99,15 +102,9 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
 
     const dateStr = selectedDate.format('YYYY-MM-DD');
 
-    Promise.all([
-      apiClient.fetchBaseballSchedule(dateStr, 'lmb'),
-      apiClient.fetchBaseballSchedule(dateStr, 'mlb'),
-    ])
-      .then(([lmbRes, mlbRes]) => {
-        setBaseballGames([
-          ...normalizeBaseballGames(lmbRes.data, 'lmb'),
-          ...normalizeBaseballGames(mlbRes.data, 'mlb'),
-        ]);
+    apiClient.fetchBaseballSchedule(dateStr)
+      .then(res => {
+        setBaseballGames(normalizeBaseballGames(res.data));
         setLoadingBaseball(false);
       })
       .catch((error) => {
@@ -132,6 +129,22 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       });
   }, [selectedDate]);
 
+  const loadNBAData = useCallback((showLoading = true) => {
+    if (showLoading) setLoadingNBA(true);
+
+    const dateStr = selectedDate.format('YYYY-MM-DD');
+
+    apiClient.fetchNBASchedule(dateStr)
+      .then(res => {
+        setNbaGames(normalizeNBAGames(res.data));
+        setLoadingNBA(false);
+      })
+      .catch((error) => {
+        console.error('Error loading NBA games:', error);
+        setLoadingNBA(false);
+      });
+  }, [selectedDate]);
+
   // Cached only — never trigger the heavy on-demand analysis just to show a
   // badge; if this date hasn't been prewarmed yet, simply show no indicators.
   const loadBetRadarData = useCallback(() => {
@@ -145,21 +158,38 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       .catch(() => setBetRadarByFixture({}));
   }, [selectedDate]);
 
+  // Same cached-only mechanism as football's BetRadar, but keyed by the
+  // negative fixture id normalizeNBA derives from event_id, so it matches
+  // nbaGames' fixture.id directly.
+  const loadNBABetRadarData = useCallback(() => {
+    const dateStr = selectedDate.format('YYYY-MM-DD');
+    apiClient.fetchNBARadarCached(dateStr)
+      .then(res => {
+        const byFixture = {};
+        (res?.suggestions ?? []).forEach(s => { byFixture[-Number(s.event_id)] = s; });
+        setNbaRadarByFixture(byFixture);
+      })
+      .catch(() => setNbaRadarByFixture({}));
+  }, [selectedDate]);
+
   useEffect(() => {
     loadMatchesData(false, true);
     loadBaseballData(true);
     loadNFLData(true);
+    loadNBAData(true);
     loadBetRadarData();
+    loadNBABetRadarData();
 
     const interval = setInterval(() => {
       loadMatchesData(false, false);
       loadBaseballData(false);
       loadNFLData(false);
+      loadNBAData(false);
     }, POLLING_TIME);
 
     return () => clearInterval(interval);
 
-  }, [selectedDate, loadMatchesData, loadBaseballData, loadNFLData, loadBetRadarData]);
+  }, [selectedDate, loadMatchesData, loadBaseballData, loadNFLData, loadNBAData, loadBetRadarData, loadNBABetRadarData]);
 
   // All sports are always fetched — chips only filter what's displayed, so
   // toggling a sport on/off is instant instead of waiting on a new request.
@@ -169,8 +199,11 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       : [];
     const baseball = activeSports.includes('baseball') ? baseballGames : [];
     const nfl = activeSports.includes('nfl') ? nflGames : [];
-    return [...soccer, ...baseball, ...nfl];
-  }, [fixtures, baseballGames, nflGames, activeSports, betRadarByFixture]);
+    const nba = activeSports.includes('basketball')
+      ? nbaGames.map(m => ({ ...m, betRadar: nbaRadarByFixture[m.fixture.id] ?? null }))
+      : [];
+    return [...soccer, ...baseball, ...nfl, ...nba];
+  }, [fixtures, baseballGames, nflGames, nbaGames, activeSports, betRadarByFixture, nbaRadarByFixture]);
 
   const processedFixtures = useMemo(() => {
 
@@ -210,15 +243,23 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   // Per-sport, so each chip can show its own live-pulse dot rather than one
   // global indicator that doesn't say which sport actually has something live.
   const liveBySport = useMemo(() => ({
-    futbol:   fixtures      ? fixtures.some(m => LIVE_STATUSES.has(m.fixture.status.short))      : false,
-    baseball: baseballGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
-    nfl:      nflGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
-  }), [fixtures, baseballGames, nflGames]);
+    futbol:     fixtures      ? fixtures.some(m => LIVE_STATUSES.has(m.fixture.status.short))      : false,
+    baseball:   baseballGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
+    nfl:        nflGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
+    basketball: nbaGames.some(m => LIVE_STATUSES.has(m.fixture.status.short)),
+  }), [fixtures, baseballGames, nflGames, nbaGames]);
 
   // Re-derived on every poll so the modal always receives the freshest fixture data.
   const activeMatch = useMemo(
     () => selectedMatchId ? (processedFixtures.find(m => m.fixture.id === selectedMatchId) ?? null) : null,
     [selectedMatchId, processedFixtures]
+  );
+
+  // Same freshness trick for the NBA modal — re-derived from allMatches so a
+  // live game's score/picks update while the modal stays open.
+  const nbaModalMatch = useMemo(
+    () => nbaModalMatchId ? (allMatches.find(m => m.fixture.id === nbaModalMatchId) ?? null) : null,
+    [nbaModalMatchId, allMatches]
   );
 
   const toggleSport = (sportId) => {
@@ -244,15 +285,20 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   // Soccer opens the rich H2H/Stats/Odds modal; baseball has no such data yet,
   // so the same "Insights" action opens its boxscore instead. NFL has neither
   // yet — its team ids come from ESPN, not API-Football, so it can't reuse the
-  // soccer modal either; no-op until an NFL-specific view exists.
+  // soccer modal either; no-op until an NFL-specific view exists. NBA's team
+  // ids are also ESPN's, but it DOES get its own (lighter) modal — see
+  // NBAGameModal — since BetRadar picks already exist for it.
   const handleOpenH2HModal = (team1Id, team2Id, fixtureId) => {
     const match = allMatches.find(m => m.fixture.id === fixtureId);
     if (match?.sport === 'baseball') {
       setBoxscoreGame(match.raw);
-      setBoxscoreLeague(match.league.id);
       return;
     }
     if (match?.sport === 'nfl') return;
+    if (match?.sport === 'nba') {
+      setNbaModalMatchId(fixtureId ?? null);
+      return;
+    }
     setSelectedTeams({ team1: team1Id, team2: team2Id });
     setSelectedMatchId(fixtureId ?? null);
     setH2hModalOpen(true);
@@ -279,7 +325,7 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
   }, {});
 
   const summaryArray = Object.values(leaguesSummary);
-  const loading = loadingSoccer || loadingBaseball || loadingNFL;
+  const loading = loadingSoccer || loadingBaseball || loadingNFL || loadingNBA;
   const onlyComingSoonSelected = activeSports.length > 0 && activeSports.every(id => !SPORTS.find(s => s.id === id)?.available);
 
   return (
@@ -440,7 +486,11 @@ const Fixtures = ({ selectedDate, searchTerm }) => {
       />
 
       {boxscoreGame && (
-        <BoxscoreModal game={boxscoreGame} league={boxscoreLeague} onClose={() => setBoxscoreGame(null)} />
+        <BoxscoreModal game={boxscoreGame} onClose={() => setBoxscoreGame(null)} />
+      )}
+
+      {nbaModalMatch && (
+        <NBAGameModal match={nbaModalMatch} onClose={() => setNbaModalMatchId(null)} />
       )}
 
       {showWaveChart && (

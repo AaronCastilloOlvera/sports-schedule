@@ -9,60 +9,23 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../api/api';
 import {
-  fmtTime, inningLabel, outsLabel, isLive, isFinal, isSuspended,
-  playerHeadshotUrl, teamColor, teamInitials, teamLogoUrl,
+  fmtTime, inningDetail, outsLabel, isLive, isFinal,
+  getHomeCompetitor, getAwayCompetitor, getCompetition,
+  playerHeadshotUrl, teamColor, teamInitials, teamLogoUrl, teamOverallRecord,
   filterGamesVsOpponent, aggregateGames,
 } from './baseballHelpers';
 
 const HISTORY_SEASONS = 5;
 
-function PitchingTable({ teamData }) {
-  const pitchers = teamData?.pitchers ?? [];
-  const players = teamData?.players ?? {};
+// Generic batting/pitching table — ESPN's boxscore.players statistics groups
+// are label-driven ({labels, athletes: [{athlete, stats}]}), with `stats`
+// values aligned to `labels` by index. Works for any group without needing
+// to know the specific stat names ahead of time.
+function StatGroupTable({ group, emptyLabel }) {
+  const athletes = group?.athletes ?? [];
 
-  if (!pitchers.length) return (
-    <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin datos de pitcheo.</Typography>
-  );
-
-  return (
-    <Box sx={{ overflowX: 'auto' }}>
-      <Table size="small" sx={{ minWidth: 380 }}>
-        <TableHead>
-          <TableRow>
-            {['Lanzador', 'IP', 'H', 'R', 'ER', 'BB', 'K'].map((h) => (
-              <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>{h}</TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {pitchers.map((pid) => {
-            const p = players[`ID${pid}`] ?? {};
-            const st = p.stats?.pitching ?? {};
-            const note = p.gameStatus?.note ?? '';
-            return (
-              <TableRow key={pid}>
-                <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>
-                  {p.person?.fullName ?? pid}
-                  {note && <Typography component="span" sx={{ fontSize: 10, color: 'text.secondary', ml: 0.5 }}>{note}</Typography>}
-                </TableCell>
-                {[st.inningsPitched, st.hits, st.runs, st.earnedRuns, st.baseOnBalls, st.strikeOuts].map((v, i) => (
-                  <TableCell key={i} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </Box>
-  );
-}
-
-function BattingTable({ teamData }) {
-  const batters = teamData?.batters ?? [];
-  const players = teamData?.players ?? {};
-
-  if (!batters.length) return (
-    <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>Sin datos de bateo.</Typography>
+  if (!athletes.length) return (
+    <Typography sx={{ color: 'text.secondary', fontSize: 13, py: 2 }}>{emptyLabel}</Typography>
   );
 
   return (
@@ -70,32 +33,85 @@ function BattingTable({ teamData }) {
       <Table size="small" sx={{ minWidth: 420 }}>
         <TableHead>
           <TableRow>
-            {['#', 'Bateador', 'Pos', 'AB', 'H', 'R', 'RBI', 'BB', 'K'].map((h) => (
-              <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>{h}</TableCell>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>Jugador</TableCell>
+            {(group.labels ?? []).map((label) => (
+              <TableCell key={label} sx={{ fontWeight: 700, fontSize: 11, py: 0.5, whiteSpace: 'nowrap' }}>{label}</TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
-          {batters.map((pid, i) => {
-            const p = players[`ID${pid}`] ?? {};
-            const st = p.stats?.batting ?? {};
-            const pos = p.position?.abbreviation ?? '';
-            return (
-              <TableRow key={pid}>
-                <TableCell sx={{ fontSize: 11, py: 0.5, color: 'text.disabled' }}>{i + 1}</TableCell>
-                <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>{p.person?.fullName ?? pid}</TableCell>
-                <TableCell sx={{ fontSize: 11, py: 0.5, color: 'text.secondary' }}>{pos}</TableCell>
-                {[st.atBats, st.hits, st.runs, st.rbi, st.baseOnBalls, st.strikeOuts].map((v, i2) => (
-                  <TableCell key={i2} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
-                ))}
-              </TableRow>
-            );
-          })}
+          {athletes.map((a, i) => (
+            <TableRow key={a.athlete?.id ?? i}>
+              <TableCell sx={{ fontSize: 12, py: 0.5, whiteSpace: 'nowrap' }}>
+                {a.athlete?.displayName ?? '—'}
+                {a.athlete?.position?.abbreviation && (
+                  <Typography component="span" sx={{ fontSize: 10, color: 'text.secondary', ml: 0.5 }}>
+                    {a.athlete.position.abbreviation}
+                  </Typography>
+                )}
+              </TableCell>
+              {(a.stats ?? []).map((v, j) => (
+                <TableCell key={j} sx={{ fontSize: 12, py: 0.5 }}>{v ?? '—'}</TableCell>
+              ))}
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </Box>
   );
 }
+
+StatGroupTable.propTypes = {
+  group: PropTypes.shape({ labels: PropTypes.array, athletes: PropTypes.array }),
+  emptyLabel: PropTypes.string.isRequired,
+};
+
+// Inning-by-inning R/H/E table — from the summary endpoint's richer
+// linescores (unlike the scoreboard's, these carry hits/errors per inning).
+function LinescoreTable({ homeLine, awayLine }) {
+  if (!homeLine || !awayLine) return null;
+  const innings = Math.max(homeLine.linescores?.length ?? 0, awayLine.linescores?.length ?? 0);
+
+  return (
+    <Box sx={{ overflowX: 'auto', px: 2, pt: 1.5 }}>
+      <Table size="small" sx={{ minWidth: 360 }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 700, fontSize: 11, py: 0.5 }} />
+            {Array.from({ length: innings }, (_, i) => (
+              <TableCell key={i} align="center" sx={{ fontWeight: 700, fontSize: 11, py: 0.5 }}>{i + 1}</TableCell>
+            ))}
+            {['R', 'H', 'E'].map((h) => (
+              <TableCell key={h} align="center" sx={{ fontWeight: 700, fontSize: 11, py: 0.5 }}>{h}</TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {[awayLine, homeLine].map((line) => (
+            <TableRow key={line.team?.id}>
+              <TableCell sx={{ fontSize: 12, py: 0.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {line.team?.abbreviation ?? '—'}
+              </TableCell>
+              {Array.from({ length: innings }, (_, i) => (
+                <TableCell key={i} align="center" sx={{ fontSize: 12, py: 0.5 }}>
+                  {line.linescores?.[i]?.displayValue ?? '—'}
+                </TableCell>
+              ))}
+              <TableCell align="center" sx={{ fontSize: 12, py: 0.5, fontWeight: 700 }}>{line.score ?? 0}</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, py: 0.5 }}>{line.hits ?? '—'}</TableCell>
+              <TableCell align="center" sx={{ fontSize: 12, py: 0.5 }}>{line.errors ?? '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
+  );
+}
+
+LinescoreTable.propTypes = {
+  homeLine: PropTypes.object,
+  awayLine: PropTypes.object,
+};
 
 function VenueSummaryLine({ summary }) {
   if (!summary) return null;
@@ -113,6 +129,9 @@ VenueSummaryLine.propTypes = {
 const weekdayOf = (dateStr, locale) =>
   new Date((dateStr ?? '').substring(0, 10) + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long' });
 
+// Backend's own synthesized "gamelog" + "final scores" contract — independent
+// of the underlying data source (unaffected by the ESPN migration), so this
+// consumption logic is unchanged.
 function gameOutcome(g, finalScores) {
   const score = finalScores?.[g.game?.gamePk];
   if (!score) return { outcome: null, forScore: null, againstScore: null, color: 'text.secondary' };
@@ -257,10 +276,10 @@ function PitcherCard({ pitcher, stats, loading }) {
       borderRadius: 2, bgcolor: 'action.hover',
     }}>
       {headshotUrl && !imgFailed ? (
-        // MLB's headshot photos are 2:3 portraits (180x270), not square — a
-        // circular Avatar would force a heavy crop just to fill the width.
-        // Match the container to the real aspect ratio instead, so the whole
-        // photo (cap to shoulders) shows without cropping.
+        // ESPN's headshot photos are 2:3 portraits, not square — a circular
+        // Avatar would force a heavy crop just to fill the width. Match the
+        // container to the real aspect ratio instead, so the whole photo
+        // (cap to shoulders) shows without cropping.
         <Avatar
           variant="rounded"
           src={headshotUrl}
@@ -287,32 +306,32 @@ function PitcherCard({ pitcher, stats, loading }) {
 }
 
 PitcherCard.propTypes = {
-  pitcher: PropTypes.shape({ id: PropTypes.number, fullName: PropTypes.string }),
+  pitcher: PropTypes.shape({ id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]), fullName: PropTypes.string }),
   stats: PropTypes.object,
   loading: PropTypes.bool,
 };
 
-function TeamRecord({ team }) {
-  const record = team?.leagueRecord;
+function TeamRecord({ competitor }) {
+  const record = teamOverallRecord(competitor);
   if (!record) return null;
   return (
     <Typography component="span" sx={{ fontSize: 11, color: 'text.disabled', ml: 0.5 }}>
-      ({record.wins}-{record.losses})
+      ({record})
     </Typography>
   );
 }
 
 TeamRecord.propTypes = {
-  team: PropTypes.shape({ leagueRecord: PropTypes.object }),
+  competitor: PropTypes.object,
 };
 
 // Header team block — logo + name + record, mirroring MLB Gameday's matchup strip.
-function TeamHeading({ team, align = 'left' }) {
+function TeamHeading({ competitor, align = 'left' }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const id = team?.team?.id;
-  const name = team?.team?.name;
-  const logoUrl = teamLogoUrl(id);
-  const row = (
+  const id = competitor?.team?.id;
+  const name = competitor?.team?.displayName;
+  const logoUrl = teamLogoUrl(competitor?.team?.abbreviation);
+  return (
     <Stack direction={align === 'right' ? 'row-reverse' : 'row'} spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
       {logoUrl && !imgFailed ? (
         <Box component="img" src={logoUrl} alt={name} onError={() => setImgFailed(true)}
@@ -326,19 +345,18 @@ function TeamHeading({ team, align = 'left' }) {
         fontWeight: 700, fontSize: 13, lineHeight: 1.2, whiteSpace: 'nowrap',
         overflow: 'hidden', textOverflow: 'ellipsis', textAlign: align,
       }}>
-        {name}<TeamRecord team={team} />
+        {name}<TeamRecord competitor={competitor} />
       </Typography>
     </Stack>
   );
-  return row;
 }
 
 TeamHeading.propTypes = {
-  team: PropTypes.shape({ team: PropTypes.shape({ id: PropTypes.number, name: PropTypes.string }) }),
+  competitor: PropTypes.shape({ team: PropTypes.shape({ id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]), displayName: PropTypes.string, abbreviation: PropTypes.string }) }),
   align: PropTypes.oneOf(['left', 'right']),
 };
 
-export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
+export default function BoxscoreModal({ game, onClose }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [box, setBox] = useState(null);
@@ -347,64 +365,72 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
   const [loadingPitchers, setLoadingPitchers] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [side, setSide] = useState('away');
-  const [historicalSide, setHistoricalSide] = useState(() => (game.teams?.home?.probablePitcher?.id ? 'home' : 'away'));
   const [historicalLogs, setHistoricalLogs] = useState({ home: [], away: [] });
   const [historicalFetched, setHistoricalFetched] = useState(false);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
   const [finalScores, setFinalScores] = useState({});
 
-  const away = game.teams?.away;
-  const home = game.teams?.home;
+  const homeComp = getHomeCompetitor(game);
+  const awayComp = getAwayCompetitor(game);
+  const homePitcherId = homeComp.probables?.[0]?.athlete?.id;
+  const awayPitcherId = awayComp.probables?.[0]?.athlete?.id;
+
+  const [historicalSide, setHistoricalSide] = useState(() => (homePitcherId ? 'home' : 'away'));
 
   useEffect(() => {
     setLoadingBox(true);
-    apiClient.fetchBaseballBoxscore(game.gamePk)
+    apiClient.fetchBaseballBoxscore(game.id)
       .then(res => setBox(res.data))
       .catch(() => setBox(null))
       .finally(() => setLoadingBox(false));
-  }, [game.gamePk]);
+  }, [game.id]);
 
   useEffect(() => {
-    const homeId = home?.probablePitcher?.id;
-    const awayId = away?.probablePitcher?.id;
-    if (!homeId && !awayId) { setLoadingPitchers(false); return; }
+    if (!homePitcherId && !awayPitcherId) { setLoadingPitchers(false); return; }
 
     setLoadingPitchers(true);
     Promise.all([
-      homeId ? apiClient.fetchPitcherStats(homeId, league) : Promise.resolve({ data: null }),
-      awayId ? apiClient.fetchPitcherStats(awayId, league) : Promise.resolve({ data: null }),
+      homePitcherId ? apiClient.fetchPitcherStats(homePitcherId) : Promise.resolve({ data: null }),
+      awayPitcherId ? apiClient.fetchPitcherStats(awayPitcherId) : Promise.resolve({ data: null }),
     ])
       .then(([homeStatsRes, awayStatsRes]) => {
         setPitcherStats({ home: homeStatsRes.data, away: awayStatsRes.data });
       })
       .catch(() => setPitcherStats({ home: null, away: null }))
       .finally(() => setLoadingPitchers(false));
-  }, [home?.probablePitcher?.id, away?.probablePitcher?.id, league]);
+  }, [homePitcherId, awayPitcherId]);
 
   // Multi-season history is heavier (one API call per season, per pitcher) so
   // it's only fetched once the Histórico tab is actually opened, not eagerly.
   useEffect(() => {
     if (activeTab !== 2 || historicalFetched) return;
-    const homeId = home?.probablePitcher?.id;
-    const awayId = away?.probablePitcher?.id;
-    if (!homeId && !awayId) { setHistoricalFetched(true); return; }
+    if (!homePitcherId && !awayPitcherId) { setHistoricalFetched(true); return; }
 
     setLoadingHistorical(true);
     Promise.all([
-      homeId ? apiClient.fetchPitcherGameLog(homeId, league, HISTORY_SEASONS) : Promise.resolve({ data: [] }),
-      awayId ? apiClient.fetchPitcherGameLog(awayId, league, HISTORY_SEASONS) : Promise.resolve({ data: [] }),
+      homePitcherId ? apiClient.fetchPitcherGameLog(homePitcherId, HISTORY_SEASONS) : Promise.resolve({ data: [] }),
+      awayPitcherId ? apiClient.fetchPitcherGameLog(awayPitcherId, HISTORY_SEASONS) : Promise.resolve({ data: [] }),
     ])
       .then(([homeLogRes, awayLogRes]) => setHistoricalLogs({ home: homeLogRes.data, away: awayLogRes.data }))
       .catch(() => setHistoricalLogs({ home: [], away: [] }))
       .finally(() => { setLoadingHistorical(false); setHistoricalFetched(true); });
-  }, [activeTab, historicalFetched, home?.probablePitcher?.id, away?.probablePitcher?.id, league]);
+  }, [activeTab, historicalFetched, homePitcherId, awayPitcherId]);
 
-  const teamData = box?.teams?.[side];
-  const awayScore = away?.score ?? 0;
-  const homeScore = home?.score ?? 0;
+  const boxTeams = box?.boxscore?.players ?? [];
+  const sideCompetitor = side === 'home' ? homeComp : awayComp;
+  const sideBox = boxTeams.find(p => p.team?.id === sideCompetitor.team?.id);
+  const battingGroup = sideBox?.statistics?.find(s => s.type === 'batting');
+  const pitchingGroup = sideBox?.statistics?.find(s => s.type === 'pitching');
 
-  const historicalPitcher = historicalSide === 'home' ? home?.probablePitcher : away?.probablePitcher;
-  const historicalOpponent = historicalSide === 'home' ? away?.team : home?.team;
+  const boxCompetitors = box?.header?.competitions?.[0]?.competitors ?? [];
+  const homeLine = boxCompetitors.find(c => c.homeAway === 'home');
+  const awayLine = boxCompetitors.find(c => c.homeAway === 'away');
+
+  const awayScore = awayComp.score ?? 0;
+  const homeScore = homeComp.score ?? 0;
+
+  const historicalPitcher = historicalSide === 'home' ? homeComp.probables?.[0]?.athlete : awayComp.probables?.[0]?.athlete;
+  const historicalOpponent = historicalSide === 'home' ? awayComp.team : homeComp.team;
   const pitcherLogs = historicalSide === 'home' ? historicalLogs.home : historicalLogs.away;
 
   const opponentGames = useMemo(() => (
@@ -438,6 +464,9 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
       .then(scores => setFinalScores(prev => ({ ...prev, ...scores })))
       .catch(() => {});
   }, [opponentGames]);
+
+  const live = isLive(game);
+  const final = isFinal(game);
 
   return (
     <Dialog
@@ -474,40 +503,40 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
       <DialogTitle sx={{ pb: 1.5 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ pr: 4 }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <TeamHeading team={home} />
+            <TeamHeading competitor={homeComp} />
           </Box>
 
           <Box sx={{ textAlign: 'center', px: 0.5, flexShrink: 0 }}>
             <Typography sx={{ fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>
-              {isLive(game) || isFinal(game) || isSuspended(game) ? `${homeScore} – ${awayScore}` : '@'}
+              {live || final ? `${homeScore} – ${awayScore}` : '@'}
             </Typography>
             <Typography sx={{ fontSize: 11, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-              {isFinal(game) ? 'Final' : isSuspended(game) ? 'Suspendido' : isLive(game)
-                ? `${inningLabel(game.linescore?.inningHalf, game.linescore?.currentInning)} · ${outsLabel(game.linescore?.outs)}`
-                : fmtTime(game.gameDate)}
+              {final ? 'Final' : live
+                ? `${inningDetail(game)}${outsLabel(game) ? ` · ${outsLabel(game)}` : ''}`
+                : fmtTime(game.date)}
             </Typography>
-            {game.venue?.name && (
-              <Typography sx={{ fontSize: 10, color: 'text.disabled', whiteSpace: 'nowrap' }}>{game.venue.name}</Typography>
+            {getCompetition(game).venue?.fullName && (
+              <Typography sx={{ fontSize: 10, color: 'text.disabled', whiteSpace: 'nowrap' }}>{getCompetition(game).venue.fullName}</Typography>
             )}
           </Box>
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <TeamHeading team={away} align="right" />
+            <TeamHeading competitor={awayComp} align="right" />
           </Box>
         </Stack>
       </DialogTitle>
 
       <DialogContent dividers sx={{ p: 0 }}>
         {/* Probable pitcher matchup — shown whenever we have at least one probable pitcher */}
-        {(home?.probablePitcher?.id || away?.probablePitcher?.id) && (
+        {(homePitcherId || awayPitcherId) && (
           <>
             <Stack direction="row" alignItems="stretch" spacing={1} sx={{ px: 2, py: 1.5 }}>
               <PitcherCard
-                pitcher={home?.probablePitcher} stats={pitcherStats.home}
+                pitcher={homeComp.probables?.[0]?.athlete} stats={pitcherStats.home}
                 loading={loadingPitchers}
               />
               <PitcherCard
-                pitcher={away?.probablePitcher} stats={pitcherStats.away}
+                pitcher={awayComp.probables?.[0]?.athlete} stats={pitcherStats.away}
                 loading={loadingPitchers}
               />
             </Stack>
@@ -523,11 +552,14 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
           <Alert severity="warning" sx={{ m: 2 }}>No hay datos disponibles para este partido.</Alert>
         ) : (
           <Box>
+            <LinescoreTable homeLine={homeLine} awayLine={awayLine} />
+            <Divider sx={{ mt: 1.5 }} />
+
             {/* Team selector */}
             <Box sx={{ px: 2, pt: 1.5 }}>
               <ToggleButtonGroup value={side} exclusive onChange={(_, v) => v && setSide(v)} size="small">
-                <ToggleButton value="home" sx={{ fontSize: 11 }}>{home?.team?.name}</ToggleButton>
-                <ToggleButton value="away" sx={{ fontSize: 11 }}>{away?.team?.name}</ToggleButton>
+                <ToggleButton value="home" sx={{ fontSize: 11 }}>{homeComp.team?.displayName}</ToggleButton>
+                <ToggleButton value="away" sx={{ fontSize: 11 }}>{awayComp.team?.displayName}</ToggleButton>
               </ToggleButtonGroup>
             </Box>
 
@@ -539,22 +571,22 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
             </Tabs>
 
             <Box sx={{ p: 2 }}>
-              {activeTab === 0 && <PitchingTable teamData={teamData} />}
-              {activeTab === 1 && <BattingTable teamData={teamData} />}
+              {activeTab === 0 && <StatGroupTable group={pitchingGroup} emptyLabel="Sin datos de pitcheo." />}
+              {activeTab === 1 && <StatGroupTable group={battingGroup} emptyLabel="Sin datos de bateo." />}
               {activeTab === 2 && (
                 <Box>
                   <ToggleButtonGroup value={historicalSide} exclusive onChange={(_, v) => v && setHistoricalSide(v)} size="small" sx={{ mb: 1.5 }}>
-                    <ToggleButton value="home" sx={{ fontSize: 11 }} disabled={!home?.probablePitcher?.id}>
-                      {home?.probablePitcher?.fullName ?? 'Sin confirmar'}
+                    <ToggleButton value="home" sx={{ fontSize: 11 }} disabled={!homePitcherId}>
+                      {homeComp.probables?.[0]?.athlete?.fullName ?? 'Sin confirmar'}
                     </ToggleButton>
-                    <ToggleButton value="away" sx={{ fontSize: 11 }} disabled={!away?.probablePitcher?.id}>
-                      {away?.probablePitcher?.fullName ?? 'Sin confirmar'}
+                    <ToggleButton value="away" sx={{ fontSize: 11 }} disabled={!awayPitcherId}>
+                      {awayComp.probables?.[0]?.athlete?.fullName ?? 'Sin confirmar'}
                     </ToggleButton>
                   </ToggleButtonGroup>
 
                   <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1.5 }}>
                     {historicalPitcher?.id
-                      ? `vs ${historicalOpponent?.name ?? ''} (últimas ${HISTORY_SEASONS} temporadas)`
+                      ? `vs ${historicalOpponent?.displayName ?? ''} (últimas ${HISTORY_SEASONS} temporadas)`
                       : 'Pitcher no confirmado'}
                   </Typography>
 
@@ -589,6 +621,5 @@ export default function BoxscoreModal({ game, league = 'lmb', onClose }) {
 
 BoxscoreModal.propTypes = {
   game: PropTypes.object.isRequired,
-  league: PropTypes.string,
   onClose: PropTypes.func.isRequired,
 };
