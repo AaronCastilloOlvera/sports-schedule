@@ -195,6 +195,14 @@ export default function BankrollView() {
   const monthlyFlow           = chartData?.monthly_flow           ?? [];
   const stakeVsBankroll       = chartData?.stake_vs_bankroll      ?? [];
 
+  // Same shape as monthlyFlow but a single row — lifetime totals, not split by month.
+  const totalFlow = [{
+    period:    'Total',
+    deposited: totalDeposits,
+    withdrawn: totalWithdrawals > 0 ? totalWithdrawals : null,
+    net:       Math.round((totalWithdrawals - totalDeposits) * 100) / 100,
+  }];
+
 
 
   const handleSubmit = async () => {
@@ -417,6 +425,29 @@ export default function BankrollView() {
                   <Cell key={i} fill="#2e7d32" fillOpacity={0.75 + (i % 2) * 0.15} />
                 ))}
               </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Box>
+      )}
+
+      {/* Lifetime deposits vs withdrawals vs net — same shape as the monthly chart, one bar */}
+      {(totalDeposits > 0 || totalWithdrawals > 0) && (
+        <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, boxShadow: 2, p: 3, mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: 11 }}>
+            Deposits vs Withdrawals — Total
+          </Typography>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={totalFlow} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
+              <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v.toLocaleString()}`} />
+              <YAxis type="category" dataKey="period" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={0} />
+              <RechartsTooltip contentStyle={tooltipStyle} formatter={(v, name) => [usd(v), FLOW_LABELS[name] ?? name]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => FLOW_LABELS[value] ?? value} />
+              <Bar dataKey="deposited" fill="#d32f2f" radius={[0, 4, 4, 0]} barSize={28} />
+              <Bar dataKey="net" fill={totalFlow[0].net >= 0 ? '#1976d2' : '#ed6c02'} radius={[0, 4, 4, 0]} barSize={28}>
+                <Cell fill={totalFlow[0].net >= 0 ? '#1976d2' : '#ed6c02'} />
+              </Bar>
+              <Bar dataKey="withdrawn" fill="#2e7d32" radius={[0, 4, 4, 0]} barSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </Box>
