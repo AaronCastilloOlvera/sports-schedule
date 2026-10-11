@@ -122,6 +122,20 @@ function flattenAllPicks(dataBySport) {
     .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 }
 
+// Tags consecutive same-match picks with an alternating `tint` for a shared background.
+function withGroupTint(picks) {
+  let groupIdx = -1;
+  let prevGroupKey = null;
+  return picks.map((pick) => {
+    const groupKey = `${pick.home}|${pick.away}|${pick.kickoff}`;
+    if (groupKey !== prevGroupKey) {
+      groupIdx++;
+      prevGroupKey = groupKey;
+    }
+    return { pick, tint: groupIdx % 2 === 1 };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // SportBadge — the "icon to tell them apart in the table"
 // ---------------------------------------------------------------------------
@@ -590,8 +604,8 @@ export default function BetRadarView() {
             </Typography>
           )}
 
-          {upcoming.map((pick, i) => (
-            <Box key={pick.key}>
+          {withGroupTint(upcoming).map(({ pick, tint }, i) => (
+            <Box key={pick.key} sx={{ bgcolor: tint ? 'action.hover' : 'transparent' }}>
               {i > 0 && <Divider />}
               <PickRow pick={pick} />
             </Box>
@@ -613,8 +627,8 @@ export default function BetRadarView() {
                 </IconButton>
               </Stack>
               <Collapse in={showStarted}>
-                {started.map((pick, i) => (
-                  <Box key={pick.key}>
+                {withGroupTint(started).map(({ pick, tint }, i) => (
+                  <Box key={pick.key} sx={{ bgcolor: tint ? 'action.hover' : 'transparent' }}>
                     {i > 0 && <Divider />}
                     <PickRow pick={pick} started />
                   </Box>
