@@ -3,7 +3,7 @@ import { Alert, Autocomplete, Box, Button, Card, CardContent, Chip, Dialog, Dial
 import { useTranslation } from "react-i18next";
 import { apiClient } from '../../api/api.js';
 import { DataGrid } from '@mui/x-data-grid';
-import { CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
+import { CardGiftcard, CloudDownload, ContentCopy, Delete, Edit, RemoveRedEye, Search } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -38,9 +38,13 @@ const initialStatedata = {
     studied: false,
     comments: '',
     legs: null,
+    bonus_stake: null,
 }
 
 const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
+
+const bonusLabel = (amount) =>
+  `Apuesta con bono: $${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(amount)}`;
 
 function TicketIdCell({ id = '' }) {
   const [copied, setCopied] = useState(false);
@@ -99,6 +103,11 @@ function TicketCard({ ticket, onEdit, onDelete }) {
             </Typography>
             {isParlay && <Box component="span" sx={{ ...badgeBase, borderColor: 'primary.main', color: 'primary.main', flexShrink: 0 }}>P</Box>}
             {isCrear  && <Box component="span" sx={{ ...badgeBase, borderColor: 'warning.main',  color: 'warning.main',  flexShrink: 0 }}>C</Box>}
+            {ticket.bonus_stake > 0 && (
+              <Tooltip title={bonusLabel(ticket.bonus_stake)} placement="top">
+                <CardGiftcard sx={{ fontSize: 15, color: 'secondary.main', flexShrink: 0 }} />
+              </Tooltip>
+            )}
           </Box>
           <IconButton size="small" sx={{ p: '2px' }} color="info"  onClick={() => onEdit(ticket.ticket_id)}><Edit sx={{ fontSize: 16 }} /></IconButton>
           <IconButton size="small" sx={{ p: '2px' }} color="error" onClick={() => onDelete(ticket.ticket_id)}><Delete sx={{ fontSize: 16 }} /></IconButton>
@@ -286,6 +295,7 @@ function Bets() {
         studied: ticketToEdit.studied ?? false,
         comments: ticketToEdit.comments ?? '',
         legs: ticketToEdit.legs ?? null,
+        bonus_stake: ticketToEdit.bonus_stake ?? null,
       });
       setEditId(ticket_id);
       setOpenModal(true);
@@ -306,12 +316,13 @@ function Bets() {
       headerName: 'Pick',
       width: 350,
       renderCell: (params) => {
-        const { pick, sport, match_name, bet_type } = params.row;
+        const { pick, sport, match_name, bet_type, bonus_stake } = params.row;
         const icon = SPORT_ICONS[sport] || '🎯';
         const isParlay = bet_type === 'parlay';
         const isCrear = bet_type === 'crear_apuesta';
+        const isBonus = bonus_stake > 0;
         const badgeBase = { px: '4px', py: '1px', fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px', border: '1px solid', lineHeight: 1.4, flexShrink: 0 };
-        const tooltipContent = match_name ? `${match_name}\n${pick}` : pick;
+        const tooltipContent = [match_name, pick, isBonus && bonusLabel(bonus_stake)].filter(Boolean).join('\n');
         return (
           <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}>{tooltipContent}</span>} placement="top" arrow>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden', width: '100%' }}>
@@ -321,6 +332,7 @@ function Bets() {
               </Box>
               {isParlay && <Box component="span" sx={{ ...badgeBase, borderColor: 'primary.main', color: 'primary.main' }}>P</Box>}
               {isCrear  && <Box component="span" sx={{ ...badgeBase, borderColor: 'warning.main',  color: 'warning.main'  }}>C</Box>}
+              {isBonus  && <CardGiftcard sx={{ fontSize: 16, color: 'secondary.main', flexShrink: 0 }} />}
             </Box>
           </Tooltip>
         );
