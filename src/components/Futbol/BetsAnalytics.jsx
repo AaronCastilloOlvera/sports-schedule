@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Box, CircularProgress, Paper, Stack, Tab, Tabs, Typography, useTheme } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
@@ -31,6 +32,36 @@ function ScatterTooltip({ active, payload }) {
     </Box>
   );
 }
+
+// Default tooltips ignore per-<Cell> colors; this one colors the line by its slice fill, or by sign.
+function ColoredTooltip({ active, payload, label, format }) {
+  const theme = useTheme();
+  if (!active || !payload?.length) return null;
+  const { name, value, payload: row } = payload[0];
+  const color = row.fill ?? (value >= 0 ? GREEN : RED);
+  const dark = theme.palette.mode === 'dark';
+  return (
+    <Box sx={{
+      bgcolor: dark ? '#3d3d3d' : '#fff',
+      border: `1px solid ${dark ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
+      borderRadius: '8px', boxShadow: 6, p: '10px', fontSize: 14,
+    }}>
+      {label != null && <Box sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5 }}>{label}</Box>}
+      <Box sx={{ color }}>{name} : {format(value)}</Box>
+    </Box>
+  );
+}
+
+ColoredTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.arrayOf(PropTypes.shape({
+    name: PropTypes.string,
+    value: PropTypes.number,
+    payload: PropTypes.shape({ fill: PropTypes.string }),
+  })),
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  format: PropTypes.func.isRequired,
+};
 
 function ChartCard({ title, children, sx = {} }) {
   return (
@@ -154,8 +185,8 @@ export default function BetsAnalytics() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.daily_data.length / 8)} />
                   <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                  <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} formatter={(v) => [usd(v), 'P&L']} />
-                  <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                  <Tooltip content={<ColoredTooltip format={usd} />} />
+                  <Bar dataKey="profit" name="P&L" radius={[4, 4, 0, 0]}>
                     {analytics.daily_data.map((entry, i) => <Cell key={i} fill={entry.profit >= 0 ? GREEN : RED} />)}
                   </Bar>
                 </BarChart>
@@ -168,7 +199,7 @@ export default function BetsAnalytics() {
                   <Pie data={winLossPie} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80}>
                     {winLossPie.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} formatter={(v, name) => [`${v} tickets`, name]} />
+                  <Tooltip content={<ColoredTooltip format={(v) => `${v} tickets`} />} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
