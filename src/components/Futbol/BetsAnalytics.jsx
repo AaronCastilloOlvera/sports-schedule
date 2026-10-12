@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, CircularProgress, Paper, Stack, Tab, Tabs, Typography, useTheme } from '@mui/material';
+import { Box, CircularProgress, FormControlLabel, Paper, Stack, Switch, Tab, Tabs, Typography, useTheme } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
-  Pie, PieChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
+  Pie, PieChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { BET_TYPES } from '../../utils/consts.jsx';
 import { apiClient } from '../../api/api.js';
@@ -15,6 +15,15 @@ const PIE_COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#7b1fa2', '#0097a7', '#c62
 const LINE_COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#7b1fa2', '#0097a7', '#c62828', '#558b2f', '#ad1457'];
 const SPORT_ICONS = { futbol: '⚽', basketball: '🏀', american_football: '🏈', baseball: '⚾' };
 const BET_TYPE_LABELS = Object.fromEntries(BET_TYPES.map(b => [b.value, b.label]));
+
+// Hardcoded for now: commit dates when each radar went live, to eyeball their effect on profit.
+const PROFIT_EVENTS = [
+  { date: '17/07', label: 'Value Picks' },
+  { date: '17/08', label: 'BetRadar' },
+  { date: '18/09', label: 'MLB Radar' },
+  { date: '20/09', label: 'NFL Radar' },
+  { date: '06/10', label: 'NBA + MLB→ESPN' },
+];
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (value, data) => `${((value / data.reduce((s, d) => s + d.value, 0)) * 100).toFixed(1)}%`;
@@ -63,10 +72,28 @@ ColoredTooltip.propTypes = {
   format: PropTypes.func.isRequired,
 };
 
-function ChartCard({ title, children, sx = {} }) {
+function ChartCard({ title, action, children, sx = {} }) {
   return (
     <Paper elevation={2} sx={{ borderRadius: 2, p: 3, ...sx }}>
-      <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>{title}</Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{title}</Typography>
+        {action}
+      </Stack>
+      {children}
+    </Paper>
+  );
+}
+
+ChartCard.propTypes = {
+  title: PropTypes.node.isRequired,
+  action: PropTypes.node,
+  children: PropTypes.node,
+  sx: PropTypes.object,
+};
+
+function _unused() {
+  return (
+    <Paper>
       {children}
     </Paper>
   );
@@ -76,6 +103,7 @@ export default function BetsAnalytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
+  const [showEvents, setShowEvents] = useState(true);
   const theme = useTheme();
   const tooltipStyle = {
     backgroundColor: theme.palette.mode === 'dark' ? '#3d3d3d' : '#fff',
@@ -100,6 +128,14 @@ export default function BetsAnalytics() {
   if (!analytics) return null;
 
   const { summary } = analytics;
+
+  // One point per ticket, so dates repeat — a numeric index axis lets each event line land on its first ticket.
+  const accData = analytics.accumulated_data.map((d, i) => ({ ...d, i }));
+  const accStep = Math.max(1, Math.floor(accData.length / 8));
+  const accTicks = accData.filter(d => d.i % accStep === 0).map(d => d.i);
+  const profitEvents = PROFIT_EVENTS
+    .map(ev => ({ ...ev, index: accData.findIndex(d => d.date === ev.date) }))
+    .filter(ev => ev.index >= 0);
 
   // Pie helpers — trivial index-based color maps, no useMemo needed
   const winLossPie = [
@@ -166,13 +202,28 @@ export default function BetsAnalytics() {
 
       {tab === 0 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <ChartCard title="Accumulated Profit">
+          <ChartCard
+            title="Accumulated Profit"
+            action={
+              <FormControlLabel
+                label="Eventos"
+                control={<Switch size="small" checked={showEvents} onChange={(e) => setShowEvents(e.target.checked)} />}
+                slotProps={{ typography: { variant: 'body2', color: 'text.secondary' } }}
+              />
+            }
+          >
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={analytics.accumulated_data}>
+              <LineChart data={accData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={Math.floor(analytics.accumulated_data.length / 8)} />
+                <XAxis dataKey="i" type="number" domain={[0, accData.length - 1]} ticks={accTicks}
+                  tickFormatter={(i) => accData[i]?.date} tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={usd} width={90} tick={{ fontSize: 12 }} />
-                <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} formatter={(v) => [usd(v), 'Profit']} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle}
+                  labelFormatter={(i) => accData[i]?.date} formatter={(v) => [usd(v), 'Profit']} />
+                {showEvents && profitEvents.map((ev, n) => (
+                  <ReferenceLine key={ev.label} x={ev.index} stroke={theme.palette.warning.main} strokeWidth={1.5} strokeDasharray="6 3"
+                    label={{ value: ev.label, position: 'insideTopLeft', dy: n * 14, fontSize: 11, fill: theme.palette.warning.main }} />
+                ))}
                 <Line type="monotone" dataKey="profit" stroke={BLUE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
