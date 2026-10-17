@@ -148,6 +148,11 @@ class ApiClient {
     return response.data;
   }
 
+  async fetchBetRadarResults(date) {
+    const response = await this.client.get(`/bet-radar/results?date=${date}`);
+    return response.data;
+  }
+
   async fetchBetRadarAccuracy(days = 7, minConfidence = 70) {
     const response = await this.client.get(
       `/bet-radar/accuracy?days=${days}&min_confidence=${minConfidence}`,
@@ -167,6 +172,11 @@ class ApiClient {
       `/mlb-radar/suggestions?date=${date}&league=${league}`,
       { timeout: 45000 },
     );
+    return response.data;
+  }
+
+  async fetchMLBRadarResults(date) {
+    const response = await this.client.get(`/mlb-radar/results?date=${date}`);
     return response.data;
   }
 
@@ -194,6 +204,11 @@ class ApiClient {
     return response.data;
   }
 
+  async fetchNFLRadarResults(date) {
+    const response = await this.client.get(`/nfl-radar/results?date=${date}`);
+    return response.data;
+  }
+
   async fetchNFLRadarAccuracy(days = 7, minConfidence = 70) {
     const response = await this.client.get(
       `/nfl-radar/accuracy?days=${days}&min_confidence=${minConfidence}`,
@@ -215,6 +230,11 @@ class ApiClient {
 
   async fetchNBARadarSuggestions(date) {
     const response = await this.client.get(`/nba-radar/suggestions?date=${date}`, { timeout: 45000 });
+    return response.data;
+  }
+
+  async fetchNBARadarResults(date) {
+    const response = await this.client.get(`/nba-radar/results?date=${date}`);
     return response.data;
   }
 

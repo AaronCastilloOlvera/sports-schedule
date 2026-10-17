@@ -91,14 +91,6 @@ ChartCard.propTypes = {
   sx: PropTypes.object,
 };
 
-function _unused() {
-  return (
-    <Paper>
-      {children}
-    </Paper>
-  );
-}
-
 export default function BetsAnalytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);

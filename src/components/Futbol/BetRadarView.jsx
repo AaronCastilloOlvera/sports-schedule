@@ -4,12 +4,14 @@ import {
   IconButton, Stack, TextField, Tooltip, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
-  AttachMoney, Balance, Bolt, CompareArrows, ExpandLess, ExpandMore, Flag,
+  AttachMoney, Balance, Bolt, Cancel, CheckCircle, CompareArrows, ExpandLess, ExpandMore, Flag,
   HelpOutline, LooksOne, SportsBaseball, SportsBasketball, SportsFootball, SportsSoccer, Square,
 } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
 import { apiClient } from '../../api/api.js';
+import LivePulseDot from './LivePulseDot';
 
 const MARKET_META = {
   // fútbol
@@ -51,6 +53,7 @@ const SPORTS = [
     cached:      (date) => apiClient.fetchBetRadarCached(date),
     suggestions: (date) => apiClient.fetchBetRadarSuggestions(date),
     accuracy:    () => apiClient.fetchBetRadarAccuracy(7, 70),
+    results:     (date) => apiClient.fetchBetRadarResults(date),
   },
   {
     key: 'mlb',
@@ -59,6 +62,7 @@ const SPORTS = [
     cached:      (date) => apiClient.fetchMLBRadarCached(date, 'mlb'),
     suggestions: (date) => apiClient.fetchMLBRadarSuggestions(date, 'mlb'),
     accuracy:    () => apiClient.fetchMLBRadarAccuracy(7, 70, 'mlb'),
+    results:     (date) => apiClient.fetchMLBRadarResults(date),
   },
   {
     key: 'nfl',
@@ -67,6 +71,7 @@ const SPORTS = [
     cached:      (date) => apiClient.fetchNFLRadarCached(date),
     suggestions: (date) => apiClient.fetchNFLRadarSuggestions(date),
     accuracy:    () => apiClient.fetchNFLRadarAccuracy(7, 70),
+    results:     (date) => apiClient.fetchNFLRadarResults(date),
   },
   {
     key: 'nba',
@@ -75,6 +80,7 @@ const SPORTS = [
     cached:      (date) => apiClient.fetchNBARadarCached(date),
     suggestions: (date) => apiClient.fetchNBARadarSuggestions(date),
     accuracy:    () => apiClient.fetchNBARadarAccuracy(7, 70),
+    results:     (date) => apiClient.fetchNBARadarResults(date),
   },
 ];
 
@@ -105,6 +111,8 @@ function flattenPicks(data) {
       return {
         ...p,
         key: `${s.game_pk ?? s.fixture_id ?? si}-${pi}`,
+        // fixture_id (fútbol) / event_id (NFL, NBA) / game_pk (MLB) — the key of each /results payload
+        game_id: s.fixture_id ?? s.event_id ?? s.game_pk,
         home: s.home_team?.name ?? '',
         away: s.away_team?.name ?? '',
         kickoff,
@@ -256,6 +264,145 @@ function OddChip({ oddValue, oddBook, sx }) {
 
 OddChip.propTypes = { oddValue: PropTypes.number, oddBook: PropTypes.string, sx: PropTypes.object };
 
+// ---------------------------------------------------------------------------
+// Pick results — live/final grading from each sport's /results endpoint
+// ---------------------------------------------------------------------------
+// tone = MUI palette key used for the row stripe and the result text
+const RESULT_META = {
+  won:     { tone: 'success.main' },
+  lost:    { tone: 'error.main' },
+  push:    { tone: 'text.disabled' },
+  winning: { tone: 'success.main',   live: true },
+  losing:  { tone: 'error.main',     live: true },
+  even:    { tone: 'text.secondary', live: true },
+  void:    { tone: 'text.disabled' },
+  unknown: { tone: 'text.disabled' },
+};
+
+/** Attaches the backend grading for this exact pick (same market/side/line), if any. */
+function attachResult(pick, resultsByGame) {
+  const entry = resultsByGame?.[pick.game_id];
+  if (!entry) return pick;
+  const graded = entry.picks.find(r => r.market === pick.market && r.side === pick.side && r.line === (pick.line ?? null));
+  if (!graded || !RESULT_META[graded.state]) return pick;
+  return { ...pick, result: graded, live: entry };
+}
+
+const fmtMargin = (n) => String(Number(Math.abs(n).toFixed(1)));
+const OVER_UNDER_MARKETS = new Set(['goals', 'corners', 'yellow_cards', 'total', 'hits']);
+
+function verdict(pick) {
+  const { state, actual, margin, line } = pick.result;
+  const m = margin != null ? fmtMargin(margin) : null;
+  if (state === 'void') return 'anulado';
+  if (state === 'unknown') return 'sin estadísticas';
+
+  if (OVER_UNDER_MARKETS.has(pick.market)) {
+    const text = {
+      won:     `ganó por ${m}`,
+      lost:    pick.side === 'over' ? `le faltó ${m}` : `se pasó por ${m}`,
+      push:    'justo en la línea',
+      winning: `margen de ${m}`,
+      losing:  `le faltan ${m}`,
+    }[state];
+    return `${actual} de ${line} — ${text}`;
+  }
+  if (pick.market === 'spread') {
+    return {
+      won: `cubrió por ${m}`, lost: `le faltaron ${m}`, push: 'empate con la línea',
+      winning: `cubriendo por ${m}`, losing: `le faltan ${m}`, even: 'justo en la línea',
+    }[state];
+  }
+  if (pick.market === 'moneyline') {
+    return {
+      won: `ganó por ${m}`, lost: `perdió por ${m}`, push: 'empate',
+      winning: `arriba por ${m}`, losing: `abajo por ${m}`, even: 'empatados',
+    }[state];
+  }
+  if (pick.market === 'nrfi') {
+    if (actual > 0) return `${actual} carrera${actual === 1 ? '' : 's'} en la 1ª`;
+    return RESULT_META[state].live ? '1ª entrada en curso' : 'sin carreras en la 1ª';
+  }
+  // btts: the score already says it once settled
+  if (state === 'winning') return 'va ganando';
+  if (state === 'losing') return 'va perdiendo';
+  return null;
+}
+
+/** "Final 1-1 · 2 de 3.5 — ganó por 1.5" — the outcome in words, no signed margins to decode. */
+function resultText(pick) {
+  const { live } = pick;
+  const home = live.home_score ?? live.home_goals;
+  const away = live.away_score ?? live.away_goals;
+  // away-home, the same order as the "away @ home" line it sits next to
+  const score = home != null ? `${away}-${home}` : null;
+  const when = live.final ? 'Final' : (live.clock ?? (live.elapsed != null ? `${live.elapsed}'` : null));
+  return [[when, score].filter(Boolean).join(' '), verdict(pick)].filter(Boolean).join(' · ');
+}
+
+const LINE_AT = 0.6; // where the line marker sits along the bar, unless the value overshoots
+
+/** Progress toward the line: fill = actual value, tick = the line, colored by the pick's state. */
+function ProgressToLine({ result }) {
+  const { actual, line, state } = result;
+  const max = Math.max(line / LINE_AT, actual);
+  const pct = (v) => `${Math.min(v / max, 1) * 100}%`;
+  return (
+    <Box sx={{ position: 'relative', height: 4, maxWidth: 240, mt: 0.75, borderRadius: 2, bgcolor: 'action.hover' }}>
+      <Box sx={{
+        height: '100%', width: pct(actual), borderRadius: 2,
+        bgcolor: RESULT_META[state].tone, transition: 'width 0.6s ease',
+      }} />
+      <Box sx={{ position: 'absolute', top: -3, bottom: -3, left: pct(line), width: 2, borderRadius: 1, bgcolor: 'text.secondary' }} />
+    </Box>
+  );
+}
+
+ProgressToLine.propTypes = { result: PropTypes.object.isRequired };
+
+function ScoredDot({ label, scored }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.5}>
+      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1 }}>{label}</Typography>
+      <Box sx={{
+        width: 8, height: 8, borderRadius: '50%', border: '1.5px solid',
+        borderColor: scored ? 'text.primary' : 'text.disabled',
+        bgcolor: scored ? 'text.primary' : 'transparent',
+      }} />
+    </Stack>
+  );
+}
+
+ScoredDot.propTypes = { label: PropTypes.string.isRequired, scored: PropTypes.bool };
+
+/** Visual companion to resultText: a bar for over/under markets, scored-dots for BTTS. */
+function PickProgress({ pick }) {
+  const { result, live } = pick;
+  if (OVER_UNDER_MARKETS.has(pick.market) && result.actual != null && result.line != null) {
+    return <ProgressToLine result={result} />;
+  }
+  if (pick.market === 'btts' && live.home_goals != null) {
+    return (
+      <Stack direction="row" spacing={1.5} sx={{ mt: 0.75 }}>
+        <ScoredDot label="Visita" scored={live.away_goals > 0} />
+        <ScoredDot label="Local" scored={live.home_goals > 0} />
+      </Stack>
+    );
+  }
+  return null;
+}
+
+PickProgress.propTypes = { pick: PropTypes.object.isRequired };
+
+function ResultIcon({ state }) {
+  if (state === 'won') return <CheckCircle sx={{ fontSize: 17, color: 'success.main', flexShrink: 0 }} />;
+  if (state === 'lost') return <Cancel sx={{ fontSize: 17, color: 'error.main', flexShrink: 0 }} />;
+  if (RESULT_META[state]?.live) return <LivePulseDot />;
+  return null;
+}
+
+ResultIcon.propTypes = { state: PropTypes.string.isRequired };
+
 function PickRow({ pick, started }) {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
@@ -265,11 +412,31 @@ function PickRow({ pick, started }) {
   const oddValue = typeof odd === 'object' && odd !== null ? odd.odd : odd;
   const oddBook = typeof odd === 'object' && odd !== null ? odd.bookmaker : null;
   const time = dayjs(pick.kickoff).format('HH:mm');
+  // A started pick with a grade is the interesting part — only dim it while there's nothing to show.
+  const dimmed = started && !pick.result;
+  const resultMeta = pick.result ? RESULT_META[pick.result.state] : null;
+  // Inset shadow instead of a border so graded and ungraded rows keep the same text alignment.
+  const stripeColor = resultMeta && resultMeta.tone.split('.').reduce((o, k) => o?.[k], theme.palette);
+  const rowSx = {
+    opacity: dimmed ? 0.5 : 1,
+    ...(stripeColor && { boxShadow: `inset 4px 0 0 ${resultMeta.live ? alpha(stripeColor, 0.5) : stripeColor}` }),
+  };
+  const label = (
+    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
+      {pick.result && <ResultIcon state={pick.result.state} />}
+      <Typography variant="body2" sx={{ fontWeight: isMobile ? 700 : 600, lineHeight: 1.3 }} noWrap={!isMobile}>
+        {pick.label}
+      </Typography>
+    </Stack>
+  );
+  const result = pick.result && (
+    <Box component="span" sx={{ color: resultMeta.tone, fontWeight: 600 }}>{resultText(pick)}</Box>
+  );
 
   // Mobile: pick label gets its own line instead of being squeezed and truncated.
   if (isMobile) {
     return (
-      <Box sx={{ opacity: started ? 0.5 : 1 }}>
+      <Box sx={rowSx}>
         <Stack
           spacing={0.5} onClick={() => setOpen(o => !o)}
           sx={{ px: 1.5, py: 1, cursor: 'pointer', '&:active': { bgcolor: 'action.hover' } }}
@@ -290,9 +457,7 @@ function PickRow({ pick, started }) {
             />
           </Stack>
 
-          <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
-            {pick.label}
-          </Typography>
+          {label}
 
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography variant="caption" color="text.secondary" noWrap sx={{ flex: 1, minWidth: 0 }}>
@@ -300,6 +465,9 @@ function PickRow({ pick, started }) {
             </Typography>
             <OddChip oddValue={oddValue} oddBook={oddBook} sx={{ height: 20, fontSize: 11, '& .MuiChip-label': { px: 0.75 } }} />
           </Stack>
+
+          {result && <Typography variant="caption">{result}</Typography>}
+          {pick.result && <PickProgress pick={pick} />}
         </Stack>
 
         <Collapse in={open}>
@@ -310,7 +478,7 @@ function PickRow({ pick, started }) {
   }
 
   return (
-    <Box sx={{ opacity: started ? 0.5 : 1 }}>
+    <Box sx={rowSx}>
       <Stack
         direction="row" spacing={1.25} alignItems="center"
         sx={{ px: 1.5, py: 1.25, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
@@ -332,12 +500,11 @@ function PickRow({ pick, started }) {
         <Icon sx={{ fontSize: 20, color, flexShrink: 0 }} />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-            {pick.label}
-          </Typography>
+          {label}
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-            {pick.away} @ {pick.home}
+            {pick.away} @ {pick.home}{result && <> · {result}</>}
           </Typography>
+          {pick.result && <PickProgress pick={pick} />}
         </Box>
 
         <Chip
@@ -422,6 +589,23 @@ export default function BetRadarView() {
   const [marketSel, setMarketSel]       = useState(null);
   const [activeSports, setActiveSports] = useState(() => new Set(SPORTS.map(s => s.key)));
   const [showStarted, setShowStarted]   = useState(false);
+  const [resultsBySport, setResultsBySport] = useState({});
+
+  // Pick grading for every sport, in parallel. Polled only for today — past dates are already final.
+  useEffect(() => {
+    let cancelled = false;
+    setResultsBySport({});
+    const load = () => Promise.allSettled(SPORTS.map(s => s.results(date))).then((rs) => {
+      if (cancelled) return;
+      const next = {};
+      rs.forEach((r, i) => { if (r.status === 'fulfilled') next[SPORTS[i].key] = r.value || {}; });
+      setResultsBySport(next);
+    });
+    load();
+    if (date !== dayjs().format('YYYY-MM-DD')) return () => { cancelled = true; };
+    const id = setInterval(load, Number(import.meta.env.VITE_POLLING_INTERVAL_MS) || 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [date]);
 
   // Fetched in parallel — one failing sport doesn't block the others.
   useEffect(() => {
@@ -469,7 +653,10 @@ export default function BetRadarView() {
     });
   };
 
-  const allPicks = useMemo(() => flattenAllPicks(dataBySport), [dataBySport]);
+  const allPicks = useMemo(
+    () => flattenAllPicks(dataBySport).map(p => attachResult(p, resultsBySport[p.sport])),
+    [dataBySport, resultsBySport],
+  );
 
   const filtered = useMemo(
     () => allPicks.filter(p =>
@@ -483,6 +670,13 @@ export default function BetRadarView() {
   const now = dayjs();
   const upcoming = filtered.filter(p => dayjs(p.kickoff).isAfter(now));
   const started  = filtered.filter(p => !dayjs(p.kickoff).isAfter(now));
+  const startedSummary = started.reduce((acc, p) => {
+    const state = p.result?.state;
+    if (state === 'won') acc.won++;
+    else if (state === 'lost') acc.lost++;
+    else if (RESULT_META[state]?.live) acc.live++;
+    return acc;
+  }, { won: 0, lost: 0, live: 0 });
 
   // {market, sport} pairs — sport resolves the total label override, null if shared
   const marketsPresent = useMemo(() => {
@@ -622,6 +816,9 @@ export default function BetRadarView() {
                 <Typography variant="caption" color="text.secondary" sx={{ flex: 1, fontWeight: 600 }}>
                   {started.length} pick{started.length !== 1 ? 's' : ''} de juegos ya iniciados
                 </Typography>
+                {startedSummary.won > 0 && <Chip size="small" color="success" icon={<CheckCircle />} label={startedSummary.won} sx={{ fontWeight: 700, height: 22 }} />}
+                {startedSummary.lost > 0 && <Chip size="small" color="error" icon={<Cancel />} label={startedSummary.lost} sx={{ fontWeight: 700, height: 22 }} />}
+                {startedSummary.live > 0 && <Chip size="small" variant="outlined" label={`${startedSummary.live} en vivo`} sx={{ fontWeight: 700, height: 22 }} />}
                 <IconButton size="small">
                   {showStarted ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                 </IconButton>

@@ -3,17 +3,7 @@ import PropTypes from 'prop-types';
 import { Avatar, Box, Chip, Stack, Tooltip, useMediaQuery } from '@mui/material';
 import { Waves } from '@mui/icons-material';
 import dayjs from 'dayjs';
-
-function LivePulseDot() {
-  return (
-    <Box sx={{
-      width: 7, height: 7, borderRadius: '50%', bgcolor: 'error.main',
-      animation: 'livePulse 1.5s ease-in-out infinite',
-      '@keyframes livePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
-    }} />
-  );
-}
-
+import LivePulseDot from './LivePulseDot';
 import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../api/api';
 import MatchDetailsModal from '../modals/MatchDetails';
