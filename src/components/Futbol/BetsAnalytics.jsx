@@ -23,6 +23,7 @@ const PROFIT_EVENTS = [
   { date: '18/09', label: 'MLB Radar' },
   { date: '20/09', label: 'NFL Radar' },
   { date: '06/10', label: 'NBA + MLB→ESPN' },
+  { date: '17/10', label: 'Poisson + picks en vivo', position: 'insideTopRight' },
 ];
 
 const usd = (v) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -214,7 +215,7 @@ export default function BetsAnalytics() {
                   labelFormatter={(i) => accData[i]?.date} formatter={(v) => [usd(v), 'Profit']} />
                 {showEvents && profitEvents.map((ev, n) => (
                   <ReferenceLine key={ev.label} x={ev.index} stroke={theme.palette.warning.main} strokeWidth={1.5} strokeDasharray="6 3"
-                    label={{ value: ev.label, position: 'insideTopLeft', dy: n * 14, fontSize: 11, fill: theme.palette.warning.main }} />
+                    label={{ value: ev.label, position: ev.position ?? 'insideTopLeft', dy: n * 14, fontSize: 11, fill: theme.palette.warning.main }} />
                 ))}
                 <Line type="monotone" dataKey="profit" stroke={BLUE} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               </LineChart>
