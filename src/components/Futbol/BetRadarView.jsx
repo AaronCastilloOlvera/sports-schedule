@@ -115,6 +115,9 @@ function flattenPicks(data) {
         game_id: s.fixture_id ?? s.event_id ?? s.game_pk,
         home: s.home_team?.name ?? '',
         away: s.away_team?.name ?? '',
+        homeTeam: s.home_team,
+        awayTeam: s.away_team,
+        league: s.league, // soccer only — NFL/NBA/MLB fall back to SPORT_LEAGUE_LOGO
         kickoff,
         // fútbol shows the referee here; MLB shows the announced starters
         context: pitchers.length ? pitchers.join(' vs ') : s.referee,
@@ -157,6 +160,56 @@ function SportBadge({ sport, size = 16 }) {
 }
 
 SportBadge.propTypes = { sport: PropTypes.string.isRequired, size: PropTypes.number };
+
+// In US sports the league *is* the sport, so the logo is fixed per sport.
+const SPORT_LEAGUE_LOGO = {
+  nfl: 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png',
+  nba: 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
+  mlb: 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png',
+};
+
+/** League logo with its name on hover; falls back to the sport icon when there's no logo or it fails to load. */
+function LeagueBadge({ pick, size = 20 }) {
+  const [failed, setFailed] = useState(false);
+  const logo = pick.league?.logo ?? SPORT_LEAGUE_LOGO[pick.sport];
+  if (!logo || failed) return <SportBadge sport={pick.sport} size={Math.round(size * 0.8)} />;
+  return (
+    <Tooltip title={pick.league?.name || SPORT_META[pick.sport]?.label || ''} placement="top">
+      <Box
+        component="img" src={logo} alt="" onError={() => setFailed(true)}
+        sx={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
+      />
+    </Tooltip>
+  );
+}
+
+LeagueBadge.propTypes = { pick: PropTypes.object.isRequired, size: PropTypes.number };
+
+/** Small inline team logo; renders nothing if the team has no logo or it fails to load. */
+function TeamLogo({ team }) {
+  const theme = useTheme();
+  const [failed, setFailed] = useState(false);
+  const src = (theme.palette.mode === 'dark' && team?.logo_dark) || team?.logo;
+  if (!src || failed) return null;
+  return (
+    <Box
+      component="img" src={src} alt="" onError={() => setFailed(true)}
+      sx={{ width: 14, height: 14, objectFit: 'contain', verticalAlign: 'text-bottom', mr: 0.5 }}
+    />
+  );
+}
+
+TeamLogo.propTypes = { team: PropTypes.object };
+
+function Matchup({ pick }) {
+  return (
+    <>
+      <TeamLogo team={pick.awayTeam} />{pick.away} @ <TeamLogo team={pick.homeTeam} />{pick.home}
+    </>
+  );
+}
+
+Matchup.propTypes = { pick: PropTypes.object.isRequired };
 
 // ---------------------------------------------------------------------------
 // AccuracyStrip — one line per sport with settled picks
@@ -448,7 +501,7 @@ function PickRow({ pick, started }) {
             >
               {time}
             </Typography>
-            <SportBadge sport={pick.sport} size={13} />
+            <LeagueBadge pick={pick} size={16} />
             <Icon sx={{ fontSize: 15, color, flexShrink: 0 }} />
             <Box sx={{ flex: 1 }} />
             <Chip
@@ -461,7 +514,7 @@ function PickRow({ pick, started }) {
 
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography variant="caption" color="text.secondary" noWrap sx={{ flex: 1, minWidth: 0 }}>
-              {pick.away} @ {pick.home}
+              <Matchup pick={pick} />
             </Typography>
             <OddChip oddValue={oddValue} oddBook={oddBook} sx={{ height: 20, fontSize: 11, '& .MuiChip-label': { px: 0.75 } }} />
           </Stack>
@@ -484,7 +537,7 @@ function PickRow({ pick, started }) {
         sx={{ px: 1.5, py: 1.25, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
         onClick={() => setOpen(o => !o)}
       >
-        <SportBadge sport={pick.sport} />
+        <LeagueBadge pick={pick} />
 
         <Typography
           variant="body2"
@@ -502,7 +555,7 @@ function PickRow({ pick, started }) {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {label}
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-            {pick.away} @ {pick.home}{result && <> · {result}</>}
+            <Matchup pick={pick} />{result && <> · {result}</>}
           </Typography>
           {pick.result && <PickProgress pick={pick} />}
         </Box>
