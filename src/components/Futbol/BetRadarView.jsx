@@ -201,12 +201,13 @@ function TeamLogo({ team }) {
 
 TeamLogo.propTypes = { team: PropTypes.object };
 
+// Soccer reads "home vs away"; the US sports keep "away @ home". The home side is always bold.
+const homeFirst = (pick) => pick.sport === 'futbol';
+
 function Matchup({ pick }) {
-  return (
-    <>
-      <TeamLogo team={pick.awayTeam} />{pick.away} @ <TeamLogo team={pick.homeTeam} />{pick.home}
-    </>
-  );
+  const home = <Box component="span" sx={{ fontWeight: 700 }}><TeamLogo team={pick.homeTeam} />{pick.home}</Box>;
+  const away = <><TeamLogo team={pick.awayTeam} />{pick.away}</>;
+  return homeFirst(pick) ? <>{home} vs {away}</> : <>{away} @ {home}</>;
 }
 
 Matchup.propTypes = { pick: PropTypes.object.isRequired };
@@ -387,8 +388,8 @@ function resultText(pick) {
   const { live } = pick;
   const home = live.home_score ?? live.home_goals;
   const away = live.away_score ?? live.away_goals;
-  // away-home, the same order as the "away @ home" line it sits next to
-  const score = home != null ? `${away}-${home}` : null;
+  // same team order as the Matchup line it sits next to
+  const score = home != null ? (homeFirst(pick) ? `${home}-${away}` : `${away}-${home}`) : null;
   const when = live.final ? 'Final' : (live.clock ?? (live.elapsed != null ? `${live.elapsed}'` : null));
   return [[when, score].filter(Boolean).join(' '), verdict(pick)].filter(Boolean).join(' · ');
 }
@@ -437,8 +438,8 @@ function PickProgress({ pick }) {
   if (pick.market === 'btts' && live.home_goals != null) {
     return (
       <Stack direction="row" spacing={1.5} sx={{ mt: 0.75 }}>
-        <ScoredDot label="Visita" scored={live.away_goals > 0} />
         <ScoredDot label="Local" scored={live.home_goals > 0} />
+        <ScoredDot label="Visita" scored={live.away_goals > 0} />
       </Stack>
     );
   }
