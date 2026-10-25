@@ -6,11 +6,23 @@ import {
 import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import PropTypes from "prop-types";
 import { apiClient } from "../../api/api.js";
+import { getAllBets, getBetDetail, PlaydoitError } from "../../api/playdoit.js";
 
 const MX_OFFSET_MS = 6 * 3600 * 1000;
+// Courtesy pause between detail calls so an import never hammers Playdoit's API.
+const DETAIL_COOLDOWN_MS = 1000;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// The browser's Authorization header reads "Bearer eyJ..."; the backend adds its own prefix.
+// The browser's Authorization header reads "Bearer eyJ..."; getAllBets adds its own prefix.
 const cleanToken = (token) => token.trim().replace(/^Bearer\s+/i, '');
+const isAuthError = (err) => err instanceof PlaydoitError && (err.status === 401 || err.status === 403);
+
+function importErrorMessage(err) {
+  if (isAuthError(err)) return 'Playdoit rechazó el token: puede estar vencido.';
+  if (err instanceof PlaydoitError) return `Playdoit respondió con un error (${err.status}).`;
+  if (err instanceof TypeError) return 'No se pudo conectar con Playdoit.'; // fetch network failure
+  return err.response?.data?.detail || 'No se pudo importar.';
+}
 
 function decodeTokenExp(token) {
   try {
@@ -46,24 +58,55 @@ function PlaydoitImportModal({ open, onClose, onImported }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState('');
 
   const expDate = useMemo(() => decodeTokenExp(token), [token]);
   const expired = expDate ? expDate.getTime() < Date.now() : false;
   const minutesLeft = expDate ? Math.round((expDate.getTime() - Date.now()) / 60000) : null;
 
+  // 1) history from Playdoit  2) backend says which bets need their detail
+  // 3) details from Playdoit, one by one with a pause  4) backend maps and saves them
   const runImport = async () => {
     setLoading(true);
     setError('');
     setResult(null);
+    const playdoitToken = cleanToken(token);
     try {
       const { date_from, date_to } = dayRangeUtc(date);
-      const data = await apiClient.importPlaydoit(cleanToken(token), date_from, date_to, false);
-      setResult(data);
-      if (data.imported > 0 || data.updated > 0) onImported();
+      setProgress('Consultando historial de Playdoit...');
+      const history = await getAllBets(playdoitToken, date_from, date_to);
+      const pending = history.length ? await apiClient.playdoitPending(history.map((b) => b.id)) : [];
+
+      const details = [];
+      let fetchFailed = 0;
+      for (const [i, betId] of pending.entries()) {
+        if (i > 0) await sleep(DETAIL_COOLDOWN_MS);
+        setProgress(`Obteniendo detalle ${i + 1} de ${pending.length}...`);
+        try {
+          details.push(await getBetDetail(playdoitToken, betId));
+        } catch (err) {
+          if (isAuthError(err)) throw err; // token died mid-import: stop, don't count every bet as failed
+          fetchFailed++;
+        }
+      }
+
+      setProgress('Guardando...');
+      const saved = details.length
+        ? await apiClient.importPlaydoit(details)
+        : { imported: 0, updated: 0, skipped_final: 0, failed: 0 };
+      setResult({
+        found: history.length,
+        imported: saved.imported,
+        updated: saved.updated,
+        skipped_final: history.length - pending.length + saved.skipped_final,
+        failed: saved.failed + fetchFailed,
+      });
+      if (saved.imported > 0 || saved.updated > 0) onImported();
     } catch (err) {
-      setError(err.response?.data?.detail || 'No se pudo importar.');
+      setError(importErrorMessage(err));
     } finally {
       setLoading(false);
+      setProgress('');
     }
   };
 
@@ -94,6 +137,8 @@ function PlaydoitImportModal({ open, onClose, onImported }) {
               <ChevronRight />
             </IconButton>
           </Stack>
+
+          {progress && <Typography variant="body2" color="text.secondary">{progress}</Typography>}
 
           {error && <Alert severity="error">{error}</Alert>}
 

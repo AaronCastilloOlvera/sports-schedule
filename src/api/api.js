@@ -71,13 +71,15 @@ class ApiClient {
     return response.data;
   }
 
-  async importPlaydoit(token, dateFrom, dateTo, dryRun = false) {
-    const response = await this.client.post(
-      `/playdoit/import?token=${encodeURIComponent(token)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&dry_run=${dryRun}`,
-      null,
-      // ~1s per non-final bet (one detail call each) — a busy day easily passes the 8s default.
-      { timeout: 120000 },
-    );
+  // Playdoit import: the browser fetches from Playdoit (src/api/playdoit.js); the backend only
+  // says which bets need their detail and then maps + saves them. No Playdoit token goes here.
+  async playdoitPending(betIds) {
+    const response = await this.client.post('/playdoit/pending', { bet_ids: betIds });
+    return response.data.pending;
+  }
+
+  async importPlaydoit(bets, dryRun = false) {
+    const response = await this.client.post('/playdoit/import', { bets, dry_run: dryRun });
     return response.data;
   }
 
