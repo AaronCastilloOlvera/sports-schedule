@@ -1,4 +1,5 @@
 import axios from "axios"
+import { clearSession, getToken } from '../auth/session.js';
 
 class ApiClient {
   constructor(baseURL, opts = {}) {
@@ -10,16 +11,32 @@ class ApiClient {
       headers: opts.headers || {}
     });
 
+    this.client.interceptors.request.use(config => {
+      const token = getToken();
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    });
+
     this.client.interceptors.response.use(
       response => response,
       error => {
         console.error('API Error:', error.message);
+        // Expired/invalid session -> back to the login screen. A wrong password on /auth/login
+        // is also a 401, but that one is shown on the login form itself.
+        if (error.response?.status === 401 && !error.config?.url?.startsWith('/auth/login')) {
+          clearSession();
+        }
         return Promise.reject(error);
       }
     );
   }
 
-  
+  // Auth
+  async login(username, password) {
+    const response = await this.client.post('/auth/login', { username, password });
+    return response.data;
+  }
+
   // Usage 
   async fetchUsage() {
     const response = await this.client.get('/status/usage');
@@ -56,7 +73,10 @@ class ApiClient {
 
   async importPlaydoit(token, dateFrom, dateTo, dryRun = false) {
     const response = await this.client.post(
-      `/playdoit/import?token=${encodeURIComponent(token)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&dry_run=${dryRun}`
+      `/playdoit/import?token=${encodeURIComponent(token)}&date_from=${encodeURIComponent(dateFrom)}&date_to=${encodeURIComponent(dateTo)}&dry_run=${dryRun}`,
+      null,
+      // ~1s per non-final bet (one detail call each) — a busy day easily passes the 8s default.
+      { timeout: 120000 },
     );
     return response.data;
   }

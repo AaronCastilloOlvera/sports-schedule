@@ -1,4 +1,16 @@
 {
+  "auth": {
+    "subtitle": "Sign in to continue",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "logout": "Log out",
+    "invalid": "Wrong username or password.",
+    "tooMany": "Too many attempts. Wait a few minutes and try again.",
+    "notConfigured": "Login is not configured on the server.",
+    "error": "Couldn't reach the server."
+  },
   "loading": "Loading...",
   "error_fetching_data": "Error fetching data.",
   "no_recent_matches": "No recent matches found.",

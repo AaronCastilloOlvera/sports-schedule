@@ -10,6 +10,7 @@ import {
   DarkMode as DarkModeIcon,
   Home as HomeIcon,
   LightMode as LightModeIcon,
+  Logout as LogoutIcon,
   Menu as MenuIcon,
   Radar as RadarIcon,
   Refresh as RefreshIcon,
@@ -21,6 +22,7 @@ import Leagues from '../Futbol/Leagues.jsx';
 import { useTranslation } from "react-i18next";
 import { useThemeMode } from "../../context/ThemeContext.jsx";
 import Status from "./../common/Status.jsx";
+import { clearSession } from "../../auth/session.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -241,6 +243,19 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
               Refresh Leagues
             </Button>
 
+            <Box sx={DIVIDER_SX} />
+
+            <Button
+              fullWidth
+              size="small"
+              color="error"
+              startIcon={<LogoutIcon />}
+              onClick={clearSession}
+              sx={{ borderRadius: '8px', textTransform: 'none', fontSize: 13, justifyContent: 'flex-start' }}
+            >
+              {t('auth.logout')}
+            </Button>
+
           </Box>
         </Popover>
 
@@ -344,6 +359,16 @@ const Header = ({ activeSection = 'home', onSectionChange }) => {
             </Box>
             <Switch checked={mode === 'dark'} onChange={toggleTheme} size="small" />
           </Box>
+
+          <List sx={{ px: 1.5, pt: 0, pb: 1.5 }}>
+            <ListItemButton
+              onClick={clearSession}
+              sx={{ borderRadius: '10px', px: 1.5, color: 'error.main', '& .MuiListItemText-primary': { fontSize: 15, fontWeight: 500 } }}
+            >
+              <Box sx={{ mr: 1.5, display: 'flex' }}><LogoutIcon fontSize="small" /></Box>
+              <ListItemText primary={t('auth.logout')} />
+            </ListItemButton>
+          </List>
         </Drawer>
       </Toolbar>
     </AppBar>

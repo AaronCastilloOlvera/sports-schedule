@@ -9,9 +9,12 @@ import { apiClient } from "../../api/api.js";
 
 const MX_OFFSET_MS = 6 * 3600 * 1000;
 
+// The browser's Authorization header reads "Bearer eyJ..."; the backend adds its own prefix.
+const cleanToken = (token) => token.trim().replace(/^Bearer\s+/i, '');
+
 function decodeTokenExp(token) {
   try {
-    const payload = token.trim().split('.')[1];
+    const payload = cleanToken(token).split('.')[1];
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
     const data = JSON.parse(atob(padded));
@@ -54,7 +57,7 @@ function PlaydoitImportModal({ open, onClose, onImported }) {
     setResult(null);
     try {
       const { date_from, date_to } = dayRangeUtc(date);
-      const data = await apiClient.importPlaydoit(token.trim(), date_from, date_to, false);
+      const data = await apiClient.importPlaydoit(cleanToken(token), date_from, date_to, false);
       setResult(data);
       if (data.imported > 0 || data.updated > 0) onImported();
     } catch (err) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, CssBaseline } from "@mui/material";
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import './App.css';
@@ -7,6 +7,8 @@ import Header from './components/layout/Header.jsx';
 import FutbolDashboard from './views/FutbolDashboard.jsx';
 import Bets from './components/Futbol/Bets.jsx';
 import BetRadarView from './components/Futbol/BetRadarView.jsx';
+import LoginView from './components/auth/LoginView.jsx';
+import { hasValidToken, LOGOUT_EVENT } from './auth/session.js';
 
 const SECTION_VIEWS = {
   radar:   <BetRadarView />,
@@ -18,6 +20,23 @@ function AppContent() {
   const { mode } = useThemeMode();
   const theme = useMemo(() => createTheme({ palette: { mode } }), [mode]);
   const [activeSection, setActiveSection] = useState('radar');
+  const [signedIn, setSignedIn] = useState(hasValidToken);
+
+  // Fired on logout and whenever the API answers 401 (expired or invalid session).
+  useEffect(() => {
+    const onLogout = () => setSignedIn(false);
+    window.addEventListener(LOGOUT_EVENT, onLogout);
+    return () => window.removeEventListener(LOGOUT_EVENT, onLogout);
+  }, []);
+
+  if (!signedIn) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LoginView onLogin={() => setSignedIn(true)} />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
