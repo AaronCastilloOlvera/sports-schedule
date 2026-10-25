@@ -110,7 +110,7 @@ function flattenPicks(data) {
       const pitchers = [s.away_team?.pitcher?.name, s.home_team?.pitcher?.name].filter(Boolean);
       return {
         ...p,
-        key: `${s.game_pk ?? s.fixture_id ?? si}-${pi}`,
+        key: `${s.game_pk ?? s.fixture_id ?? s.event_id ?? si}-${pi}`,
         // fixture_id (fútbol) / event_id (NFL, NBA) / game_pk (MLB) — the key of each /results payload
         game_id: s.fixture_id ?? s.event_id ?? s.game_pk,
         home: s.home_team?.name ?? '',
@@ -129,7 +129,7 @@ function flattenPicks(data) {
 /** One combined, chronologically sorted feed — each pick tagged with its sport. */
 function flattenAllPicks(dataBySport) {
   return SPORTS
-    .flatMap(s => flattenPicks(dataBySport[s.key]).map(p => ({ ...p, sport: s.key })))
+    .flatMap(s => flattenPicks(dataBySport[s.key]).map(p => ({ ...p, key: `${s.key}-${p.key}`, sport: s.key })))
     .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 }
 
