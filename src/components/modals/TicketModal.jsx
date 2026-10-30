@@ -152,13 +152,23 @@ const formatEventDate = (iso) => {
   }
 };
 
+function OutcomeIcon({ outcome, fontSize = 'small' }) {
+  const color = outcome === true ? 'success.main' : outcome === false ? 'error.main' : 'text.disabled';
+  const icon = outcome === true
+    ? <CheckCircle fontSize={fontSize} />
+    : outcome === false
+      ? <Cancel fontSize={fontSize} />
+      : <RadioButtonUnchecked fontSize={fontSize} />;
+  return (
+    <Tooltip title={outcome === true ? 'Ganado' : outcome === false ? 'Perdido' : 'Pendiente'}>
+      <Box sx={{ color, display: 'flex' }}>{icon}</Box>
+    </Tooltip>
+  );
+}
+
+OutcomeIcon.propTypes = { outcome: PropTypes.bool, fontSize: PropTypes.string };
+
 function PlaydoitLegView({ leg }) {
-  const outcomeColor = leg.outcome === true ? 'success.main' : leg.outcome === false ? 'error.main' : 'text.disabled';
-  const outcomeIcon = leg.outcome === true
-    ? <CheckCircle fontSize="small" />
-    : leg.outcome === false
-      ? <Cancel fontSize="small" />
-      : <RadioButtonUnchecked fontSize="small" />;
   const eventDate = formatEventDate(leg.event_date);
 
   return (
@@ -167,17 +177,31 @@ function PlaydoitLegView({ leg }) {
         <Typography variant="body2" fontWeight={600}>{leg.match_name}</Typography>
         <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
           {leg.odd != null && <Typography variant="body2" color="text.secondary">{leg.odd.toFixed(2)}</Typography>}
-          <Tooltip title={leg.outcome === true ? 'Ganado' : leg.outcome === false ? 'Perdido' : 'Pendiente'}>
-            <Box sx={{ color: outcomeColor, display: 'flex' }}>{outcomeIcon}</Box>
-          </Tooltip>
+          <OutcomeIcon outcome={leg.outcome} />
         </Stack>
       </Stack>
-      <Typography variant="body2">{leg.pick}</Typography>
-      <Stack direction="row" spacing={1} alignItems="center">
+      {leg.selections?.length ? (
+        // Crear apuesta: each part is settled on its own
+        <Stack spacing={0.25}>
+          {leg.selections.map((sel, i) => (
+            <Stack key={i} direction="row" spacing={0.75} alignItems="center">
+              <OutcomeIcon outcome={sel.outcome} fontSize="inherit" />
+              <Typography variant="body2">
+                {sel.pick} <Typography component="span" variant="caption" color="text.secondary">· {sel.market_name_raw}</Typography>
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      ) : (
+        <Typography variant="body2">{leg.pick}</Typography>
+      )}
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
         {leg.market_name_raw && (
           <Typography variant="caption" color="text.secondary">{leg.market_name_raw}</Typography>
         )}
         {eventDate && <Typography variant="caption" color="text.disabled">· {eventDate}</Typography>}
+        {leg.event_score && <Typography variant="caption" color="text.disabled">· Final {leg.event_score.replace(':', '-')}</Typography>}
+        {leg.is_live && <Typography variant="caption" color="warning.main" fontWeight={600}>· En vivo</Typography>}
       </Stack>
     </Stack>
   );

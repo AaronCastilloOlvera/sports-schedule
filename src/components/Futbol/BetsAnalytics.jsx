@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, CircularProgress, FormControlLabel, Paper, Stack, Switch, Tab, Tabs, Typography, useTheme } from '@mui/material';
+import {
+  Box, CircularProgress, FormControlLabel, Paper, Stack, Switch, Tab, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Tabs, Typography, useTheme,
+} from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart,
   Pie, PieChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
@@ -159,6 +162,14 @@ export default function BetsAnalytics() {
   const devicePie     = analytics.device_data.map(d => ({ name: d.label, value: d.count, fill: d.label === 'Mobile' ? BLUE : '#757575' }));
   const dayOfWeekPie  = analytics.day_of_week_data.map((d, i) => ({ name: d.day, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
   const timeOfDayPie  = analytics.time_of_day_data.map((d, i) => ({ name: d.time, value: d.count, fill: PIE_COLORS[i % PIE_COLORS.length] }));
+
+  // One bar per bet type within each timing bucket; `${type}_n` carries its ticket count for the tooltip.
+  const placementData = analytics.placement_data || [];
+  const placementTypes = [...new Set(placementData.flatMap(d => Object.keys(d.by_type)))];
+  const placementByType = placementData.map(d => ({
+    bucket: d.bucket,
+    ...Object.fromEntries(placementTypes.flatMap(t => [[t, d.by_type[t]?.winRate], [`${t}_n`, d.by_type[t]?.count]])),
+  }));
 
   const renderPieTooltip = (data) => ({
     formatter: (v, name) => [`${v} tickets (${pct(v, data)})`, name],
@@ -340,6 +351,38 @@ export default function BetsAnalytics() {
             </ResponsiveContainer>
           </ChartCard>
 
+          <ChartCard title="League × Market">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 1 }}>
+              Peores combinaciones primero — cada selección de un Crear apuesta cuenta por separado. Mínimo 5 picks decididos.
+            </Typography>
+            <TableContainer sx={{ maxHeight: 420 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>League</TableCell>
+                    <TableCell>Market</TableCell>
+                    <TableCell align="right">W-L</TableCell>
+                    <TableCell align="right">Win Rate</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(analytics.league_market_data || []).map(row => (
+                    <TableRow key={`${row.league}|${row.market}`} hover>
+                      <TableCell>{row.league}</TableCell>
+                      <TableCell>{row.market}</TableCell>
+                      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {row.wins}-{row.decided - row.wins}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.winRate < 50 ? RED : row.winRate >= 70 ? GREEN : 'text.primary' }}>
+                        {row.winRate}%
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </ChartCard>
+
           <ChartCard title="Picks by League">
             <ResponsiveContainer width="100%" height={320}>
               <PieChart>
@@ -475,7 +518,7 @@ export default function BetsAnalytics() {
       {tab === 5 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            Por pick individual (mismo criterio que By League) — top 15 mercados por cantidad de picks.
+            Por pick individual (mismo criterio que By League); cada selección de un Crear apuesta cuenta por separado — top 15 mercados por cantidad de picks.
           </Typography>
 
           <ChartCard title="Win Rate by Market">
@@ -550,6 +593,44 @@ export default function BetsAnalytics() {
 
       {tab === 7 && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {placementData.length > 0 && (
+            <>
+              <ChartCard title="ROI % by Bet Timing">
+                <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 1 }}>
+                  Cuánto antes del partido hiciste la apuesta — ¿los tickets apresurados te van peor? Solo tickets de Playdoit.
+                </Typography>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={placementData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+                    <YAxis unit="%" tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle}
+                      formatter={(v, name, { payload }) => [`${v}% · ${usd(payload.profit)} · ${payload.count} tickets`, 'ROI']} />
+                    <Bar dataKey="roi" radius={[4, 4, 0, 0]}>
+                      {placementData.map((entry, i) => <Cell key={i} fill={entry.roi >= 0 ? GREEN : RED} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="Win Rate by Bet Timing and Bet Type">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={placementByType}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
+                    <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle}
+                      formatter={(v, name, { payload }) => [`${v}% (${payload[`${name}_n`]} tickets)`, BET_TYPE_LABELS[name] || name]} />
+                    <Legend formatter={(name) => BET_TYPE_LABELS[name] || name} />
+                    {placementTypes.map((t, i) => (
+                      <Bar key={t} dataKey={t} fill={PIE_COLORS[i % PIE_COLORS.length]} radius={[4, 4, 0, 0]} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </>
+          )}
+
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <ChartCard title="Profit by Day of Week" sx={{ flex: 2 }}>
               <ResponsiveContainer width="100%" height={250}>
